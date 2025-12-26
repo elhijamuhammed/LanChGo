@@ -54,3 +54,22 @@ This makes LanChGo suitable for private environments such as:
 ```bash
 cd windows
 cargo build --release
+```
+
+### RUN
+```bash
+cargo run
+```
+
+The compiled binary will be located in:
+```bash
+windows/target/release/
+```
+
+License
+This project is licensed under the MIT License.
+See the LICENSE file for details.
+
+Author
+Developed by Muhammed Abu El-Hija
+ 
