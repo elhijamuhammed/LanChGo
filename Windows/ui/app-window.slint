@@ -1,0 +1,1071 @@
+import { VerticalBox, HorizontalBox, LineEdit, Button, Switch, Slider, TextEdit, ListView} from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    width: 980px;
+    height: 700px;
+    title: "LanChGo";
+    icon: @image-url("assets/LanChGo_icon.png");
+
+    // Reactive list provided by Rust (ModelRc)
+    in-out property <[string]> messages;
+    in-out property <string> input_text;
+    callback clear_chatbox();
+
+    // Interface selection
+    in-out property <bool> show_welcome;
+    in-out property <[string]> interfaces;        // ["Wi-Fi|10.0.0.255", "Ethernet|192.168.1.255"]
+    in-out property <string> selected_interface;  // e.g. "Wi-Fi"
+    callback interface_selected(string);
+    in-out property <bool> changed_networks; // if the network changes show
+    in-out property <string> broadcast_address;
+    in-out property <string> interface_status;
+    in-out property <int> ui_port;
+
+    // Security / channel status
+    in-out property <string> channel_mode: "public";  // values: "public" | "host" | "joined" // default public
+    callback change_channel_mode(string);
+    callback fix_the_bug_please(); // To fix a bug when you click close it still host
+    in-out property <bool> public_secure_helper: false;
+    callback create_channel();
+    in-out property <string> host_PIN;
+    in-out property <string> host_PIN_masked: "N/A";
+    callback generate_new_PIN();
+    callback disconnect_channel();
+    in property <image> QR_code_image;
+
+    // Joiner logic
+    in-out property <string> joining_PIN;
+    callback join_channel(string);
+    callback REQA();
+    callback show_connecting_popup();
+    callback hide_connecting_popup();
+    show_connecting_popup => { connectingpopup.show(); }
+    hide_connecting_popup => { connectingpopup.close(); }
+
+    // Temporary message callback
+    in-out property <string> temp_message: "";
+    callback show_temp_message(string);
+    show_temp_message(msg) => {
+        hide_temp.stop();           // 🛑 explicitly stop first
+        root.temp_message = "";     // ✅ clear previous message to force UI update
+        root.temp_message = msg;
+        hide_temp.start();          // ▶️ then start fresh
+    }
+    // Button for debugging
+    // callback reset_config();
+    // Logic for the new version
+    callback show_new_version_popup();
+    callback exit_app();
+    show_new_version_popup => { newversion.show(); }
+
+    // Backend will call this to append a message safely on UI thread
+    callback append_message(string);
+
+    // popup API
+    in-out property <string> popup_msg:
+        "Message too long, it will not be sent!\nClick to dismiss.";
+    callback send_clicked();
+    callback show_popupmsg();
+    show_popupmsg => { msgtoolongpopup.show(); }
+
+    // version 
+    in-out property <string> show_version;
+
+    // File transfer (Needs work)
+    // callback send_file_start();
+    // in-out property <int> bundle_number: 1;
+    // in-out property <bool> file_offer_visible: false;
+    // in-out property <string> file_offer_text: "";
+    // callback accept_file();
+    // callback deny_file();
+    // callback show_file_offer(string);
+    // show_file_offer(info) => {
+    //     root.file_offer_text = info;
+    //     root.file_offer_visible = true;
+    //     fileofferpopup.show();
+    // }
+    
+    Rectangle {
+        background: blue;
+        border-width: 3px;
+        border-bottom-left-radius: 3px;
+        border-color: white;
+
+        // ---------- Main UI ----------
+        Rectangle {
+            background: #111318;
+
+            // Floating status badge
+            Rectangle {
+                x: 12px;
+                y: 12px;
+                width: 200px;
+                height: 50px;
+                visible: !root.show_welcome; 
+
+                VerticalBox {
+                    spacing: 2px;
+                    padding: 6px;
+                    Text {
+                        text: "🔌 " + root.selected_interface;
+                        font-size: 14px;
+                        color: #00e1ff;
+                    }
+                    Text {
+                        text: "📡 " + root.broadcast_address;
+                        font-size: 14px;
+                        color: #aaaaaa;
+                    }
+                    Text {
+                        text: root.interface_status == "IfOperStatusUp" ? "✅ Online" : "❌ Offline";
+                        font-size: 14px;
+                        color: root.interface_status == "IfOperStatusUp" ? #00ff88 : #ff4444;
+                    }
+                    Text {
+                        text: root.channel_mode == "host" ? "🔒 Secure Host"
+                            : root.channel_mode == "joined" ? "📥 Joined"
+                            : "🌍 Public";
+                        font-size: 14px;
+                        color: root.channel_mode == "host" ? #ffaa00
+                            : root.channel_mode == "joined" ? #00ccff
+                            : #bbbbbb;
+                    }
+                }
+            }
+
+            // // Floating Debug Reset Button
+            // Rectangle {
+            //     x: parent.width - 130px;   // right side
+            //     y: 12px;                   // top padding
+            //     width: 120px;
+            //     height: 40px;
+            //     border-radius: 8px;
+            //     background: reset_btn_area.has-hover ? #ff4444 : #cc0000;
+            //     border-width: 1px;
+            //     border-color: #880000;
+
+            //     Text {
+            //         text: "🗑 Reset";
+            //         color: white;
+            //         font-size: 14px;
+            //         horizontal-alignment: center;
+            //         vertical-alignment: center;
+            //         width: parent.width;
+            //         height: parent.height;
+            //     }
+
+            //     reset_btn_area := TouchArea {
+            //         width: parent.width;
+            //         height: parent.height;
+            //         clicked => { root.reset_config(); }
+            //     }
+            // }
+
+            VerticalBox {
+                spacing: 12px;
+
+                // Title
+                Text {
+                    text: "Talk freely fast with LanChGo App";
+                    font-size: 24px;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Made to solve a problem!"+" LanChGo App "+show_version;
+                    font-size: 14px;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+                // --- Welcome overlay (first start) ---
+                if root.show_welcome: Rectangle {
+                    width: parent.width;
+                    height: parent.height;
+                    background: #00000080;   // dim overlay
+
+                    VerticalLayout {
+                        Rectangle { vertical-stretch: 1; }   // top spacer
+
+                        HorizontalLayout {
+                            Rectangle { horizontal-stretch: 1; } // left spacer
+
+                            Rectangle {
+                                width: 680px;
+                                height: 420px;
+                                border-radius: 16px;
+                                background: #2c2f35;
+                                border-width: 1px;
+                                border-color: #3a3f48;
+
+                                VerticalLayout {
+                                    padding: 20px;
+                                    spacing: 6px;  // tighter spacing
+
+                                    Text {
+                                        text: "Welcome to LanChGo";
+                                        color: white;
+                                        font-size: 22px;
+                                        horizontal-alignment: center;
+                                    }
+
+                                    Text {
+                                        text: "Pick your network interface, all receiving ends should be on the same subnet.";
+                                        color: #cccccc;
+                                        font-size: 14px;
+                                        wrap: word-wrap;
+                                        horizontal-alignment: center;
+                                        //padding-bottom: 8px; // spacing before list
+                                        visible: !root.changed_networks;
+                                    }
+                                    Text {
+                                        text: "Pick your network interface, all receiving ends should be on the same subnet. Network changed";
+                                        color: #cccccc;
+                                        font-size: 14px;
+                                        wrap: word-wrap;
+                                        horizontal-alignment: center;
+                                        //padding-bottom: 8px; // spacing before list
+                                        visible: root.changed_networks;
+                                    }
+
+                                    // --- Interface List ---
+                                    ListView {
+                                        width: parent.width;
+                                        height: 200px;
+
+                                        for iface in root.interfaces: Rectangle {
+                                            width: parent.width * 0.85;
+                                            height: 72px;
+                                            border-radius: 12px;
+                                            background: root.selected_interface == iface
+                                                ? #2b7bff
+                                                : #2c2f35;
+                                            border-width: 2px;
+                                            border-color: root.selected_interface == iface ? #66aaff : #3a3f48;
+                                            x: (parent.width - self.width) / 2;
+
+                                            HorizontalLayout {
+                                                spacing: 12px;
+                                                Rectangle {width:12px;}
+                                                // Circle indicator
+                                                Rectangle {
+                                                    width: 18px;
+                                                    height: 18px;
+                                                    border-radius: 9px;
+                                                    border-width: 2px;
+                                                    border-color: root.selected_interface == iface ? #66aaff : white;
+                                                    background: root.selected_interface == iface ? #66aaff : transparent;
+                                                    y: (parent.height - self.height) / 2;
+                                                    //padding-left: 8px;
+                                                }
+
+                                                VerticalLayout {
+                                                    spacing: 4px;
+                                                    Text{
+                                                        text: " ";
+                                                        font-size: 5px;
+                                                    }
+                                                    Text {
+                                                        text: iface;
+                                                        font-size: 16px;
+                                                        color: white;
+                                                    }
+                                                }
+                                            }
+                                            TouchArea {
+                                                width: parent.width;
+                                                height: parent.height;
+                                                clicked => {
+                                                    root.selected_interface = iface;
+                                                    //root.interface_selected(iface);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // --- Continue button ---
+                                    HorizontalLayout {
+                                        Rectangle { horizontal-stretch: 1; }
+
+                                        Rectangle {
+                                            width: 120px;
+                                            height: 42px;
+                                            border-radius: 8px;
+                                            background: continue_area.has-hover ? #3a8dff : #2b7bff;
+
+                                            Text {
+                                                text: "Continue";
+                                                color: white;
+                                                font-size: 14px;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
+                                                width: parent.width;
+                                                height: parent.height;
+                                            }
+
+                                            continue_area := TouchArea {
+                                                width: parent.width;
+                                                height: parent.height;
+                                                clicked => { 
+                                                    root.interface_selected(root.selected_interface);
+                                                    root.show_welcome = false; 
+                                                }
+                                            }
+                                        }
+
+                                        Rectangle { horizontal-stretch: 1; }
+                                    }
+                                }
+                            }
+
+                            Rectangle { horizontal-stretch: 1; } // right spacer
+                        }
+
+                        Rectangle { vertical-stretch: 1; }   // bottom spacer
+                    }
+                }
+
+                // --- Chat box ---
+                Rectangle {
+                    background: #2c2f35;
+                    border-radius: 8px;
+                    height: 450px;
+                        HorizontalLayout {
+                            Rectangle { horizontal-stretch: 1; }   // left spacer
+
+                            VerticalBox {                          // stack Slint logo and text together
+                                Text {
+                                    text: "© Muhammed Abu El-Hija 2025, All rights reserved";
+                                    font-size: 16px;
+                                    color: white;
+                                    opacity: 25%;
+                                    horizontal-alignment: center;  // center text inside its box
+                                }
+                            }
+
+                            Rectangle { horizontal-stretch: 1; }   // right spacer
+                        }
+                        // Temporary banner for short-lived messages
+                        if root.temp_message != "": Rectangle {
+                            background: #444;
+                            border-radius: 8px;
+                            width: parent.width * 0.4;
+                            height: 40px;
+                            x: (parent.width - self.width) / 2;
+                            y: 6px;
+                            z: 100;
+                            Text {
+                                text: root.temp_message;
+                                color: white;
+                                font-size: 16px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                                height: parent.height;
+                            }
+                        }
+
+                    ListView {
+                        width: parent.width;
+                        height: parent.height;
+
+                        for m[i] in root.messages: Rectangle {
+                            width: parent.width;
+                            height: bubble.height + 8px;
+
+                            bubble := Rectangle {
+                                background: #3a3f48;
+                                border-radius: 12px;
+                                x: 10px;
+
+                                width: min(parent.width * 0.85, msg.preferred-width + 20px);
+                                height: msg.preferred-height + 16px;
+
+                                msg := TextInput {
+                                    text: m;
+                                    read-only: true;
+                                    color: white;
+                                    font-size: 18px;
+                                    wrap: word-wrap;
+                                    single-line: false;
+                                    x: 10px; y: 8px;
+                                    width: parent.width - 20px;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // --- Toolbar ---
+                HorizontalBox {
+                    spacing: 12px;
+                    alignment: center;
+                    padding: 8px;
+
+                    // Mode Switch
+                    Switch {
+                        checked <=> root.public_secure_helper;   // two-way binding
+                        text: self.checked ? "🔒 Secure" : "🌍 Public";
+
+                        toggled => {
+                            if (self.checked) {
+                                root.channel_mode = "host";
+                                root.change_channel_mode("host");
+                                createorjoinpopup.show();   // open popup
+                            } else {
+                                root.channel_mode = "public";
+                                root.change_channel_mode("public");
+                                root.public_secure_helper = false;
+                                root.host_PIN = 0;
+                                root.host_PIN_masked = "N/A";
+                                createorjoinpopup.close();  // hide popup if going back
+                            }
+                        }
+                    }
+
+                    // Separator
+                    Rectangle { width: 2px; height: 28px; background: #555; }
+
+                    // PIN Label
+                    Text {
+                        text: "PIN:";
+                        color: white;
+                        font-size: 18px;
+                        vertical-alignment: center;
+                    }
+
+                    // PIN Value
+                    Text {
+                        text: root.channel_mode == "public" ? "N/A" : root.host_PIN_masked;
+                        color: #00e1ff;
+                        font-size: 18px;
+                        vertical-alignment: center;
+                        min-width: 80px;
+                    }
+
+                    // Show PIN button
+                    Rectangle {
+                        width: 110px; height: 34px;
+                        border-radius: 8px;
+
+                        background: root.channel_mode == "host"
+                            ? (show_pin_btn_area.has-hover ? #1e90ff : #0078d7)  // Host colors
+                            : #444444; // Gray when public or joined
+
+                        border-width: 1px;
+                        border-color: root.channel_mode == "host" ? #005a9e : #222222;
+
+                        Text {
+                            text: "👁 Show PIN";
+                            color: root.channel_mode == "host" ? white : #888888;
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+
+                        show_pin_btn_area := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            enabled: root.channel_mode == "host";   // Only clickable in host mode
+                            clicked => { 
+                                showpin.show();
+                                debug("Show PIN clicked"); 
+                            }
+                        }
+                    }
+
+                    // New PIN Button (Green)
+                    Rectangle {
+                        width: 110px; height: 34px;
+                        border-radius: 8px;
+                        background: root.channel_mode == "host"
+                            ? (new_pin_btn_area.has-hover ? #32cd32 : #228b22)
+                            :#444444;
+                        
+                        border-width: 1px;
+                        border-color:root.channel_mode == "host" ? #006400 : #222222;
+
+                        Text {
+                            text: "🔄 New PIN";
+                            color: root.channel_mode == "host" ? white : #888888;
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+
+                        new_pin_btn_area := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            enabled: root.channel_mode == "host";
+                            clicked => {
+                                generate_new_PIN();
+                                debug("New PIN clicked"); 
+                            }
+                        }
+                    }
+                    // Disconnect Button (Red)
+                    Rectangle {
+                        width: 110px; height: 34px;
+                        border-radius: 8px;
+                        background: root.channel_mode != "public"
+                            ? (disconnect_btn_area.has-hover ? #cc3333 : #aa2222)
+                            : #444444;
+                        
+                        border-width: 1px;
+                        border-color: root.channel_mode != "public" ? #881111 : #222222;
+
+                        Text {
+                            text: "⏏ Disconnect";
+                            color: root.channel_mode != "public" ? white : #888888;
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+
+                        disconnect_btn_area := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            enabled: root.channel_mode != "public";   // Only clickable if in secure mode
+                            clicked => { disconnect_channel(); }
+                        }
+                    }
+                    // // Transfer File Button (Metallic Gold)
+                    // Rectangle {
+                    //     width: 110px; height: 34px;
+                    //     border-radius: 8px;
+                    //     background: transfer_btn_area.has-hover ? #FFD700 : #B8860B;
+                    //     border-width: 1px;
+                    //     border-color: #E0B000;
+
+                    //     Text {
+                    //         text: "📁 Send File";
+                    //         color: #fff8dc; // soft ivory white for better contrast
+                    //         font-size: 14px;
+                    //         horizontal-alignment: center;
+                    //         vertical-alignment: center;
+                    //         width: parent.width;
+                    //         height: parent.height;
+                    //     }
+
+                    //     transfer_btn_area := TouchArea {
+                    //         width: parent.width;
+                    //         height: parent.height;
+                    //         clicked => { root.send_file_start(); }
+                    //     }
+                    // }
+                    // Settings Button (Purple)
+                    Rectangle {
+                        width: 110px; height: 34px;
+                        border-radius: 8px;
+                        background: settings_btn_area.has-hover ? #9370db : #6a5acd;
+                        border-width: 1px;
+                        border-color: #4b0082;
+
+                        Text {
+                            text: "⚙ Settings";
+                            color: white;
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+
+                        settings_btn_area := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            clicked => { root.show_welcome = true;; }
+                        }
+                    }
+                }
+
+                // --- Input row ---
+                HorizontalBox {
+                    spacing: 5px;
+
+                    messageinput := TextEdit {
+                        text <=> root.input_text;
+                        wrap: word-wrap;
+                        height: 60px;
+                        horizontal-stretch: 1;
+                        font-size: 20px;
+                        has-focus: true;
+                        placeholder-text: "Type here...";
+
+                        key-pressed(event) => {
+                            if (event.text == "\n" && !event.modifiers.shift) {
+                                if (root.input_text != "") { root.send_clicked(); }
+                                accept
+                            } else { reject }
+                        }
+                    }
+
+                    Timer {
+                        running: true;
+                        interval: 200ms;  // small delay after app loads
+                        triggered => { 
+                            messageinput.focus();
+                            self.running = false; 
+                        }
+                    }
+
+                    Button {
+                        text: "Send";
+                        enabled: root.input_text != "";
+                        clicked => { 
+                            root.send_clicked();
+                            messageinput.focus(); 
+                        }
+                    }
+                    Button {
+                        text: "Clear";
+                        clicked => { clearchatbox.show(); }
+                    }
+                }
+            }
+
+            // --- Settings button ---
+            // settings_btn := Rectangle {
+            //     x: 12px; y: 12px;
+            //     width: 34px; height: 34px;
+            //     border-radius: 17px;
+            //     background: btn_area.has-hover ? #353a43 : #2b2f36;
+            //     border-width: 1px; border-color: #3a3f48;
+
+            //     btn_area := TouchArea {
+            //         width: parent.width;
+            //         height: parent.height;
+            //         clicked => { root.show_welcome = true; }
+            //     }
+
+            //     Image {
+            //         source: @image-url("assets/settingsIcon.png");
+            //         width: 35px; height: 35px;
+            //         x: (parent.width - self.width) / 2;
+            //         y: (parent.height - self.height) / 2;
+            //     }
+            // }
+        }
+    }
+
+    // --- Popup ---
+    msgtoolongpopup := PopupWindow {
+        width: 500px;
+        height: 250px;
+
+        Rectangle {
+            width: 500px; min-height: 250px;
+            x: (((parent.width) / 2 ) - 50px);
+            y: (((parent.height) / 2 ) - 50px);
+            background: #00000066;
+            border-radius: 12px;
+
+            Text {
+                width: parent.width - 32px;
+                x: 16px; y: 16px;
+                text: root.popup_msg;
+                font-size: 24px;
+                color: white;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+
+        TouchArea {
+            width: 100%; height: 100%;
+            clicked => { msgtoolongpopup.close(); }
+        }
+    }
+
+    // --- Create or Join ---
+    createorjoinpopup := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close; 
+
+        // Dark transparent overlay
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080;
+
+            // Prevent clicks on the overlay from closing the popup
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { /* absorb clicks, do nothing */ }
+            }
+        }
+
+        // Centered dialog card
+        Rectangle {
+            width: 420px;
+            height: 280px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                spacing: 18px;
+                padding: 20px;
+
+                // Title
+                Text {
+                    text: "Create or Join a Channel";
+                    font-size: 22px;
+                    color: white;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                // Create Section
+                Button {
+                    text: "🛡 Create Channel";
+                    horizontal-stretch: 1;
+                    height: 40px;
+                    clicked => {
+                            root.create_channel();
+                            root.change_channel_mode("host");
+                            createorjoinpopup.close();
+                        }
+                }
+
+                // Divider
+                Rectangle {
+                    height: 1px;
+                    background: #444;
+                    width: parent.width;
+                    opacity: 0.6;
+                }
+
+                // Join Section
+                VerticalBox {
+                    spacing: 6px;
+
+                    Text {
+                        text: "Join with PIN:";
+                        font-size: 16px;
+                        color: #dddddd;
+                    }
+
+                    HorizontalBox {
+                        spacing: 8px;
+
+                        TextEdit {
+                            text <=> joining_PIN;
+                            placeholder-text: "Enter PIN…";
+                            horizontal-stretch: 1;
+                            height: 36px;
+                        }
+
+                        Button {
+                            text: "🔑 Join";
+                            height: 36px;
+                            clicked => { 
+                                root.join_channel(joining_PIN);
+                                createorjoinpopup.close();
+                            }
+                        }
+                    }
+                    // Close Button
+                    Button {
+                        text: "❌ Close";
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        clicked => { 
+                            root.channel_mode = "public";
+                            root.public_secure_helper = false;
+                            root.fix_the_bug_please();
+                            createorjoinpopup.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Show pin ---
+    showpin := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        // Dark transparent overlay
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080;
+        }
+
+        // Centered dialog card
+        Rectangle {
+            width: 420px;
+            height: 360px; // ↑ increased height to fit QR nicely
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                spacing: 16px;
+                padding: 20px;
+
+                Text {
+                    text: "Your Channel PIN:";
+                    font-size: 18px;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+
+                TextInput {
+                    text: root.host_PIN;
+                    read-only: true;
+                    horizontal-stretch: 1;
+                    height: 38px;
+                    font-size: 22px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    color: #00e0ff;
+                }
+
+                // Center QR code nicely with padding
+                Rectangle {
+                    height: 180px;
+                    background: transparent;
+
+                    Image {
+                        source: root.QR_code_image;
+                        width: 160px;
+                        height: 160px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                Button {
+                    text: "Close";
+                    horizontal-stretch: 1;
+                    clicked => { showpin.close(); }
+                }
+            }
+        }
+    }
+    clearchatbox := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        Rectangle {
+            width: 420px;
+            height: 200px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                spacing: 16px;
+                padding: 20px;
+
+                Text {
+                    text: "Are you sure you want to clear the chat box?";
+                    font-size: 20px;
+                    font-weight: 500;
+                    color: #e4e4e4;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalBox {
+                    spacing: 12px;
+
+                    Button {
+                        text: "✅ Confirm";
+                        horizontal-stretch: 1;
+                        height: 40px;
+                        clicked => {
+                            root.clear_chatbox();
+                            clearchatbox.close();
+                        }
+                    }
+                    Button {
+                        text: "❌ Cancel";
+                        horizontal-stretch: 1;
+                        height: 40px;
+                        clicked => { clearchatbox.close() }
+                    }
+                }
+            }
+        }
+    }
+
+    newversion := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        // Dark transparent background overlay
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080; // 👈 black with 50% transparency
+
+            // Centered dialog card
+            Rectangle {
+                width: 500px;          // a bit wider for text
+                height: 240px;         // a bit taller
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 16px;
+                background: #2c2f35;
+                border-width: 1px;
+                border-color: #3a3f48;
+
+                VerticalBox {
+                    spacing: 18px;
+                    padding: 20px;
+
+                    // Title text
+                    Text {
+                        text: "⚠️ Config file for an older version detected!";
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: white;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;       // 👈 allow multi-line text
+                    }
+
+                    Text {
+                        text: "Please restart LanChGo to continue with a fresh configuration.";
+                        font-size: 16px;
+                        color: #dddddd;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;       // 👈 wrap the smaller text too
+                    }
+
+                    // Exit button centered
+                    HorizontalBox {
+                        Rectangle { horizontal-stretch: 1; } // left spacer
+                        Button {
+                            text: "🚪 EXIT";
+                            horizontal-stretch: 0;
+                            width: 120px;
+                            height: 42px;
+                            clicked => { root.exit_app(); }
+                        }
+                        Rectangle { horizontal-stretch: 1; } // right spacer
+                    }
+                }
+            }
+        }
+    }
+    connectingpopup := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        Rectangle {
+            width: 300px; height: 150px;
+            x: (parent.width - self.width)/2;
+            y: (parent.height - self.height)/2;
+            border-radius: 12px;
+            background: #2c2f35;
+
+            VerticalBox {
+                spacing: 12px;
+                Text { text: "Connecting to secure channel..."; color: white; horizontal-alignment: center; }
+                Text { text: "🔄 Please wait"; color: #aaaaaa; horizontal-alignment: center; }
+            }
+        }
+    }
+    // --- Timer to clear temporary messages ---
+    hide_temp := Timer {
+        interval: 3s;
+        running: false;
+        triggered => {
+            root.temp_message = "";   // clear the banner text
+            self.running = false;     // stop after firing once
+        }
+    }
+    // // -- File Offer --
+    // fileofferpopup := PopupWindow {
+    //     width: parent.width;
+    //     height: parent.height;
+    //     close-policy: no-auto-close;
+
+    //     // Dark overlay
+    //     Rectangle {
+    //         width: parent.width;
+    //         height: parent.height;
+    //         background: #00000080;
+    //     }
+
+    //     // Centered card
+    //     Rectangle {
+    //         width: 420px;
+    //         height: 220px;
+    //         x: (parent.width - self.width) / 2;
+    //         y: (parent.height - self.height) / 2;
+    //         border-radius: 16px;
+    //         background: #2c2f35;
+    //         border-width: 1px;
+    //         border-color: #3a3f48;
+
+    //         VerticalBox {
+    //             spacing: 16px;
+    //             padding: 20px;
+
+    //             Text {
+    //                 text: "Incoming file bundle:";
+    //                 font-size: 18px;
+    //                 color: #e4e4e4;
+    //                 horizontal-alignment: center;
+    //             }
+
+    //             Text {
+    //                 text: root.file_offer_text;
+    //                 font-size: 16px;
+    //                 color: #c0e8ff;
+    //                 wrap: word-wrap;
+    //                 horizontal-alignment: center;
+    //             }
+
+    //             HorizontalBox {
+    //                 spacing: 12px;
+
+    //                 Button {
+    //                     text: "✅ Accept";
+    //                     horizontal-stretch: 1;
+    //                     height: 40px;
+    //                     clicked => {
+    //                         root.accept_file();
+    //                         root.file_offer_visible = false;
+    //                         fileofferpopup.close();
+    //                     }
+    //                 }
+
+    //                 Button {
+    //                     text: "❌ Deny";
+    //                     horizontal-stretch: 1;
+    //                     height: 40px;
+    //                     clicked => {
+    //                         root.deny_file();
+    //                         root.file_offer_visible = false;
+    //                         fileofferpopup.close();
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+}
