@@ -1,0 +1,29 @@
+# --- General ---
+.DS_Store
+Thumbs.db
+*.log
+
+# --- Android ---
+*.apk
+*.aab
+*.keystore
+*.jks
+/local.properties
+/.gradle/
+/build/
+/captures/
+/.idea/
+/*.iml
+
+# --- Rust / Cargo ---
+/target/
+**/*.rs.bk
+
+# --- Windows ---
+*.exe
+*.msi
+*.dll
+
+# --- Env / secrets ---
+.env
+.env.*
