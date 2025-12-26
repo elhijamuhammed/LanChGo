@@ -66,10 +66,10 @@ The compiled binary will be located in:
 windows/target/release/
 ```
 
-License
+## 📄 License
 This project is licensed under the MIT License.
-See the LICENSE file for details.
 
-Author
+## 👤 Author
 Developed by Muhammed Abu El-Hija
  
+
