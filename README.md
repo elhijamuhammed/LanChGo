@@ -56,7 +56,7 @@ cd windows
 cargo build --release
 ```
 
-### RUN
+### Run
 ```bash
 cargo run
 ```
@@ -72,4 +72,5 @@ This project is licensed under the MIT License.
 ## 👤 Author
 Developed by Muhammed Abu El-Hija
  
+
 
