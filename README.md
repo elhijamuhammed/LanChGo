@@ -16,6 +16,7 @@ This repository contains the **Windows implementation** of LanChGo.
 - End-to-end encrypted secure communication
 - Lightweight and fast
 - Built with Rust and Slint UI
+- Transfer files between devices
 
 ---
 
@@ -75,6 +76,7 @@ Developed by Muhammed Abu El-Hija
  ## 🌐 Website
 Official project website:  
 https://lanchgo.com
+
 
 
 
