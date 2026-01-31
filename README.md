@@ -77,6 +77,9 @@ Developed by Muhammed Abu El-Hija
 Official project website:  
 https://lanchgo.com
 
+## Contributing
+Feel free to open issues or PRs.  
+LanChGo is MIT-licensed and open to community contributions.
 
 
 
