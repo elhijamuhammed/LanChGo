@@ -53,7 +53,7 @@ This makes LanChGo suitable for private environments such as:
 
 ### Build
 ```bash
-cd windows
+cd Windows
 cargo build --release
 ```
 
@@ -64,7 +64,7 @@ cargo run
 
 The compiled binary will be located in:
 ```bash
-windows/target/release/
+Windows/target/release/
 ```
 
 ## 📄 License
@@ -80,6 +80,7 @@ https://lanchgo.com
 ## Contributing
 Feel free to open issues or PRs.  
 LanChGo is MIT-licensed and open to community contributions.
+
 
 
 
