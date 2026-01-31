@@ -1,0 +1,75 @@
+import { VerticalBox, HorizontalBox, TextEdit, ListView } from "std-widgets.slint";
+
+export component ChatPanel inherits Rectangle {
+    // ✅ inputs from AppWindow
+    in property <string> temp_message;
+    in property <[string]> messages;
+
+    background: #2c2f35;
+    border-radius: 8px;
+    height: 450px;
+        HorizontalLayout {
+            Rectangle { horizontal-stretch: 1; }   // left spacer
+
+            VerticalBox {                          // stack Slint logo and text together
+                Text {
+                    text: "© Muhammed Abu El-Hija 2025, All rights reserved";
+                    font-size: 16px;
+                    color: white;
+                    opacity: 25%;
+                    horizontal-alignment: center;  // center text inside its box
+                }
+            }
+
+            Rectangle { horizontal-stretch: 1; }   // right spacer
+        }
+        // Temporary banner for short-lived messages
+        if root.temp_message != "": Rectangle {
+            background: #444;
+            border-radius: 8px;
+            width: parent.width * 0.4;
+            height: 40px;
+            x: (parent.width - self.width) / 2;
+            y: 6px;
+            z: 100;
+            Text {
+                text: root.temp_message;
+                color: white;
+                font-size: 16px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+        }
+
+    ListView {
+        width: parent.width;
+        height: parent.height;
+
+        for m[i] in root.messages: Rectangle {
+            width: parent.width;
+            height: bubble.height + 8px;
+
+            bubble := Rectangle {
+                background: #3a3f48;
+                border-radius: 12px;
+                x: 10px;
+
+                width: min(parent.width * 0.85, msg.preferred-width + 20px);
+                height: msg.preferred-height + 16px;
+
+                msg := TextInput {
+                    text: m;
+                    read-only: true;
+                    color: white;
+                    font-size: 18px;
+                    wrap: word-wrap;
+                    single-line: false;
+                    x: 10px; y: 8px;
+                    width: parent.width - 20px;
+                }
+            }
+        }
+    }
+}

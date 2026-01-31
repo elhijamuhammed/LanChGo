@@ -1,0 +1,47 @@
+import { VerticalBox } from "std-widgets.slint";
+
+export component StatusBadge inherits Rectangle {
+
+    // Interface selection
+    in-out property <bool> show_welcome;
+    in-out property <[string]> interfaces;        // ["Wi-Fi|10.0.0.255", "Ethernet|192.168.1.255"]
+    in-out property <string> selected_interface;  // e.g. "Wi-Fi"
+    in-out property <string> channel_mode: "public";  // values: "public" | "host" | "joined" // default public
+    in-out property <string> broadcast_address;
+    in-out property <string> interface_status;
+
+    x: 12px;
+    y: 12px;
+    width: 200px;
+    height: 50px;
+    visible: !root.show_welcome; 
+
+    VerticalBox {
+        spacing: 2px;
+        padding: 6px;
+        Text {
+            text: "🔌 " + root.selected_interface;
+            font-size: 14px;
+            color: #00e1ff;
+        }
+        Text {
+            text: "📡 " + root.broadcast_address;
+            font-size: 14px;
+            color: #aaaaaa;
+        }
+        Text {
+            text: root.interface_status == "IfOperStatusUp" ? "✅ Online" : "❌ Offline";
+            font-size: 14px;
+            color: root.interface_status == "IfOperStatusUp" ? #00ff88 : #ff4444;
+        }
+        Text {
+            text: root.channel_mode == "host" ? "🔒 Secure Host"
+                : root.channel_mode == "joined" ? "📥 Joined"
+                : "🌍 Public";
+            font-size: 14px;
+            color: root.channel_mode == "host" ? #ffaa00
+                : root.channel_mode == "joined" ? #00ccff
+                : #bbbbbb;
+        }
+    }
+}

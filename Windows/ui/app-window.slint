@@ -1,0 +1,535 @@
+import { VerticalBox, HorizontalBox, LineEdit, Button, Switch, Slider, TextEdit, ListView } from "std-widgets.slint";
+import { ChatPanel } from "components/ChatPanel.slint";
+import { ChatInput } from "components/ChatInput.slint";
+import { HeaderBar } from "components/HeaderBar.slint";
+import { StatusBadge } from "components/StatusBadges.slint";
+import { WelcomeOverlay } from "components/WelcomeOverlay.slint";
+import { Toolbar } from "components/Toolbar.slint";
+import { FileTransferPanel } from "components/FileTransferPanel.slint";
+import { FileOfferItem } from "components/types.slint";
+
+export component AppWindow inherits Window {
+    width: 1000px;
+    height: 720px;
+    title: "LanChGo";
+    icon: @image-url("assets/LanChGo_icon.png");
+
+    // Reactive list provided by Rust (ModelRc)
+    in-out property <[string]> messages;
+    in-out property <string> input_text;
+    callback clear_chatbox();
+
+    // Interface selection
+    in-out property <bool> show_welcome;
+    in-out property <[string]> interfaces;        // ["Wi-Fi|10.0.0.255", "Ethernet|192.168.1.255"]
+    in-out property <string> selected_interface;  // e.g. "Wi-Fi"
+    callback interface_selected(string);
+    in-out property <bool> changed_networks; // if the network changes show
+    in-out property <string> broadcast_address;
+    in-out property <string> interface_status;
+    in-out property <int> ui_port;
+
+    // Security / channel status
+    in-out property <string> channel_mode: "public";  // values: "public" | "host" | "joined" // default public
+    callback change_channel_mode(string);
+    callback fix_the_bug_please(); // To fix a bug when you click close it still host
+    in-out property <bool> public_secure_helper: false;
+    callback create_channel();
+    in-out property <string> host_PIN;
+    in-out property <string> host_PIN_masked: "N/A";
+    callback generate_new_PIN();
+    callback disconnect_channel();
+    in property <image> QR_code_image;
+
+    // Joiner logic
+    in-out property <string> joining_PIN;
+    callback join_channel(string);
+    callback REQA();
+    callback show_connecting_popup();
+    callback hide_connecting_popup();
+    show_connecting_popup => { connectingpopup.show(); }
+    hide_connecting_popup => { connectingpopup.close(); }
+
+    // Temporary message callback
+    in-out property <string> temp_message: "";
+    callback show_temp_message(string);
+    show_temp_message(msg) => {
+        hide_temp.stop();           // 🛑 explicitly stop first
+        root.temp_message = "";     // ✅ clear previous message to force UI update
+        root.temp_message = msg;
+        hide_temp.start();          // ▶️ then start fresh
+    }
+    // Logic for the new version
+    callback show_new_version_popup();
+    callback exit_app();
+    show_new_version_popup => { newversion.show(); }
+
+    // Backend will call this to append a message safely on UI thread
+    callback append_message(string);
+
+    // popup API
+    in-out property <string> popup_msg: "Message too long, it will not be sent!\nClick to dismiss.";
+    callback send_clicked();
+    callback show_popupmsg();
+    show_popupmsg => { msgtoolongpopup.show(); }
+
+    // ---------------- File transfer ----------------
+    callback pick_files_send();
+    callback pick_download_folder();
+    callback open_download_folder();
+    in-out property <[FileOfferItem]> file_offer: [];
+    callback add_file_offer(FileOfferItem);
+    callback clear_file_transfer_panel();
+    callback download_offer(string);
+    in-out property <string> download_folder;
+    //callback debug_add_fake_offer_msg(); // debug
+
+    // bundling progress
+    in-out property <bool> bundle_in_progress: false;
+    in-out property <float> bundle_progress: 0.0;
+    in-out property <string> bundle_progress_text: "";
+
+    // version 
+    in-out property <string> show_version;
+
+    property <int> debug_offer_counter: 0;
+
+    
+    Rectangle {
+        background: blue;
+        border-width: 3px;
+        border-bottom-left-radius: 3px;
+        border-color: white;
+
+        // ---------- Main UI ----------
+        Rectangle {
+            background: #111318;
+
+            // Floating status badge
+            StatusBadge {
+                show_welcome: root.show_welcome;
+                interfaces: root.interfaces;
+                selected_interface: root.selected_interface;
+                channel_mode <=> root.channel_mode;
+                broadcast_address: root.broadcast_address;
+                interface_status: root.interface_status;
+            }
+
+            VerticalBox {
+                spacing: 12px;
+                // Title
+                HeaderBar { 
+                    show_version: root.show_version;
+                }
+
+                if root.show_welcome: WelcomeOverlay {
+                    width: parent.width;
+                    height: parent.height;
+                    changed_networks <=> root.changed_networks;
+                    selected_interface <=> root.selected_interface;
+                    interfaces <=> root.interfaces;
+                    show_welcome <=> root.show_welcome;
+                    interface_selected() => {
+                        root.interface_selected(root.selected_interface);
+                    }
+                }
+
+                // ======= MAIN ROW: Chat + File transfers =======
+                HorizontalBox {
+                    spacing: 12px;
+                    horizontal-stretch: 1;
+                    vertical-stretch: 1;
+
+                    ChatPanel {
+                        horizontal-stretch: 1;
+                        vertical-stretch: 1;
+                        messages: root.messages;
+                        temp_message: root.temp_message;
+                    }
+
+                    FileTransferPanel {
+                        vertical-stretch: 1;
+                        file_offer <=> root.file_offer;
+                        download_folder <=> root.download_folder;
+                        bundle_in_progress: root.bundle_in_progress;
+                        bundle_progress: root.bundle_progress;
+                        bundle_progress_text: root.bundle_progress_text;
+                        pick_files() => { root.pick_files_send(); }
+                        pick_download_folder => { root.pick_download_folder(); }
+                        open_download_folder() => { root.open_download_folder(); }
+                        clear_offers() => {root.clear_file_transfer_panel(); }
+                        download_offer(id) => { root.download_offer(id); }
+                    }
+                }
+
+                Toolbar {
+                    channel_mode <=> root.channel_mode;
+                    public_secure_helper <=> root.public_secure_helper;
+                    host_PIN <=> root.host_PIN;
+                    host_PIN_masked <=> root.host_PIN_masked;
+                    show_welcome <=> root.show_welcome;
+
+                    change_channel_mode(mode) => { root.change_channel_mode(mode); }
+                    generate_new_PIN() => { root.generate_new_PIN(); }
+                    disconnect_channel() => { root.disconnect_channel(); }
+
+                    // ✅ popup hooks
+                    request_open_create_or_join() => { createorjoinpopup.show(); }
+                    request_close_create_or_join() => { createorjoinpopup.close(); }
+                    request_show_pin() => { showpin.show(); }
+                }
+
+                //--- Input row ---
+                ChatInput {
+                    input_text <=> root.input_text;
+                    send_clicked() => { root.send_clicked(); }
+                    clear_clicked() => { clearchatbox.show(); }
+                    // add_fake_file_offer() => {
+                    //     root.debug_add_fake_offer_msg();
+                    // }
+                }
+            }
+        }
+    }
+    // --- Popup ---
+    msgtoolongpopup := PopupWindow {
+        width: 500px;
+        height: 250px;
+
+        Rectangle {
+            width: 500px; min-height: 250px;
+            x: (((parent.width) / 2 ) - 50px);
+            y: (((parent.height) / 2 ) - 50px);
+            background: #00000066;
+            border-radius: 12px;
+
+            Text {
+                width: parent.width - 32px;
+                x: 16px; y: 16px;
+                text: root.popup_msg;
+                font-size: 24px;
+                color: white;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+
+        TouchArea {
+            width: 100%; height: 100%;
+            clicked => { msgtoolongpopup.close(); }
+        }
+    }
+    // --- Create or Join ---
+    createorjoinpopup := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close; 
+
+        // Dark transparent overlay
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080;
+
+            // Prevent clicks on the overlay from closing the popup
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { /* absorb clicks, do nothing */ }
+            }
+        }
+
+        // Centered dialog card
+        Rectangle {
+            width: 420px;
+            height: 280px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                spacing: 18px;
+                padding: 20px;
+
+                // Title
+                Text {
+                    text: "Create or Join a Channel";
+                    font-size: 22px;
+                    color: white;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                // Create Section
+                Button {
+                    text: "🛡 Create Channel";
+                    horizontal-stretch: 1;
+                    height: 40px;
+                    clicked => {
+                            root.create_channel();
+                            root.change_channel_mode("host");
+                            createorjoinpopup.close();
+                        }
+                }
+
+                // Divider
+                Rectangle {
+                    height: 1px;
+                    background: #444;
+                    width: parent.width;
+                    opacity: 0.6;
+                }
+
+                // Join Section
+                VerticalBox {
+                    spacing: 6px;
+
+                    Text {
+                        text: "Join with PIN:";
+                        font-size: 16px;
+                        color: #dddddd;
+                    }
+
+                    HorizontalBox {
+                        spacing: 8px;
+
+                        TextEdit {
+                            text <=> joining_PIN;
+                            placeholder-text: "Enter PIN…";
+                            horizontal-stretch: 1;
+                            height: 36px;
+                        }
+
+                        Button {
+                            text: "🔑 Join";
+                            height: 36px;
+                            clicked => { 
+                                root.join_channel(joining_PIN);
+                                createorjoinpopup.close();
+                            }
+                        }
+                    }
+                    // Close Button
+                    Button {
+                        text: "❌ Close";
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        clicked => { 
+                            root.channel_mode = "public";
+                            root.public_secure_helper = false;
+                            root.fix_the_bug_please();
+                            createorjoinpopup.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // --- Show pin ---
+    showpin := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        // Dark transparent overlay
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080;
+        }
+
+        // Centered dialog card
+        Rectangle {
+            width: 420px;
+            height: 360px; // ↑ increased height to fit QR nicely
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                spacing: 16px;
+                padding: 20px;
+
+                Text {
+                    text: "Your Channel PIN:";
+                    font-size: 18px;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+
+                TextInput {
+                    text: root.host_PIN;
+                    read-only: true;
+                    horizontal-stretch: 1;
+                    height: 38px;
+                    font-size: 22px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    color: #00e0ff;
+                }
+
+                // Center QR code nicely with padding
+                Rectangle {
+                    height: 180px;
+                    background: transparent;
+
+                    Image {
+                        source: root.QR_code_image;
+                        width: 160px;
+                        height: 160px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                Button {
+                    text: "Close";
+                    horizontal-stretch: 1;
+                    clicked => { showpin.close(); }
+                }
+            }
+        }
+    }
+    clearchatbox := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        Rectangle {
+            width: 420px;
+            height: 200px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                spacing: 16px;
+                padding: 20px;
+
+                Text {
+                    text: "Are you sure you want to clear the chat box?";
+                    font-size: 20px;
+                    font-weight: 500;
+                    color: #e4e4e4;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalBox {
+                    spacing: 12px;
+
+                    Button {
+                        text: "✅ Confirm";
+                        horizontal-stretch: 1;
+                        height: 40px;
+                        clicked => {
+                            root.clear_chatbox();
+                            clearchatbox.close();
+                        }
+                    }
+                    Button {
+                        text: "❌ Cancel";
+                        horizontal-stretch: 1;
+                        height: 40px;
+                        clicked => { clearchatbox.close() }
+                    }
+                }
+            }
+        }
+    }
+    newversion := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        // Dark transparent background overlay
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080; // 👈 black with 50% transparency
+
+            // Centered dialog card
+            Rectangle {
+                width: 500px;          // a bit wider for text
+                height: 240px;         // a bit taller
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 16px;
+                background: #2c2f35;
+                border-width: 1px;
+                border-color: #3a3f48;
+
+                VerticalBox {
+                    spacing: 18px;
+                    padding: 20px;
+
+                    // Title text
+                    Text {
+                        text: "⚠️ Config file for an older version detected!";
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: white;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;       // 👈 allow multi-line text
+                    }
+
+                    Text {
+                        text: "Please restart LanChGo to continue with a fresh configuration.";
+                        font-size: 16px;
+                        color: #dddddd;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;       // 👈 wrap the smaller text too
+                    }
+
+                    // Exit button centered
+                    HorizontalBox {
+                        Rectangle { horizontal-stretch: 1; } // left spacer
+                        Button {
+                            text: "🚪 EXIT";
+                            horizontal-stretch: 0;
+                            width: 120px;
+                            height: 42px;
+                            clicked => { root.exit_app(); }
+                        }
+                        Rectangle { horizontal-stretch: 1; } // right spacer
+                    }
+                }
+            }
+        }
+    }
+    connectingpopup := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        Rectangle {
+            width: 300px; height: 150px;
+            x: (parent.width - self.width)/2;
+            y: (parent.height - self.height)/2;
+            border-radius: 12px;
+            background: #2c2f35;
+
+            VerticalBox {
+                spacing: 12px;
+                Text { text: "Connecting to secure channel..."; color: white; horizontal-alignment: center; }
+                Text { text: "🔄 Please wait"; color: #aaaaaa; horizontal-alignment: center; }
+            }
+        }
+    }
+    // --- Timer to clear temporary messages ---
+    hide_temp := Timer {
+        interval: 3s;
+        running: false;
+        triggered => {
+            root.temp_message = "";   // clear the banner text
+            self.running = false;     // stop after firing once
+        }
+    }
+}

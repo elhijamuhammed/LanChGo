@@ -1,0 +1,293 @@
+// components/FileTransferPanel.slint
+import { VerticalBox, HorizontalBox, ListView } from "std-widgets.slint";
+import { FileOfferItem } from "types.slint";
+
+export component FileTransferPanel inherits Rectangle {
+    // -------- Data --------
+    in-out property <[FileOfferItem]> file_offer;
+    in-out property <string> download_folder;
+
+    // -------- Bundling Progress ----------
+    // (bottom status bar)
+    in-out property <bool> bundle_in_progress: false;
+    in-out property <float> bundle_progress: 0.0; // 0.0..1.0
+    in-out property <string> bundle_progress_text: "";
+
+    // -------- Actions (handled by AppWindow / Rust) --------
+    callback pick_files();
+    callback pick_download_folder();
+    callback open_download_folder();
+    callback download_offer(string);
+    callback clear_offers();
+
+    // -------- Layout / styling --------
+    width: 260px;
+    vertical-stretch: 1;
+    background: #1a1d23;
+    border-width: 1px;
+    border-color: #2f3640;
+    border-radius: 12px;
+
+    VerticalBox {
+        padding: 10px;
+        spacing: 8px;
+        horizontal-stretch: 1;
+        vertical-stretch: 1;
+
+        // ===== Header =====
+        HorizontalBox {
+            spacing: 8px;
+
+            Text {
+                text: "📦 File Transfers";
+                color: white;
+                font-size: 16px;
+                horizontal-stretch: 1;
+            }
+
+            Rectangle {
+                width: 70px;
+                height: 24px;
+                border-radius: 7px;
+                opacity: file_offer.length > 0 ? 1 : 0.45;
+                background: clear_area.has-hover ? #ff5a5a : #d64545;
+
+                Text {
+                    text: "🧹 Clear";
+                    color: white;
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+                }
+
+                clear_area := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        if (file_offer.length > 0) { clear_offers(); }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: #2a2f38;
+            opacity: 0.6;
+        }
+
+        // ===== Action buttons =====
+        HorizontalBox {
+            spacing: 8px;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 32px;
+                border-radius: 8px;
+                background: files_area.has-hover ? #2b7bff : #1e5fd6;
+
+                Text {
+                    text: "📄 Send";
+                    color: white;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+                }
+
+                files_area := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => pick_files();
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 32px;
+                border-radius: 6px;
+                background: save_area.has-hover ? #ffb347 : #d9942f;
+
+                Text {
+                    text: "💾 Save to…";
+                    color: #1a1a1a;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+                }
+
+                save_area := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => pick_download_folder();
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 32px;
+                border-radius: 8px;
+                opacity: download_folder != "" ? 1 : 0.45;
+                background: open_area.has-hover ? #2a2f38 : #20242c;
+
+                Text {
+                    text: "📂 Open";
+                    color: white;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+                }
+
+                open_area := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        if (download_folder != "") { open_download_folder(); }
+                    }
+                }
+            }
+        }
+
+        // ===== Offers list + Bottom bundling bar =====
+        Rectangle {
+            horizontal-stretch: 1;
+            vertical-stretch: 1;   // ✅ IMPORTANT: take remaining height
+            background: #12151a;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: #2a2f38;
+
+            VerticalBox {
+                padding: 0px;
+                spacing: 0px;
+                horizontal-stretch: 1;
+                vertical-stretch: 1;
+
+                // ✅ Scroll viewport that fills available height
+                Flickable {
+                    horizontal-stretch: 1;
+                    vertical-stretch: 1;
+                    //clip: true;
+
+                    // Empty state (fills viewport)
+                    Text {
+                        visible: file_offer.length == 0;
+                        text: "No offers yet";
+                        color: #9aa3ad;
+                        font-size: 13px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+
+                    // Offers list fills viewport (top aligned)
+                    ListView {
+                        visible: file_offer.length > 0;
+                        width: parent.width;
+                        height: parent.height;
+
+                        for offer in file_offer: Rectangle {
+                            width: parent.width;
+                            height: 56px;
+                            background: row_area.has-hover ? #1d2230 : transparent;
+
+                            HorizontalBox {
+                                padding: 10px;
+                                spacing: 10px;
+
+                                VerticalBox {
+                                    spacing: 2px;
+                                    horizontal-stretch: 1;
+
+                                    Text {
+                                        text: offer.name;
+                                        color: white;
+                                        font-size: 14px;
+                                    }
+
+                                    Text {
+                                        text: offer.size_text;
+                                        color: #9aa3ad;
+                                        font-size: 12px;
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 34px;
+                                    height: 34px;
+                                    border-radius: 8px;
+                                    background: download_area.has-hover ? #3a8dff : #2b7bff;
+
+                                    Text {
+                                        text: "⬇";
+                                        color: white;
+                                        font-size: 14px;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        width: parent.width;
+                                        height: parent.height;
+                                    }
+
+                                    row_area := TouchArea { width: parent.width; height: parent.height; }
+                                    download_area := TouchArea {
+                                        z: 10;
+                                        width: parent.width;
+                                        height: parent.height;
+                                        clicked => download_offer(offer.offer_id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ✅ Bottom bundling progress bar (always at bottom)
+                Rectangle {
+                    visible: bundle_in_progress;
+                    height: 44px;
+                    horizontal-stretch: 1;
+                    background: #0f1217;
+                    border-width: 1px;
+                    border-color: #2a2f38;
+
+                    HorizontalBox {
+                        padding: 10px;
+                        spacing: 10px;
+
+                        Text {
+                            text: bundle_progress_text;
+                            color: white;
+                            font-size: 12px;
+                            horizontal-stretch: 1;
+
+                            wrap: word-wrap;   // ✅ allow 2 lines
+                            max-height: 28px;  // ✅ clamp to ~2 lines
+                        }
+
+                        Rectangle {
+                            width: 80px;
+                            height: 6px;
+                            border-radius: 6px;
+                            background: #20242c;
+
+                            Rectangle {
+                                width: parent.width * bundle_progress; // 0..1
+                                height: parent.height;
+                                border-radius: 6px;
+                                background: #2b7bff;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

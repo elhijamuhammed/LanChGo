@@ -1,0 +1,60 @@
+import { HorizontalBox, Button, TextEdit } from "std-widgets.slint";
+
+export component ChatInput inherits HorizontalBox {
+    spacing: 5px;
+
+    // Parent binds these
+    in-out property <string> input_text;
+    callback send_clicked();
+    callback clear_clicked();
+    //callback add_fake_file_offer();
+
+    messageinput := TextEdit {
+        text <=> root.input_text;
+        wrap: word-wrap;
+        height: 60px;
+        horizontal-stretch: 1;
+        font-size: 20px;
+        //has-focus: true;
+        placeholder-text: "Type here...";
+
+        key-pressed(event) => {
+            if (event.text == "\n" && !event.modifiers.shift) {
+                if (root.input_text != "") { root.send_clicked(); }
+                accept
+            } else {
+                reject
+            }
+        }
+    }
+
+    Timer {
+        running: true;
+        interval: 200ms;
+        triggered => {
+            messageinput.focus();
+            self.running = false;
+        }
+    }
+
+    Button {
+        text: "Send";
+        enabled: root.input_text != "";
+        clicked => {
+            root.send_clicked();
+            messageinput.focus();
+        }
+    }
+
+    Button {
+        text: "Clear";
+        clicked => { root.clear_clicked(); }
+    }
+
+    // 🧪 DEBUG BUTTON
+    // Button {
+    //     text: "➕ Fake File";
+    //     clicked => add_fake_file_offer();
+    // }
+
+}
