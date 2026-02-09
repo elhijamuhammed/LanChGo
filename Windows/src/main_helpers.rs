@@ -8,12 +8,16 @@ use ipconfig;
 use slint::VecModel;
 use std::fs::File;
 use std::io;
+use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use slint::ComponentHandle;
+use slint::{ComponentHandle, SharedString, Model};
+use rodio::{Decoder, OutputStreamBuilder, Sink};
+
+const NUTELLA_BYTES: &[u8] = include_bytes!("../nutella.ogg");
 
 /// To fix a bug that is not fixable
 pub fn force_switch_to_public(app: &AppWindow, channel_mode: &Arc<Mutex<String>>) {
@@ -241,10 +245,7 @@ pub fn bind_single_port_socket(port: u16) -> io::Result<Arc<UdpSocket>> {
     Ok(Arc::new(sock))
 }
 // to clear up the registry of sent file offers bundles in the temp
-pub fn cleanup_file_offers(
-    offer_registry: &Arc<Mutex<file_transfer_protocol::OfferRegistry>>,
-    file_offer_model: Option<&Rc<VecModel<FileOfferItem>>>,
-) {
+pub fn cleanup_file_offers( offer_registry: &Arc<Mutex<file_transfer_protocol::OfferRegistry>>, file_offer_model: Option<&Rc<VecModel<FileOfferItem>>>, ) {
     {
         let mut reg = offer_registry.lock().unwrap();
         file_transfer_protocol::cleanup_temp_offers(&mut reg);
@@ -256,4 +257,46 @@ pub fn cleanup_file_offers(
     }
 
     println!("[FOFT][CLEANUP] temp offers deleted + registry cleared");
+}
+// to show download progress 
+pub fn progress_bucket_3(done: u64, total: u64) -> u32 {
+    if total == 0 { return 0; }
+    let percent = ((done.saturating_mul(100)) / total) as u32;
+    if percent >= 100 { 100 } else { (percent / 3) * 3 }
+}
+
+pub fn set_offer_progress_text(app: &AppWindow, offer_id: &str, downloading: bool, text: &str) {
+    let model_rc = app.get_file_offer();
+
+    if let Some(vec) = model_rc.as_any().downcast_ref::<VecModel<FileOfferItem>>() {
+        for i in 0..vec.row_count() {
+            if let Some(mut row) = vec.row_data(i) {
+                if row.offer_id.as_str() == offer_id {
+                    row.is_downloading = downloading;
+                    row.progress_text = SharedString::from(text);
+                    vec.set_row_data(i, row);
+                    break;
+                }
+            }
+        }
+    }
+}
+
+pub fn play_nutella_sound() {
+    if let Ok(builder) = OutputStreamBuilder::from_default_device() {
+        if let Ok(stream) = builder.open_stream() {
+            let mixer = stream.mixer();
+            let sink = Sink::connect_new(&mixer);
+            let cursor = Cursor::new(NUTELLA_BYTES);
+            if let Ok(source) = Decoder::new(cursor) {
+                sink.append(source);
+                sink.detach();
+            }
+
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                drop(stream);
+            });
+        }
+    }
 }

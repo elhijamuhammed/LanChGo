@@ -1,0 +1,23 @@
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\target\debug\build\SLINT_DEFAULT_STYLE.txt
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\ChatInput.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\ChatPanel.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\FileTransferPanel.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\HeaderBar.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\StatusBadges.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\Toolbar.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\WelcomeOverlay.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\components\types.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui/app-window.slint
+cargo:rerun-if-changed=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\ui\assets\LanChGo_icon.png
+cargo:rerun-if-env-changed=SLINT_STYLE
+cargo:rerun-if-env-changed=SLINT_FONT_SIZES
+cargo:rerun-if-env-changed=SLINT_SCALE_FACTOR
+cargo:rerun-if-env-changed=SLINT_ASSET_SECTION
+cargo:rerun-if-env-changed=SLINT_EMBED_RESOURCES
+cargo:rerun-if-env-changed=SLINT_EMIT_DEBUG_INFO
+cargo:rerun-if-env-changed=SLINT_LIVE_PREVIEW
+cargo:rustc-env=SLINT_INCLUDE_GENERATED=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\target\debug\build\slint-rust-template-354da6cc1180f562\out\app-window.rs
+Microsoft (R) Windows (R) Resource Compiler Version 10.0.10011.16384
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+cargo:rustc-link-arg-bins=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\target\debug\build\slint-rust-template-354da6cc1180f562\out\app_icon.lib

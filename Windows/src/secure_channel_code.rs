@@ -344,7 +344,6 @@ pub fn play_ping_sound() {
                 sink.append(source);
                 sink.detach();
             }
-
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_secs(2));
                 drop(stream);

@@ -11,6 +11,7 @@ mod udp_receiver;
 mod tcp_file_server;
 mod tcp_file_client;
 
+use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
 use std::error::Error;
 use std::io;
@@ -25,13 +26,13 @@ use bincode;
 
 use crate::classes::{BroadcastState, Config};
 use crate::phone_protocol::build_MANCH;
-use crate::file_transfer_protocol::{FileOffer, RemoteOfferRegistry};
+use crate::file_transfer_protocol::{ RemoteWindowsOfferRegistry, RemoteMobileOfferRegistry};
 use crate::udp_receiver::start_udp_receiver;
 use crate::main_helpers::{
     bind_single_port_socket, clear_chatbox, cleanup_file_offers, collect_interfaces,
     force_switch_to_public, get_broadcast_address, get_broadcast_for_name, get_gateway_for_adapter,
     load_or_create_config, match_getifadd_ipconfig, save_config, set_channel_mode_only,
-    update_ui_PIN,};
+    update_ui_PIN };
 
 slint::include_modules!();
 
@@ -47,38 +48,6 @@ fn broadcast_the_msg(sock: &UdpSocket, state: &BroadcastState, msg: &[u8]) -> io
     }
     sock.send_to(msg, target)?;
     Ok(())
-}
-
-// ===================== debugger =====================
-pub fn debug_print_foft_packet(packet: &[u8]) {
-    if packet.len() >= 4 && &packet[..4] == b"FOFT" {
-        let payload = &packet[4..];
-
-        match bincode::serde::decode_from_slice::<FileOffer, _>(
-            payload,
-            bincode::config::standard(),
-        ) {
-            Ok((offer, _)) => {
-                println!("[FOFT][DEBUG] Built offer:");
-                println!("  id: {:?}", offer.offer_id);
-                println!("  name: {}", offer.name);
-                println!("  size: {} bytes", offer.size);
-                println!("  kind: {:?}", offer.kind);
-                println!("  protocol_version: {}", offer.protocol_version);
-                println!("  packet_len: {}", packet.len());
-                println!("  tcp_port: {}", offer.tcp_port);
-            }
-            Err(e) => {
-                println!("[FOFT][DEBUG] Failed to decode payload: {}", e);
-            }
-        }
-    } else {
-        println!(
-            "[FOFT][DEBUG] Not a FOFT packet (len={}, head={:?})",
-            packet.len(),
-            &packet.get(..4)
-        );
-    }
 }
 
 // ===================== main =====================
@@ -127,7 +96,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         Arc::clone(&offer_registry),
         file_transfer_protocol::DEFAULT_TCP_PORT,
     )?; // <-- starts idle listener thread
-    let remote_offers = Arc::new(Mutex::new(RemoteOfferRegistry::new()));
+    let remote_windows_offers: Arc<Mutex<RemoteWindowsOfferRegistry>> = Arc::new(Mutex::new(RemoteWindowsOfferRegistry::new()));
+    let remote_mobile_offers: Arc<Mutex<RemoteMobileOfferRegistry>> = Arc::new(Mutex::new(RemoteMobileOfferRegistry::new()));
     // for pushing file offers in the Vector
     {
         let file_offer_model = file_offer_model.clone();
@@ -251,7 +221,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Arc::clone(&running),
         app.as_weak(),
         Arc::clone(&channel_mode),
-        Arc::clone(&remote_offers),
+        Arc::clone(&remote_windows_offers),
     );
 
     // ===================== Send button =====================
@@ -593,11 +563,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             match build {
                 file_transfer_protocol::BuildResult::Ready(packet) => {
-                    println!(
-                        "[FOFT][DEBUG] registry size = {}",
-                        offer_registry.lock().unwrap().len()
-                    );
-                    debug_print_foft_packet(&packet);
+                    //println!( "[FOFT][DEBUG] registry size = {}", offer_registry.lock().unwrap().len() );
+                    //debug_print_foft_packet(&packet);
 
                     if let Err(_e) = broadcast_the_msg(&s, &st, &packet) {
                         app.invoke_show_popupmsg();
@@ -687,7 +654,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                         reg.insert(offer_id, local);
                                     }
 
-                                    debug_print_foft_packet(&packet);
+                                    //debug_print_foft_packet(&packet);
                                     let ok = broadcast_the_msg(&s2, &st2, &packet).is_ok();
 
                                     let weak_ui = weak2.clone();
@@ -786,31 +753,47 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         });
     }
-
+    // download thread cap to two
+    let download_semaphore: Arc<Semaphore<()>> = Arc::new(Semaphore::new(2, ()));
     // clicking download on a file transfer offer
     {
-        let remote_offers = Arc::clone(&remote_offers);
+        let remote_windows_offers = Arc::clone(&remote_windows_offers);
         let config = Arc::clone(&config);
-        let weak = app.as_weak(); // ✅ capture once here
+        let weak = app.as_weak();
+        let sem = Arc::clone(&download_semaphore);
 
         app.on_download_offer(move |offer_id_hex| {
+        // Try to take a slot (non-blocking)
+            let permit = match sem.try_access() {
+                Ok(guard) => guard, // SemaphoreGuard<()> held while download runs :contentReference[oaicite:3]{index=3}
+                Err(_e) => {
+                    let weak_ui = weak.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(app) = weak_ui.upgrade() {
+                            app.invoke_show_temp_message("⚠️ Maximum 2 downloads at a time".into());
+                        }
+                    });
+                    return;
+                }
+            };
+
             // 1) Lookup sender_ip + offer from remote_offers
             let (sender_ip, offer) = {
-                let reg = remote_offers.lock().unwrap();
-                match reg.get(offer_id_hex.as_str()) {
-                    Some(v) => v.clone(),
-                    None => {
-                        println!("[DOWNLOAD] Offer not found");
-                        return;
-                    }
-                }
+                // 1️⃣ try Windows offers first
+                if let Some(v) = remote_windows_offers.lock().unwrap().get(offer_id_hex.as_str()).cloned()
+                { v }
+                else if let Some(v) = remote_mobile_offers.lock().unwrap().get(offer_id_hex.as_str()).cloned()
+                { v }
+                else { return; 
+                } 
             };
 
             // 2) Convert offer_id_hex -> [u8;16]
             let offer_id = match file_transfer_protocol::hex_to_offer_id(offer_id_hex.as_str()) {
                 Some(id) => id,
                 None => {
-                    println!("[DOWNLOAD] bad offer id hex: {}", offer_id_hex);
+                    //println!("[DOWNLOAD] bad offer id hex: {}", offer_id_hex);
+                    // permit drops here automatically
                     return;
                 }
             };
@@ -827,45 +810,76 @@ fn main() -> Result<(), Box<dyn Error>> {
                 offer_id_hex.as_str(),
             );
 
-            println!(
-                "[DOWNLOAD] Requested {} from {}:{} → {}",
-                offer.name,
-                sender_ip,
-                offer.tcp_port,
-                save_path.display()
-            );
+            //println!( "[DOWNLOAD] Requested {} from {}:{} → {}", offer.name, sender_ip, offer.tcp_port, save_path.display() );
 
             // 4) Spawn download thread
-            let weak_ui = weak.clone();
+            let weak_ui_thread = weak.clone();
+            let offer_id_str_thread = offer_id_hex.to_string();
+
             std::thread::spawn(move || {
+                // Hold permit for entire download lifetime (IMPORTANT)
+                let _permit = permit;
+
+                let mut last_bucket: u32 = 999;
+
+                // --- 0% immediately ---
+                {
+                    let weak_ui0 = weak_ui_thread.clone();
+                    let offer_id0 = offer_id_str_thread.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(app) = weak_ui0.upgrade() {
+                            main_helpers::set_offer_progress_text(&app, &offer_id0, true, "0%");
+                        }
+                    });
+                }
+
+                // Clone for progress closure
+                let weak_ui_progress = weak_ui_thread.clone();
+                let offer_id_progress = offer_id_str_thread.clone();
+
                 let res = crate::tcp_file_client::download_offer(
                     sender_ip,
                     offer.tcp_port,
                     offer_id,
                     save_path,
-                    |_done, _total| {
-                        // later: update UI progress
+                    move |done, total| {
+                        let bucket = main_helpers::progress_bucket_3(done, total);
+                        if bucket == last_bucket { return; }
+                        last_bucket = bucket;
+
+                        let text = format!("{}%", bucket);
+
+                        let weak_ui = weak_ui_progress.clone();
+                        let offer_id = offer_id_progress.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(app) = weak_ui.upgrade() {
+                                main_helpers::set_offer_progress_text(&app, &offer_id, true, &text);
+                            }
+                        });
                     },
                 );
 
+                // Finish/error UI
+                let weak_ui_done = weak_ui_thread.clone();
+                let offer_id_done = offer_id_str_thread.clone();
+
                 let _ = slint::invoke_from_event_loop(move || {
-                    if let Some(app) = weak_ui.upgrade() {
+                    if let Some(app) = weak_ui_done.upgrade() {
                         match res {
                             Ok(_) => {
+                                main_helpers::set_offer_progress_text(&app, &offer_id_done, false, "100%");
+                                secure_channel_code::play_ping_sound();
                                 app.invoke_show_temp_message("✅ Download complete".into());
                             }
                             Err(e) => {
-                                // 👇 print to console
-                                println!("[DOWNLOAD ERROR] {}", e);
-
-                                // 👇 show in UI
-                                app.invoke_show_temp_message(
-                                    format!("❌ Download failed: {}", e).into()
-                                );
+                                main_helpers::set_offer_progress_text(&app, &offer_id_done, false, "ERR");
+                                app.invoke_show_temp_message(format!("❌ Download failed: {}", e).into());
                             }
                         }
                     }
                 });
+
+                // when thread ends, _permit is dropped -> slot released
             });
         });
     }

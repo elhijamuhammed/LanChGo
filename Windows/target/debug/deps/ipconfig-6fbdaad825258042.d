@@ -1,0 +1,10 @@
+C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\target\debug\deps\ipconfig-6fbdaad825258042.d: C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\lib.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\adapter.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\bindings\mod.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\bindings\win64.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\computer.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\error.rs
+
+C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\target\debug\deps\libipconfig-6fbdaad825258042.rmeta: C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\lib.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\adapter.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\bindings\mod.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\bindings\win64.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\computer.rs C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\error.rs
+
+C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\lib.rs:
+C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\adapter.rs:
+C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\bindings\mod.rs:
+C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\bindings\win64.rs:
+C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\computer.rs:
+C:\Users\mslap\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\ipconfig-0.3.2\src\error.rs:

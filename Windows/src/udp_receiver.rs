@@ -1,6 +1,7 @@
 use crate::AppWindow;
 use crate::FileOfferItem;
-use crate::file_transfer_protocol::RemoteOfferRegistry;
+use crate::file_transfer_protocol::RemoteWindowsOfferRegistry;
+use crate::main_helpers;
 use crate::phone_protocol;
 use crate::secure_channel_code;
 //use crate::file_transfer_protocol; // optional (you call it via crate::file_transfer_protocol::... but this is still fine)
@@ -14,7 +15,7 @@ use std::thread::{self, JoinHandle};
 use crate::main_helpers::get_local_ipv4;
 
 pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_weak: slint::Weak<AppWindow>, 
-    channel_mode: Arc<Mutex<String>>, remote_offers: Arc<Mutex<RemoteOfferRegistry>>,) -> JoinHandle<()> {
+    channel_mode: Arc<Mutex<String>>, remote_offers: Arc<Mutex<RemoteWindowsOfferRegistry>>,) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut buf = [0u8; 2048];
         let my_ip = get_local_ipv4();
@@ -65,6 +66,8 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                     if let Some(app) = weak.upgrade() {
                                         if decrypted.eq_ignore_ascii_case("ping") {
                                             secure_channel_code::play_ping_sound();
+                                        } else if decrypted.to_ascii_lowercase().contains("nutella") {
+                                            main_helpers::play_nutella_sound();
                                         }
                                         if !decrypted.eq_ignore_ascii_case("/exit")
                                             || !decrypted
@@ -108,6 +111,8 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                             if let Some(app) = weak.upgrade() {
                                                 if plain.eq_ignore_ascii_case("ping") {
                                                     secure_channel_code::play_ping_sound();
+                                                } else if plain.to_ascii_lowercase().contains("nutella") {
+                                                    main_helpers::play_nutella_sound();
                                                 }
                                                 if !plain.eq_ignore_ascii_case("/exit")
                                                     && !plain.eq_ignore_ascii_case(
@@ -178,41 +183,77 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                     // ─── Public Mode ──────────────────────────────────────────────────────
                     if mode == "public" {
                         // 1) Special handling for FOFR
-                            // 🔍 Debug handling for FOFT (File Offer)
                         if msg_bytes.len() >= 4 && &msg_bytes[..4] == b"FOFT" {
                             if let Some(offer) = crate::file_transfer_protocol::decode_foft(msg_bytes) {
-                                // build UI strings outside the UI closure
-                                let id_hex = crate::file_transfer_protocol::offer_id_to_hex(&offer.offer_id);
-                                let sender_ip = _from.ip(); // ✅ sender IP comes from recv_from
-                                // ✅ store offer + sender for later download clicks
+                                let id_hex =
+                                    crate::file_transfer_protocol::offer_id_to_hex(&offer.offer_id);
+                                let sender_ip = _from.ip();
+
                                 {
                                     let mut reg = remote_offers.lock().unwrap();
                                     reg.insert(id_hex.clone(), (sender_ip, offer.clone()));
                                 }
-                                let weak = ui_weak.clone();
-                                // build ui strings
-                                let max_chars = 20;
-                                let display_name: String = if offer.name.chars().count() <= max_chars {
-                                    offer.name.clone()
-                                } else {
-                                    let mut s: String = offer.name.chars()
-                                        .take(max_chars.saturating_sub(1))
-                                        .collect();
-                                    s.push('…');
-                                    s
-                                };
 
-                                let size_text = crate::file_transfer_protocol::human_size(offer.size);
+                                let weak = ui_weak.clone();
+
+                                // ✅ truncate using helper
+                                let display_name =
+                                    crate::file_transfer_protocol::truncate_name(&offer.name, 16);
+
+                                let size_text =
+                                    crate::file_transfer_protocol::human_size(offer.size);
 
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(app) = weak.upgrade() {
                                         let item = FileOfferItem {
                                             offer_id: id_hex.into(),
-                                            name: display_name.into(),          // ✅ use truncated name
+                                            name: display_name.into(),
                                             size_text: size_text.into(),
+                                            is_downloading: false,
+                                            progress_text: "".into(),
                                         };
 
                                         app.invoke_add_file_offer(item);
+                                    }
+                                })
+                                .ok();
+                            }
+
+                            continue;
+                        }
+
+                        if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MFOFT" {
+                            let payload = &msg_bytes[5..];
+
+                            if let Some((offer, id_hex)) = crate::file_transfer_protocol::decode_mfoft(payload) {
+                                let sender_ip = _from.ip();
+
+                                let is_new = crate::file_transfer_protocol::register_remote_offer(
+                                    &remote_offers,
+                                    sender_ip,
+                                    id_hex.clone(),
+                                    offer.clone(),
+                                );
+
+                                if !is_new {
+                                    continue; // duplicate MFOFT, don't spam UI
+                                }
+
+                                let weak = ui_weak.clone();
+                                let display_name =
+                                    crate::file_transfer_protocol::truncate_name(&offer.name, 16);
+                                let size_text =
+                                    crate::file_transfer_protocol::human_size(offer.size);
+
+                                slint::invoke_from_event_loop(move || {
+                                    if let Some(app) = weak.upgrade() {
+                                        app.invoke_add_file_offer(FileOfferItem {
+                                            offer_id: id_hex.into(),
+                                            name: display_name.into(),
+                                            size_text: size_text.into(),
+                                            is_downloading: false,
+                                            progress_text: "".into(),
+                                        });
                                     }
                                 })
                                 .ok();
@@ -225,6 +266,8 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                         if let Ok(msg) = String::from_utf8(msg_bytes.to_vec()) {
                             if msg.eq_ignore_ascii_case("ping") {
                                 secure_channel_code::play_ping_sound();
+                            } else if msg.to_ascii_lowercase().contains("nutella") {
+                                main_helpers::play_nutella_sound();
                             }
                             if !msg.eq_ignore_ascii_case("/exit")
                                 && !msg.eq_ignore_ascii_case("/clear")

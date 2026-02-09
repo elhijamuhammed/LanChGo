@@ -10,7 +10,7 @@ pub const DEFAULT_TCP_PORT: u16 = 3001;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OfferKind {
     SingleFile,
-    Folder,
+    //Folder, removed feature
     ZipBundle,
 }
 
@@ -63,7 +63,8 @@ pub enum BuildResult {
 }
 
 pub type OfferRegistry = HashMap<[u8; 16], LocalFileOffer>;
-pub type RemoteOfferRegistry = HashMap<String, (IpAddr, crate::file_transfer_protocol::FileOffer)>;
+pub type RemoteWindowsOfferRegistry = HashMap<String, (IpAddr, crate::file_transfer_protocol::FileOffer)>; // for the FOFT
+pub type RemoteMobileOfferRegistry = HashMap<String, (IpAddr, FileOffer)>; // for MFOFT
 static ACTIVE_BUNDLES: AtomicUsize = AtomicUsize::new(0);
 const MAX_BUNDLES: usize = 2;
 
@@ -184,7 +185,6 @@ pub fn decode_foft(bytes: &[u8]) -> Option<FileOffer> {
     if offer.protocol_version != FILE_PROTOCOL_VERSION {
         return None;
     }
-
     Some(offer)
 }
 
@@ -392,4 +392,73 @@ pub fn hex_to_offer_id(hex: &str) -> Option<[u8; 16]> {
         out[i] = u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16).ok()?;
     }
     Some(out)
+}
+
+// ─────────────────────────────────────────────────────────────
+// Mobile (Flutter) file-offer decoder (MFOFT)
+// ─────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+struct MobileFileOfferJson {
+    #[serde(rename = "offer_id")]
+    offer_id_hex: String,
+    name: String,
+    size: u64,
+    kind: String,
+    #[serde(rename = "protocol_version")]
+    protocol_version: u8,
+    #[serde(rename = "tcp_port")]
+    tcp_port: u16,
+}
+
+pub fn decode_mfoft(payload: &[u8]) -> Option<(FileOffer, String)> {
+    let m: MobileFileOfferJson = serde_json::from_slice(payload).ok()?;
+
+    // version guard
+    if m.protocol_version != FILE_PROTOCOL_VERSION {
+        return None;
+    }
+
+    // currently mobile only supports single file
+    if m.kind != "SingleFile" {
+        return None;
+    }
+
+    let offer_id = hex_to_offer_id(&m.offer_id_hex)?;
+
+    let offer = FileOffer {
+        offer_id,
+        name: m.name,
+        size: m.size,
+        kind: OfferKind::SingleFile,
+        protocol_version: m.protocol_version,
+        tcp_port: m.tcp_port,
+    };
+
+    Some((offer, m.offer_id_hex))
+}
+
+pub fn register_remote_offer(
+    remote_offers: &std::sync::Arc<std::sync::Mutex<RemoteWindowsOfferRegistry>>,
+    sender_ip: std::net::IpAddr,
+    id_hex: String,
+    offer: crate::file_transfer_protocol::FileOffer,
+) -> bool {
+    let mut reg = remote_offers.lock().unwrap();
+    if reg.contains_key(&id_hex) {
+        false // duplicate
+    } else {
+        reg.insert(id_hex, (sender_ip, offer));
+        true // new
+    }
+}
+
+// helper for both mobile and windows
+pub fn truncate_name(name: &str, max_chars: usize) -> String {
+    if name.chars().count() <= max_chars {
+        return name.to_string();
+    }
+    let mut s: String = name.chars().take(max_chars.saturating_sub(1)).collect();
+    s.push('…');
+    s
 }
