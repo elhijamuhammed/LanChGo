@@ -312,3 +312,36 @@ pub fn build_download_save_path( config: &Arc<Mutex<Config>>, offer_name: &str, 
         offer_id_hex,
     )
 }
+
+pub fn info_message() -> String {
+        "   LanChGo App
+        Talk freely, fast, and local.
+
+        Features:
+        • LAN chat & secure channels
+        • File transfers (no cloud)
+        • QR / PIN pairing
+
+        Links:
+        • Website: https://lanchgo.com/
+        • GitHub:  https://github.com/elhijamuhammed/LanChGo
+
+        © 2025 Muhammed Abu El-Hija"
+    .to_string()
+}
+
+pub fn help_message() -> String {
+        "Available Commands
+
+        /info        Show app information
+        /help        Show this help message
+        /clear       Clear chat messages
+        /clearfiles  Clear file transfer panel
+        /clearall    Clear chat and files
+        /disconnect  Disconnect from secure channel
+        /exit        Exit LanChGo
+
+        Tip:
+        Commands are local and not sent over the network."
+    .to_string()
+}

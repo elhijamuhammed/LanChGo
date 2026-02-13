@@ -284,6 +284,20 @@ fn main() -> Result<(), Box<dyn Error>> {
                 return;
             }
             
+            if trimmed.eq_ignore_ascii_case("/info") {
+                let info = main_helpers::info_message();
+                app.invoke_append_message(info.into());
+                app.set_input_text("".into());
+                return;
+            }
+
+            if trimmed.eq_ignore_ascii_case("/help") {
+                let info = main_helpers::help_message();
+                app.invoke_append_message(info.into());
+                app.set_input_text("".into());
+                return;
+            }
+
             if trimmed.is_empty() {
                 app.set_input_text("".into());
                 return;

@@ -2,7 +2,6 @@ import { VerticalBox } from "std-widgets.slint";
 
 export component HeaderBar {
     in property <string> show_version;
-    callback info_clicked();
 
     VerticalBox {
         spacing: 6px;
@@ -15,7 +14,7 @@ export component HeaderBar {
         }
 
         Text {
-            text: "Made to solve a problem!" + " LanChGo App " + show_version;
+            text: "Made to solve a problem! LanChGo App " + show_version;
             font-size: 14px;
             color: white;
             horizontal-alignment: center;

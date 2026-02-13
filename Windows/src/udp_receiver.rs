@@ -279,14 +279,7 @@ pub fn start_udp_receiver(
                             } else if msg.to_ascii_lowercase().contains("nutella") {
                                 main_helpers::play_nutella_sound();
                             }
-                            if !msg.eq_ignore_ascii_case("/exit")
-                                && !msg.eq_ignore_ascii_case("/clear")
-                                && !msg.eq_ignore_ascii_case("/disconnect")
-                                && !msg.eq_ignore_ascii_case("REQA")
-                                && !msg.eq_ignore_ascii_case("/clearfiles")
-                                && !msg.eq_ignore_ascii_case("/clearall")
-                                && !msg.starts_with("MANCH")
-                            {
+                            if !msg.starts_with("/") && !msg.starts_with("MANCH") {
                                 let weak = ui_weak.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(app) = weak.upgrade() {
