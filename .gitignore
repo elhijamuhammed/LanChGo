@@ -17,6 +17,7 @@ Thumbs.db
 
 # --- Rust / Cargo ---
 /target/
+**/target/
 **/*.rs.bk
 
 # --- Windows ---
