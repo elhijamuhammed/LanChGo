@@ -279,7 +279,7 @@ pub fn start_udp_receiver(
                             } else if msg.to_ascii_lowercase().contains("nutella") {
                                 main_helpers::play_nutella_sound();
                             }
-                            if !msg.starts_with("/") && !msg.starts_with("MANCH") {
+                            if !msg.starts_with("/") && !msg.starts_with("MANCH") && !msg.starts_with("REQA") {
                                 let weak = ui_weak.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(app) = weak.upgrade() {
