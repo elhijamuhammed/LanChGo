@@ -4,6 +4,7 @@ use uuid::Uuid;
 use zip::{write::FileOptions, ZipWriter};
 
 pub const FOFT_MAGIC: &[u8; 4] = b"FOFT";
+pub const MFOFT_MAGIC: &[u8; 5] = b"MFOFT";
 pub const FILE_PROTOCOL_VERSION: u8 = 1;
 pub const DEFAULT_TCP_PORT: u16 = 3001;
 
@@ -235,14 +236,14 @@ pub fn cleanup_temp_offers(registry: &mut OfferRegistry) {
         if matches!(local.kind, OfferKind::ZipBundle) {
             if let Err(e) = std::fs::remove_file(&local.path) {
                 if e.kind() != std::io::ErrorKind::NotFound {
-                    println!(
-                        "[FOFT][CLEANUP] failed to delete {}: {}",
-                        local.path.display(),
-                        e
-                    );
+                    // println!(
+                    //     "[FOFT][CLEANUP] failed to delete {}: {}",
+                    //     local.path.display(),
+                    //     e
+                    // );
                 }
             } else {
-                println!("[FOFT][CLEANUP] deleted {}", local.path.display());
+                //println!("[FOFT][CLEANUP] deleted {}", local.path.display());
             }
             to_remove.push(*id);
         }
@@ -398,7 +399,7 @@ pub fn hex_to_offer_id(hex: &str) -> Option<[u8; 16]> {
 // Mobile (Flutter) file-offer decoder (MFOFT)
 // ─────────────────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 struct MobileFileOfferJson {
     #[serde(rename = "offer_id")]
     offer_id_hex: String,
@@ -439,7 +440,7 @@ pub fn decode_mfoft(payload: &[u8]) -> Option<(FileOffer, String)> {
 }
 
 pub fn register_remote_offer(
-    remote_offers: &std::sync::Arc<std::sync::Mutex<RemoteWindowsOfferRegistry>>,
+    remote_offers: &std::sync::Arc<std::sync::Mutex<RemoteMobileOfferRegistry>>,
     sender_ip: std::net::IpAddr,
     id_hex: String,
     offer: crate::file_transfer_protocol::FileOffer,
@@ -461,4 +462,22 @@ pub fn truncate_name(name: &str, max_chars: usize) -> String {
     let mut s: String = name.chars().take(max_chars.saturating_sub(1)).collect();
     s.push('…');
     s
+}
+
+///build bytes ready to broadcast: "MFOFT" + utf8(json)
+pub fn encode_mfoft_packet(offer: &FileOffer) -> io::Result<Vec<u8>> {
+    let offer_id_hex = offer_id_to_hex(&offer.offer_id);
+    let mob = MobileFileOfferJson {
+        offer_id_hex,
+        name: offer.name.clone(),
+        size: offer.size,
+        kind: "SingleFile".to_string(),
+        protocol_version: offer.protocol_version,
+        tcp_port: offer.tcp_port,
+    };
+    let payload = serde_json::to_vec(&mob).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+    let mut packet = Vec::with_capacity(MFOFT_MAGIC.len() + payload.len());
+    packet.extend_from_slice(MFOFT_MAGIC); // MFOFT
+    packet.extend_from_slice(&payload);    // JSON
+    Ok(packet)
 }

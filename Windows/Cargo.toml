@@ -1,6 +1,6 @@
 [package]
 name = "slint-rust-template"
-version = "1.4.0"
+version = "1.4.3"
 edition = "2021"
 
 [[bin]]
@@ -36,6 +36,8 @@ zeroize = "1.8.1"
 zip = "7.2.0"
 uuid = { version = "1.19.0", features = ["v4"] }
 open = "5.3.3"
+crossbeam-utils = "0.8.21"
+semaphore = "0.4.0"
 
 [build-dependencies]
 slint-build = "1.14.1"

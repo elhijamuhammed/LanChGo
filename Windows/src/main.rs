@@ -10,6 +10,7 @@ mod main_helpers;
 mod udp_receiver;
 mod tcp_file_server;
 mod tcp_file_client;
+mod mobile_download;
 
 use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
@@ -23,7 +24,6 @@ use std::thread::{self, sleep};
 use std::time::Duration;
 use std::process;
 use bincode;
-
 use crate::classes::{BroadcastState, Config};
 use crate::phone_protocol::build_MANCH;
 use crate::file_transfer_protocol::{ RemoteWindowsOfferRegistry, RemoteMobileOfferRegistry};
@@ -33,7 +33,6 @@ use crate::main_helpers::{
     force_switch_to_public, get_broadcast_address, get_broadcast_for_name, get_gateway_for_adapter,
     load_or_create_config, match_getifadd_ipconfig, save_config, set_channel_mode_only,
     update_ui_PIN };
-
 slint::include_modules!();
 
 const MAX_DATAGRAM: usize = 1400;
@@ -110,10 +109,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     {
         let file_offer_model = file_offer_model.clone();
         let offer_registry = Arc::clone(&offer_registry);
-
-        app.on_clear_file_transfer_panel(move || {
-            cleanup_file_offers(&offer_registry, Some(&file_offer_model));
-        });
+        app.on_clear_file_transfer_panel(move || { cleanup_file_offers(&offer_registry, Some(&file_offer_model)); });
     }
 
     // -------- channel mode shared state
@@ -222,6 +218,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         app.as_weak(),
         Arc::clone(&channel_mode),
         Arc::clone(&remote_windows_offers),
+        Arc::clone(&remote_mobile_offers),
     );
 
     // ===================== Send button =====================
@@ -274,6 +271,19 @@ fn main() -> Result<(), Box<dyn Error>> {
                 return;
             }
 
+            if msg.eq_ignore_ascii_case("/clearfiles") {
+                cleanup_file_offers(&offer_registry2, Some(&file_offer_model2));
+                app.set_input_text("".into());
+                return;
+            }
+
+            if msg.eq_ignore_ascii_case("/clearall") {
+                model2.set_vec(Vec::new());
+                cleanup_file_offers(&offer_registry2, Some(&file_offer_model2));
+                app.set_input_text("".into());
+                return;
+            }
+            
             if trimmed.is_empty() {
                 app.set_input_text("".into());
                 return;
@@ -520,11 +530,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Exit app
-    {
-        app.on_exit_app(move || {
-            std::process::exit(0);
-        });
-    }
+    { app.on_exit_app(move || { std::process::exit(0); }); }
 
     // files button (broadcast FOFT)
     {
@@ -562,18 +568,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             };
 
             match build {
+                // NOTE: in this section it builds an FOFT and then decodes it and does an MFOFT made this so i can move on 
+                // i want to work on something else so i am leaving it at that maybe if i wanted to i will change it and make
+                // it more tidy
                 file_transfer_protocol::BuildResult::Ready(packet) => {
-                    //println!( "[FOFT][DEBUG] registry size = {}", offer_registry.lock().unwrap().len() );
-                    //debug_print_foft_packet(&packet);
-
+                    // 1) broadcast FOFT (Windows)
                     if let Err(_e) = broadcast_the_msg(&s, &st, &packet) {
                         app.invoke_show_popupmsg();
                         return;
                     }
-
-                    app.invoke_show_temp_message("📤 File offer (FOFT) broadcasted".into());
+                    // 2) broadcast MFOFT (Android)
+                    if let Some(offer) = crate::file_transfer_protocol::decode_foft(&packet) {
+                        if let Ok(mfoft_packet) = crate::file_transfer_protocol::encode_mfoft_packet(&offer) {
+                            let _ = broadcast_the_msg(&s, &st, &mfoft_packet);
+                        }
+                    }
+                    app.invoke_show_temp_message("📤 File offer broadcasted".into());
                 }
-
                 file_transfer_protocol::BuildResult::Bundling { rx, handle: _handle, offer_id: _ } => {
                     // ✅ show immediate UI feedback
                     app.invoke_show_temp_message("🧵 Bundling files in background...".into());
@@ -648,14 +659,35 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 }
 
                                 Ok(file_transfer_protocol::BundleEvent::Finished { offer_id, packet, local }) => {
+                                    // temporary fix cause the local_size is gone afterwards i need to figure something out with this one to fix a problem with line 673
+                                    let local_name = local.name.clone();
+                                    let local_size = local.size;
                                     // insert into registry
                                     {
                                         let mut reg = offer_registry2.lock().unwrap();
                                         reg.insert(offer_id, local);
                                     }
-
+                                    // NOTE: need work and tiding up this block also like the previous note i just want to move on maybe in the future
                                     //debug_print_foft_packet(&packet);
-                                    let ok = broadcast_the_msg(&s2, &st2, &packet).is_ok();
+                                    let ok_foft = broadcast_the_msg(&s2, &st2, &packet).is_ok();
+                                    // Also send Android offer (MFOFT) as "SingleFile" (Android expects that)
+                                    let ok_mfoft = {
+                                        let offer = crate::file_transfer_protocol::FileOffer {
+                                            offer_id,
+                                            name: local_name.clone(),
+                                            size: local_size,
+                                            kind: crate::file_transfer_protocol::OfferKind::SingleFile, // android limitation
+                                            protocol_version: crate::file_transfer_protocol::FILE_PROTOCOL_VERSION,
+                                            tcp_port: crate::file_transfer_protocol::DEFAULT_TCP_PORT,
+                                        };
+
+                                        match crate::file_transfer_protocol::encode_mfoft_packet(&offer) {
+                                            Ok(p) => broadcast_the_msg(&s2, &st2, &p).is_ok(),
+                                            Err(_) => false,
+                                        }
+                                    };
+
+                                    let ok = ok_foft || ok_mfoft;
 
                                     let weak_ui = weak2.clone();
                                     let _ = slint::invoke_from_event_loop(move || {
@@ -758,6 +790,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // clicking download on a file transfer offer
     {
         let remote_windows_offers = Arc::clone(&remote_windows_offers);
+        let remote_mobile_offers = Arc::clone(&remote_mobile_offers);
         let config = Arc::clone(&config);
         let weak = app.as_weak();
         let sem = Arc::clone(&download_semaphore);
@@ -777,17 +810,41 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             };
 
-            // 1) Lookup sender_ip + offer from remote_offers
+            // 1) Lookup sender_ip + offer from remote_offers, and check if it is mobile or windows
+            let mut is_mobile: bool = false;
+            // println!(
+            //     "[DL] clicked id={} windows_has={} mobile_has={}",
+            //     offer_id_hex,
+            //     remote_windows_offers.lock().unwrap().contains_key(offer_id_hex.as_str()),
+            //     remote_mobile_offers.lock().unwrap().contains_key(offer_id_hex.as_str()),
+            // );
             let (sender_ip, offer) = {
                 // 1️⃣ try Windows offers first
                 if let Some(v) = remote_windows_offers.lock().unwrap().get(offer_id_hex.as_str()).cloned()
                 { v }
+                // 2️⃣ try Mobile offers
                 else if let Some(v) = remote_mobile_offers.lock().unwrap().get(offer_id_hex.as_str()).cloned()
-                { v }
-                else { return; 
-                } 
+                {
+                    is_mobile = true; // ✅ mark as mobile
+                    v
+                }
+                else {
+                    return;
+                }
             };
-
+            let weak_ui = weak.clone();
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(app) = weak_ui.upgrade() {
+                    app.invoke_show_temp_message("📱 Mobile download path triggered".into());
+                }
+            });
+            // 3) Get download dir from config + build save path
+            let save_path = main_helpers::build_download_save_path( &config, &offer.name, offer_id_hex.as_str(),);
+            // if it is mobile go to another function to deal with it else just continue (it is like that so i don't rewrite the code when it works perfectly)
+            if is_mobile {
+                mobile_download::spawn_mobile_download( sender_ip, offer, offer_id_hex.to_string(), save_path, weak.clone(), permit, );
+                return;
+            }
             // 2) Convert offer_id_hex -> [u8;16]
             let offer_id = match file_transfer_protocol::hex_to_offer_id(offer_id_hex.as_str()) {
                 Some(id) => id,
@@ -797,18 +854,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                     return;
                 }
             };
-
-            // 3) Get download dir from config + build save path
-            let download_dir = {
-                let cfg = config.lock().unwrap();
-                cfg.save_to_folder.clone()
-            };
-
-            let save_path = file_transfer_protocol::build_unique_download_path(
-                std::path::Path::new(&download_dir),
-                &offer.name,
-                offer_id_hex.as_str(),
-            );
 
             //println!( "[DOWNLOAD] Requested {} from {}:{} → {}", offer.name, sender_ip, offer.tcp_port, save_path.display() );
 

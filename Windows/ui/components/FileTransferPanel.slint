@@ -13,6 +13,12 @@ export component FileTransferPanel inherits Rectangle {
     in-out property <float> bundle_progress: 0.0; // 0.0..1.0
     in-out property <string> bundle_progress_text: "";
 
+    // -------- Download Progress ----------
+    // (bottom status bar)
+    in-out property <bool> download_in_progress: false;
+    in-out property <float> download_progress: 0.0; // 0.0..1.0
+    in-out property <string> download_progress_text: "";
+
     // -------- Actions (handled by AppWindow / Rust) --------
     callback pick_files();
     callback pick_download_folder();
@@ -89,7 +95,7 @@ export component FileTransferPanel inherits Rectangle {
                 background: files_area.has-hover ? #2b7bff : #1e5fd6;
 
                 Text {
-                    text: "📄 Send";
+                    text: "📄 Files";
                     color: white;
                     font-size: 13px;
                     horizontal-alignment: center;
@@ -155,10 +161,10 @@ export component FileTransferPanel inherits Rectangle {
             }
         }
 
-        // ===== Offers list + Bottom bundling bar =====
+        // ===== Offers list + Bottom bars =====
         Rectangle {
             horizontal-stretch: 1;
-            vertical-stretch: 1;   // ✅ IMPORTANT: take remaining height
+            vertical-stretch: 1;
             background: #12151a;
             border-radius: 10px;
             border-width: 1px;
@@ -170,13 +176,10 @@ export component FileTransferPanel inherits Rectangle {
                 horizontal-stretch: 1;
                 vertical-stretch: 1;
 
-                // ✅ Scroll viewport that fills available height
                 Flickable {
                     horizontal-stretch: 1;
                     vertical-stretch: 1;
-                    //clip: true;
 
-                    // Empty state (fills viewport)
                     Text {
                         visible: file_offer.length == 0;
                         text: "No offers yet";
@@ -188,16 +191,14 @@ export component FileTransferPanel inherits Rectangle {
                         height: parent.height;
                     }
 
-                    // Offers list fills viewport (top aligned)
                     ListView {
                         visible: file_offer.length > 0;
                         width: parent.width;
                         height: parent.height;
 
                         for offer in file_offer: Rectangle {
-                            width: parent.width;
+                            width: parent.width - 10px;
                             height: 56px;
-                            background: row_area.has-hover ? #1d2230 : transparent;
 
                             HorizontalBox {
                                 padding: 10px;
@@ -220,28 +221,39 @@ export component FileTransferPanel inherits Rectangle {
                                     }
                                 }
 
+                                // ✅ ONE fixed control = never moves
                                 Rectangle {
-                                    width: 34px;
+                                    width: 44px;
                                     height: 34px;
                                     border-radius: 8px;
-                                    background: download_area.has-hover ? #3a8dff : #2b7bff;
+
+                                    // change look based on state
+                                    background: offer.is_downloading
+                                        ? #20242c
+                                        : (download_area.has-hover ? #3a8dff : #2b7bff);
 
                                     Text {
-                                        text: "⬇";
+                                        text: offer.is_downloading ? offer.progress_text : "⬇";
                                         color: white;
-                                        font-size: 14px;
+                                        font-size: offer.is_downloading ? 11px : 14px;
                                         horizontal-alignment: center;
                                         vertical-alignment: center;
                                         width: parent.width;
                                         height: parent.height;
                                     }
 
-                                    row_area := TouchArea { width: parent.width; height: parent.height; }
                                     download_area := TouchArea {
-                                        z: 10;
                                         width: parent.width;
                                         height: parent.height;
-                                        clicked => download_offer(offer.offer_id);
+
+                                        // prevent clicks while downloading
+                                        enabled: !offer.is_downloading;
+
+                                        clicked => {
+                                            if (!offer.is_downloading) {
+                                                download_offer(offer.offer_id);
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -249,7 +261,7 @@ export component FileTransferPanel inherits Rectangle {
                     }
                 }
 
-                // ✅ Bottom bundling progress bar (always at bottom)
+                // Bottom bundling progress bar
                 Rectangle {
                     visible: bundle_in_progress;
                     height: 44px;
@@ -267,9 +279,8 @@ export component FileTransferPanel inherits Rectangle {
                             color: white;
                             font-size: 12px;
                             horizontal-stretch: 1;
-
-                            wrap: word-wrap;   // ✅ allow 2 lines
-                            max-height: 28px;  // ✅ clamp to ~2 lines
+                            wrap: word-wrap;
+                            max-height: 28px;
                         }
 
                         Rectangle {
@@ -279,7 +290,45 @@ export component FileTransferPanel inherits Rectangle {
                             background: #20242c;
 
                             Rectangle {
-                                width: parent.width * bundle_progress; // 0..1
+                                width: parent.width * bundle_progress;
+                                height: parent.height;
+                                border-radius: 6px;
+                                background: #2b7bff;
+                            }
+                        }
+                    }
+                }
+
+                // Bottom download progress bar
+                Rectangle {
+                    visible: download_in_progress;
+                    height: 44px;
+                    horizontal-stretch: 1;
+                    background: #0f1217;
+                    border-width: 1px;
+                    border-color: #2a2f38;
+
+                    HorizontalBox {
+                        padding: 10px;
+                        spacing: 10px;
+
+                        Text {
+                            text: download_progress_text;
+                            color: white;
+                            font-size: 12px;
+                            horizontal-stretch: 1;
+                            wrap: word-wrap;
+                            max-height: 28px;
+                        }
+
+                        Rectangle {
+                            width: 80px;
+                            height: 6px;
+                            border-radius: 6px;
+                            background: #20242c;
+
+                            Rectangle {
+                                width: parent.width * download_progress;
                                 height: parent.height;
                                 border-radius: 6px;
                                 background: #2b7bff;

@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io;
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -299,4 +299,16 @@ pub fn play_nutella_sound() {
             });
         }
     }
+}
+
+pub fn build_download_save_path( config: &Arc<Mutex<Config>>, offer_name: &str, offer_id_hex: &str, ) -> PathBuf {
+    let download_dir = {
+        let cfg = config.lock().unwrap();
+        cfg.save_to_folder.clone()
+    };
+    file_transfer_protocol::build_unique_download_path(
+        Path::new(&download_dir),
+        offer_name,
+        offer_id_hex,
+    )
 }

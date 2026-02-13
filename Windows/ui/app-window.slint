@@ -7,6 +7,7 @@ import { WelcomeOverlay } from "components/WelcomeOverlay.slint";
 import { Toolbar } from "components/Toolbar.slint";
 import { FileTransferPanel } from "components/FileTransferPanel.slint";
 import { FileOfferItem } from "components/types.slint";
+import { AboutPopup } from "components/AboutPopup.slint";
 
 export component AppWindow inherits Window {
     width: 1000px;
@@ -89,9 +90,14 @@ export component AppWindow inherits Window {
     in-out property <float> bundle_progress: 0.0;
     in-out property <string> bundle_progress_text: "";
 
+    // -------- Download Progress ----------
+    in-out property <bool> download_in_progress: false;
+    in-out property <float> download_progress: 0.0; // 0.0..1.0
+    in-out property <string> download_progress_text: "";
+
     // version 
     in-out property <string> show_version;
-
+    callback show_about();
     property <int> debug_offer_counter: 0;
 
     
@@ -154,6 +160,9 @@ export component AppWindow inherits Window {
                         bundle_in_progress: root.bundle_in_progress;
                         bundle_progress: root.bundle_progress;
                         bundle_progress_text: root.bundle_progress_text;
+                        download_in_progress: root.download_in_progress;
+                        download_progress: root.download_progress;
+                        download_progress_text: root.download_progress_text;
                         pick_files() => { root.pick_files_send(); }
                         pick_download_folder => { root.pick_download_folder(); }
                         open_download_folder() => { root.open_download_folder(); }

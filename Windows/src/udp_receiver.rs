@@ -1,11 +1,10 @@
 use crate::AppWindow;
 use crate::FileOfferItem;
+use crate::file_transfer_protocol::RemoteMobileOfferRegistry;
 use crate::file_transfer_protocol::RemoteWindowsOfferRegistry;
 use crate::main_helpers;
 use crate::phone_protocol;
 use crate::secure_channel_code;
-//use crate::file_transfer_protocol; // optional (you call it via crate::file_transfer_protocol::... but this is still fine)
-//use crate::helpers::get_local_ipv4; // adjust path to wherever you moved get_local_ipv4()
 use bincode;
 use slint;
 use std::io;
@@ -13,12 +12,20 @@ use std::net::UdpSocket;
 use std::sync::{ Arc, Mutex, atomic::{AtomicBool, Ordering}, };
 use std::thread::{self, JoinHandle};
 use crate::main_helpers::get_local_ipv4;
+//use crate::file_transfer_protocol; // optional (you call it via crate::file_transfer_protocol::... but this is still fine)
+//use crate::helpers::get_local_ipv4; // adjust path to wherever you moved get_local_ipv4()
 
-pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_weak: slint::Weak<AppWindow>, 
-    channel_mode: Arc<Mutex<String>>, remote_offers: Arc<Mutex<RemoteWindowsOfferRegistry>>,) -> JoinHandle<()> {
+pub fn start_udp_receiver( 
+    sock: Arc<UdpSocket>,
+    running: Arc<AtomicBool>, 
+    ui_weak: slint::Weak<AppWindow>, 
+    channel_mode: Arc<Mutex<String>>, 
+    remote_windows_offers: Arc<Mutex<RemoteWindowsOfferRegistry>>,
+    remote_mobile_offers: Arc <Mutex<RemoteMobileOfferRegistry>>,
+) -> JoinHandle<()> {
     thread::spawn(move || {
         let mut buf = [0u8; 2048];
-        let my_ip = get_local_ipv4();
+        let my_ip: Option<std::net::IpAddr> = get_local_ipv4().map(std::net::IpAddr::V4);
 
         while running.load(Ordering::Relaxed) {
             match sock.recv_from(&mut buf) {
@@ -28,14 +35,14 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                         let cm = channel_mode.lock().unwrap();
                         cm.clone()
                     };
-
+                    
                     // ─── Secure Channel Mode ──────────────────────────────────────────────
                     if mode == "joined" || mode == "host" {
                         // 🛰 Step 1: Handle announcements
                         if msg_bytes.len() >= 4 && &msg_bytes[..4] == b"ANCH" {
                             if let Some(ip) = my_ip {
                                 if _from.ip() == ip {
-                                    continue; // Ignore self-broadcasts
+                                    continue;
                                 }
                             }
                             let payload = &msg_bytes[4..];
@@ -70,16 +77,12 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                             main_helpers::play_nutella_sound();
                                         }
                                         if !decrypted.eq_ignore_ascii_case("/exit")
-                                            || !decrypted
-                                                .eq_ignore_ascii_case("/clear")
-                                            || !decrypted
-                                                .eq_ignore_ascii_case(
-                                                    "/disconnect",
-                                                )
+                                            || !decrypted.eq_ignore_ascii_case("/clear")
+                                            || !decrypted.eq_ignore_ascii_case( "/disconnect")
+                                            || !decrypted.eq_ignore_ascii_case( "/clearfiles")
+                                            || !decrypted.eq_ignore_ascii_case( "/clearall")
                                         {
-                                            app.invoke_append_message(
-                                                decrypted.into(),
-                                            );
+                                            app.invoke_append_message(decrypted.into(),);
                                         }
                                     }
                                 })
@@ -89,7 +92,7 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                         } else if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MENCM" {
                             if let Some(ip) = my_ip {
                                 if _from.ip() == ip {
-                                    continue; // Ignore self-broadcasts
+                                    continue;
                                 }
                             }
                             if msg_bytes.len() > 17 {
@@ -115,12 +118,10 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                                     main_helpers::play_nutella_sound();
                                                 }
                                                 if !plain.eq_ignore_ascii_case("/exit")
-                                                    && !plain.eq_ignore_ascii_case(
-                                                        "/clear",
-                                                    )
-                                                    && !plain.eq_ignore_ascii_case(
-                                                        "/disconnect",
-                                                    )
+                                                    && !plain.eq_ignore_ascii_case("/clear")
+                                                    && !plain.eq_ignore_ascii_case("/disconnect")
+                                                    && !plain.eq_ignore_ascii_case("/clearfiles")
+                                                    && !plain.eq_ignore_ascii_case("/clearall")
                                                 {
                                                     app.invoke_append_message(
                                                         plain.into(),
@@ -177,6 +178,8 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                         } else if msg_bytes.len() >= 4 && &msg_bytes[..4] == b"FOFR" {
                             // ignore FOFR in secure mode for now
                             continue;
+                        } else if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MFOFT" {
+                            continue;
                         }
                     }
 
@@ -190,7 +193,7 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                 let sender_ip = _from.ip();
 
                                 {
-                                    let mut reg = remote_offers.lock().unwrap();
+                                    let mut reg = remote_windows_offers.lock().unwrap();
                                     reg.insert(id_hex.clone(), (sender_ip, offer.clone()));
                                 }
 
@@ -211,6 +214,7 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                             size_text: size_text.into(),
                                             is_downloading: false,
                                             progress_text: "".into(),
+                                            is_mobile: false,
                                         };
 
                                         app.invoke_add_file_offer(item);
@@ -223,13 +227,20 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                         }
 
                         if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MFOFT" {
+                            if let Some(ip) = my_ip {
+                                if _from.ip() == ip {
+                                    continue;
+                                }
+                            }
                             let payload = &msg_bytes[5..];
-
                             if let Some((offer, id_hex)) = crate::file_transfer_protocol::decode_mfoft(payload) {
+                                if remote_windows_offers.lock().unwrap().contains_key(&id_hex) {
+                                    continue;
+                                }
                                 let sender_ip = _from.ip();
 
                                 let is_new = crate::file_transfer_protocol::register_remote_offer(
-                                    &remote_offers,
+                                    &remote_mobile_offers,
                                     sender_ip,
                                     id_hex.clone(),
                                     offer.clone(),
@@ -240,10 +251,8 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                 }
 
                                 let weak = ui_weak.clone();
-                                let display_name =
-                                    crate::file_transfer_protocol::truncate_name(&offer.name, 16);
-                                let size_text =
-                                    crate::file_transfer_protocol::human_size(offer.size);
+                                let display_name = crate::file_transfer_protocol::truncate_name(&offer.name, 16);
+                                let size_text = crate::file_transfer_protocol::human_size(offer.size);
 
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(app) = weak.upgrade() {
@@ -253,6 +262,7 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                             size_text: size_text.into(),
                                             is_downloading: false,
                                             progress_text: "".into(),
+                                            is_mobile: true,
                                         });
                                     }
                                 })
@@ -273,6 +283,8 @@ pub fn start_udp_receiver( sock: Arc<UdpSocket>, running: Arc<AtomicBool>, ui_we
                                 && !msg.eq_ignore_ascii_case("/clear")
                                 && !msg.eq_ignore_ascii_case("/disconnect")
                                 && !msg.eq_ignore_ascii_case("REQA")
+                                && !msg.eq_ignore_ascii_case("/clearfiles")
+                                && !msg.eq_ignore_ascii_case("/clearall")
                                 && !msg.starts_with("MANCH")
                             {
                                 let weak = ui_weak.clone();

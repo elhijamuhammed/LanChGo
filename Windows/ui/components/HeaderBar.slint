@@ -2,6 +2,7 @@ import { VerticalBox } from "std-widgets.slint";
 
 export component HeaderBar {
     in property <string> show_version;
+    callback info_clicked();
 
     VerticalBox {
         spacing: 6px;
