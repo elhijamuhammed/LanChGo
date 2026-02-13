@@ -1,3 +1,0 @@
-cargo:rustc-check-cfg=cfg(slint_debug_property)
-cargo:rerun-if-changed=widgets
-cargo:rustc-env=SLINT_WIDGETS_LIBRARY=C:\Users\mslap\LanCh\LanChGo_App7\repo\LanChGo\Windows\target\debug\build\i-slint-compiler-e261323c28980d9e\out\included_library.rs
