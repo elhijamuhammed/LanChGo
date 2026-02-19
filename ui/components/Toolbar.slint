@@ -1,0 +1,181 @@
+import { HorizontalBox, Switch } from "std-widgets.slint";
+
+export component Toolbar inherits HorizontalBox {
+    
+    in-out property <string> channel_mode: "public";  // values: "public" | "host" | "joined" // default public
+    callback change_channel_mode(string);
+    in-out property <bool> public_secure_helper: false; // the switch helper for what I do not know
+    in-out property <string> host_PIN;
+    in-out property <string> host_PIN_masked: "N/A";
+    callback generate_new_PIN();
+    in-out property <bool> show_welcome; // this is instead of doing a different code with the same intention just recall it
+    callback disconnect_channel();
+    // this help call them from the app-window
+    callback request_open_create_or_join();
+    callback request_close_create_or_join();
+    callback request_show_pin();
+
+    spacing: 12px;
+    alignment: center;
+    padding: 8px;
+
+    // Mode Switch
+    Switch {
+        checked <=> root.public_secure_helper;   // two-way binding
+        text: self.checked ? "🔒 Secure" : "🌍 Public";
+
+        toggled => {
+            if (self.checked) {
+                root.channel_mode = "host";
+                root.change_channel_mode("host");
+                root.request_open_create_or_join();   // open popup
+            } else {
+                root.channel_mode = "public";
+                root.change_channel_mode("public");
+                root.public_secure_helper = false;
+                root.host_PIN = 0;
+                root.host_PIN_masked = "N/A";
+                root.request_close_create_or_join();  // hide popup if going back
+            }
+        }
+    }
+
+    // Separator
+    Rectangle { width: 2px; height: 28px; background: #555; }
+
+    // PIN Label
+    Text {
+        text: "PIN:";
+        color: white;
+        font-size: 18px;
+        vertical-alignment: center;
+    }
+
+    // PIN Value
+    Text {
+        text: root.channel_mode == "public" ? "N/A" : root.host_PIN_masked;
+        color: #00e1ff;
+        font-size: 18px;
+        vertical-alignment: center;
+        min-width: 80px;
+    }
+
+    // Show PIN button
+    Rectangle {
+        width: 110px; height: 34px;
+        border-radius: 8px;
+
+        background: root.channel_mode == "host"
+            ? (show_pin_btn_area.has-hover ? #1e90ff : #0078d7)  // Host colors
+            : #444444; // Gray when public or joined
+
+        border-width: 1px;
+        border-color: root.channel_mode == "host" ? #005a9e : #222222;
+
+        Text {
+            text: "👁 Show PIN";
+            color: root.channel_mode == "host" ? white : #888888;
+            font-size: 14px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
+
+        show_pin_btn_area := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            enabled: root.channel_mode == "host";   // Only clickable in host mode
+            clicked => { 
+                root.request_show_pin();
+                debug("Show PIN clicked"); 
+            }
+        }
+    }
+
+    // New PIN Button (Green)
+    Rectangle {
+        width: 110px; height: 34px;
+        border-radius: 8px;
+        background: root.channel_mode == "host"
+            ? (new_pin_btn_area.has-hover ? #32cd32 : #228b22)
+            :#444444;
+        
+        border-width: 1px;
+        border-color:root.channel_mode == "host" ? #006400 : #222222;
+
+        Text {
+            text: "🔄 New PIN";
+            color: root.channel_mode == "host" ? white : #888888;
+            font-size: 14px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
+
+        new_pin_btn_area := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            enabled: root.channel_mode == "host";
+            clicked => {
+                generate_new_PIN();
+                debug("New PIN clicked"); 
+            }
+        }
+    }
+
+    // Disconnect Button (Red)
+    Rectangle {
+        width: 110px; height: 34px;
+        border-radius: 8px;
+        background: root.channel_mode != "public"
+            ? (disconnect_btn_area.has-hover ? #cc3333 : #aa2222)
+            : #444444;
+        
+        border-width: 1px;
+        border-color: root.channel_mode != "public" ? #881111 : #222222;
+
+        Text {
+            text: "⏏ Disconnect";
+            color: root.channel_mode != "public" ? white : #888888;
+            font-size: 14px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
+
+        disconnect_btn_area := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            enabled: root.channel_mode != "public";   // Only clickable if in secure mode
+            clicked => { disconnect_channel(); }
+        }
+    }
+
+    // Settings Button (Purple)
+    Rectangle {
+        width: 110px; height: 34px;
+        border-radius: 8px;
+        background: settings_btn_area.has-hover ? #9370db : #6a5acd;
+        border-width: 1px;
+        border-color: #4b0082;
+
+        Text {
+            text: "⚙ Settings";
+            color: white;
+            font-size: 14px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
+
+        settings_btn_area := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => { root.show_welcome = true;; }
+        }
+    }
+}

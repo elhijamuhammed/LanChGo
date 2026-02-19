@@ -1,0 +1,152 @@
+import { ListView } from "std-widgets.slint";
+
+export component WelcomeOverlay inherits Rectangle {
+    
+    in-out property <bool> changed_networks; // if the network changes show
+    in-out property <string> selected_interface;  // e.g. "Wi-Fi"
+    in-out property <[string]> interfaces;        // ["Wi-Fi|10.0.0.255", "Ethernet|192.168.1.255"]
+    in-out property <bool> show_welcome;
+    callback interface_selected(string);
+
+    background: #00000080;   // dim overlay
+
+    VerticalLayout {
+        Rectangle { vertical-stretch: 1; }   // top spacer
+
+        HorizontalLayout {
+            Rectangle { horizontal-stretch: 1; } // left spacer
+
+            Rectangle {
+                width: 680px;
+                height: 420px;
+                border-radius: 16px;
+                background: #2c2f35;
+                border-width: 1px;
+                border-color: #3a3f48;
+
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 6px;  // tighter spacing
+
+                    Text {
+                        text: "Welcome to LanChGo";
+                        color: white;
+                        font-size: 22px;
+                        horizontal-alignment: center;
+                    }
+
+                    Text {
+                        text: "Pick your network interface, all receiving ends should be on the same subnet.";
+                        color: #cccccc;
+                        font-size: 14px;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                        //padding-bottom: 8px; // spacing before list
+                        visible: !root.changed_networks;
+                    }
+                    Text {
+                        text: "Pick your network interface, all receiving ends should be on the same subnet. Network changed";
+                        color: #cccccc;
+                        font-size: 14px;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                        //padding-bottom: 8px; // spacing before list
+                        visible: root.changed_networks;
+                    }
+
+                    // --- Interface List ---
+                    ListView {
+                        width: parent.width;
+                        height: 200px;
+
+                        for iface in root.interfaces: Rectangle {
+                            width: parent.width * 0.85;
+                            height: 72px;
+                            border-radius: 12px;
+                            background: root.selected_interface == iface
+                                ? #2b7bff
+                                : #2c2f35;
+                            border-width: 2px;
+                            border-color: root.selected_interface == iface ? #66aaff : #3a3f48;
+                            x: (parent.width - self.width) / 2;
+
+                            HorizontalLayout {
+                                spacing: 12px;
+                                Rectangle {width:12px;}
+                                // Circle indicator
+                                Rectangle {
+                                    width: 18px;
+                                    height: 18px;
+                                    border-radius: 9px;
+                                    border-width: 2px;
+                                    border-color: root.selected_interface == iface ? #66aaff : white;
+                                    background: root.selected_interface == iface ? #66aaff : transparent;
+                                    y: (parent.height - self.height) / 2;
+                                    //padding-left: 8px;
+                                }
+
+                                VerticalLayout {
+                                    spacing: 4px;
+                                    Text{
+                                        text: " ";
+                                        font-size: 5px;
+                                    }
+                                    Text {
+                                        text: iface;
+                                        font-size: 16px;
+                                        color: white;
+                                    }
+                                }
+                            }
+                            TouchArea {
+                                width: parent.width;
+                                height: parent.height;
+                                clicked => {
+                                    root.selected_interface = iface;
+                                    //root.interface_selected(iface);
+                                }
+                            }
+                        }
+                    }
+
+                    // --- Continue button ---
+                    HorizontalLayout {
+                        Rectangle { horizontal-stretch: 1; }
+
+                        Rectangle {
+                            width: 120px;
+                            height: 42px;
+                            border-radius: 8px;
+                            background: continue_area.has-hover ? #3a8dff : #2b7bff;
+
+                            Text {
+                                text: "Continue";
+                                color: white;
+                                font-size: 14px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                                height: parent.height;
+                            }
+
+                            continue_area := TouchArea {
+                                width: parent.width;
+                                height: parent.height;
+                                clicked => { 
+                                    root.interface_selected(root.selected_interface);
+                                    root.show_welcome = false; 
+                                }
+                            }
+                        }
+
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                }
+            }
+
+            Rectangle { horizontal-stretch: 1; } // right spacer
+        }
+
+        Rectangle { vertical-stretch: 1; }   // bottom spacer
+    }   
+}

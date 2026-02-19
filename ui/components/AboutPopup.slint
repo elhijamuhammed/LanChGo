@@ -1,0 +1,74 @@
+import { HorizontalBox, Button, VerticalBox } from "std-widgets.slint";
+
+export component AboutPopup inherits PopupWindow {
+    in property <string> version;
+    callback close_requested();
+
+    // width: parent.width;
+    // height: parent.height;
+    close-policy: no-auto-close;
+
+    // 1) OVERLAY FIRST (behind)
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: #00000080;
+
+        // Click outside = close
+        TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => { root.close_requested(); }
+        }
+    }
+
+    // 2) CARD SECOND (on top, clickable)
+    Rectangle {
+        width: 520px;
+        height: 420px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: 16px;
+        background: #2c2f35;
+        border-width: 1px;
+        border-color: #3a3f48;
+
+        VerticalBox {
+            spacing: 14px;
+            padding: 22px;
+
+            Text { text: "About LanChGo"; font-size: 26px; font-weight: 700; color: white; }
+            Text { text: "LanChGo — LAN chat & file transfer"; font-size: 16px; color: #d8d8d8; }
+
+            Rectangle { height: 1px; background: #444; opacity: 0.6; width: parent.width; }
+
+            Text { text: "Developer: Muhammed Abu El-Hija"; color: #cfcfcf; }
+            Text { text: "Version: " + version; color: #cfcfcf; }
+            Text { text: "Built with Rust + Slint"; color: #cfcfcf; }
+
+            Rectangle { height: 1px; background: #444; opacity: 0.6; width: parent.width; }
+
+            Text {
+                text:
+                    "• Works only on the same local network\n" +
+                    "• Secure channel via PIN\n" +
+                    "• No external servers\n" +
+                    "• Keep app open while downloading";
+                wrap: word-wrap;
+                color: #cfcfcf;
+            }
+
+            Rectangle { vertical-stretch: 1; }
+
+            HorizontalBox {
+                Rectangle { horizontal-stretch: 1; }
+                Button {
+                    text: "Close";
+                    width: 120px;
+                    height: 40px;
+                    clicked => { root.close_requested(); }
+                }
+            }
+        }
+    }
+}
