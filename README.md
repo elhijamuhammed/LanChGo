@@ -53,7 +53,6 @@ This makes LanChGo suitable for private environments such as:
 
 ### Build
 ```bash
-cd Windows
 cargo build --release
 ```
 
