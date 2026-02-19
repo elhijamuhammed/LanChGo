@@ -1,38 +1,82 @@
-# Slint Rust Template
+# LanChGo (Windows)
 
-A template for a Rust application that's using [Slint](https://slint.rs/) for the user interface.
+LanChGo is an open-source, privacy-focused LAN messaging application for Windows.  
+It allows devices on the same local network to communicate instantly **without internet access, servers, or accounts**.
 
-## About
+This repository contains the **Windows implementation** of LanChGo.
 
-This template helps you get started developing a Rust application with Slint as toolkit
-for the user interface. It demonstrates the integration between the `.slint` UI markup and
-Rust code, how to react to callbacks, get and set properties, and use basic widgets.
+---
 
-## Usage
+## ✨ Features
 
-1. Install Rust by following its [getting-started guide](https://www.rust-lang.org/learn/get-started).
-   Once this is done, you should have the `rustc` compiler and the `cargo` build system installed in your `PATH`.
-2. Download and extract the [ZIP archive of this repository](https://github.com/slint-ui/slint-rust-template/archive/refs/heads/main.zip).
-3. Rename the extracted directory and change into it:
-    ```
-    mv slint-rust-template-main my-project
-    cd my-project    
-    ```
-4. Build with `cargo`:
-    ```
-    cargo build
-    ```
-5. Run the application binary:
-    ```
-    cargo run
-    ```
+- Local network (LAN) messaging
+- No internet connection required
+- Automatic device discovery via local network
+- Secure channel mode using a PIN
+- End-to-end encrypted secure communication
+- Lightweight and fast
+- Built with Rust and Slint UI
+- Transfer files between devices
 
-We recommend using an IDE for development, along with our [LSP-based IDE integration for `.slint` files](https://github.com/slint-ui/slint/blob/master/tools/lsp/README.md). You can also load this project directly in [Visual Studio Code](https://code.visualstudio.com) and install our [Slint extension](https://marketplace.visualstudio.com/items?itemName=Slint.slint).
+---
 
-## Next Steps
+## 🖥️ Platform Scope
 
-We hope that this template helps you get started, and that you enjoy exploring making user interfaces with Slint. To learn more
-about the Slint APIs and the `.slint` markup language, check out our [online documentation](https://slint.dev/docs).
+- ✅ **Windows** — open-source (this repository)
+- ❌ Android — **not included here**
 
-Don't forget to edit this readme to replace it by yours, and edit the `name =` field in `Cargo.toml` to match the name of your
-project.
+The Android app exists as a separate project and is not part of this repository.
+
+---
+
+## 🔐 Security & Privacy
+
+- Communication is limited to the local network
+- No cloud services or external servers
+- Secure channels use PIN-based encryption
+- No user accounts, tracking, or analytics
+
+This makes LanChGo suitable for private environments such as:
+- Home networks
+- Offices
+- Labs
+- Local events or classrooms
+
+---
+
+## 🚀 Building the Windows App
+
+### Prerequisites
+- Rust (stable)
+- Cargo
+- Windows OS
+
+### Build
+```bash
+cd Windows
+cargo build --release
+```
+
+### Run
+```bash
+cargo run
+```
+
+The compiled binary will be located in:
+```bash
+Windows/target/release/
+```
+
+## 📄 License
+This project is licensed under the MIT License.
+
+## 👤 Author
+Developed by Muhammed Abu El-Hija
+
+ ## 🌐 Website
+Official project website:  
+https://lanchgo.com
+
+## Contributing
+Feel free to open issues or PRs.  
+LanChGo is MIT-licensed and open to community contributions.
