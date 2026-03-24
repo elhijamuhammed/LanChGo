@@ -1,0 +1,12 @@
+export component EscCloseHandler inherits FocusScope {
+    callback close_me();
+
+    key-pressed(event) => {
+        if (event.text == Key.Escape) {
+            close_me();
+            accept
+        } else {
+            reject
+        }
+    }
+}

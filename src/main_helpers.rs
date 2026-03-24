@@ -5,19 +5,20 @@ use crate::FileOfferItem;
 use crate::secure_channel_code;
 use get_if_addrs::{get_if_addrs, IfAddr};
 use ipconfig;
-use slint::VecModel;
+use slint::{VecModel, Weak};
 use std::fs::File;
 use std::io;
 use std::io::Cursor;
 use std::net::{IpAddr, Ipv4Addr, UdpSocket};
 use std::path::{PathBuf, Path};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 use slint::{ComponentHandle, SharedString, Model};
 use rodio::{Decoder, OutputStreamBuilder, Sink};
 
 const NUTELLA_BYTES: &[u8] = include_bytes!("../nutella.ogg");
+static APP_HANDLE: OnceLock<Weak<AppWindow>> = OnceLock::new();
 
 /// To fix a bug that is not fixable
 pub fn force_switch_to_public(app: &AppWindow, channel_mode: &Arc<Mutex<String>>) {
@@ -117,7 +118,6 @@ pub fn collect_interfaces() -> Vec<InterfacesInfo> {
             });
         }
     }
-
     collection
 }
 
@@ -344,4 +344,24 @@ pub fn help_message() -> String {
         Tip:
         Commands are local and not sent over the network."
     .to_string()
+}
+
+pub fn update_ui_qr_only(app: &AppWindow) {
+    if let Some(img) = crate::secure_channel_code::get_QR_slint_image() {
+        app.set_QR_code_image(img);
+    }
+}
+
+pub fn set_app_handle(handle: Weak<AppWindow>) { let _ = APP_HANDLE.set(handle); }
+
+pub fn append_message_from_web(text: String) {
+    if let Some(app_weak) = APP_HANDLE.get() {
+        let app_weak = app_weak.clone();
+
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = app_weak.upgrade() {
+                app.invoke_append_message(text.into());
+            }
+        });
+    }
 }

@@ -1,6 +1,6 @@
-====================================
-           LanChGo v1.4.3
-====================================
+==============================================================================
+           LanChGo v1.5.0 — Local Network Communication Made Simple
+==============================================================================
 
 Thank you for installing LanChGo!
 
@@ -12,6 +12,7 @@ connection.
 LanChGo uses UDP broadcast for instant local discovery and messaging,
 combined with TCP for reliable file transfers. No external servers,
 no accounts, and no cloud involvement.
+The Web Companion uses a WebSocket server hosted by the app.
 
 ------------------------------------
  How to Use
@@ -31,6 +32,14 @@ File Transfer:
 - Select one or multiple files to send.
 - The receiving device can download them directly.
 - Multiple files are bundled automatically into a ZIP for convenience.
+
+Web companion
+- Press "Web Join".
+- Reveals a QR code.
+- Scan it using the browser scanner.
+- Start chatting.
+
+Note: All devices must be connected to the same local network.
 
 ------------------------------------
  Features
@@ -53,6 +62,7 @@ File Transfer:
 - Clean and responsive UI with focus optimization.
 - Developer/debug commands (hidden).
 - File transfer feature.
+- Web app companion to chat using the browser.
 
 ------------------------------------
  Privacy & Security
@@ -71,13 +81,14 @@ If you encounter issues:
 - Make sure the firewall allows:
   - UDP traffic on port 3000 (default)
   - TCP traffic on port 3001 (file transfer)
+  - Web companion on port 38421 (default)
 - Restart the app if a configuration warning appears.
 - Report bugs or feedback to help improve the project.
 
 ------------------------------------
  Open Source
 ------------------------------------
-LanChGo is open source (Windows version).
+LanChGo (Windows version) is open source.
 You are free to explore, modify, and build the project.
 
 ------------------------------------

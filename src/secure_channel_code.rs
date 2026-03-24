@@ -221,10 +221,7 @@ pub fn build_announcement(channel: &Channel) -> ChannelAnnounce {
 
 /// Decode & store full ChannelAnnounce only if it’s not already in the store
 pub fn store_announcement(bytes: &[u8]) -> bool {
-    match bincode::serde::decode_from_slice::<ChannelAnnounce, _>(
-        bytes,
-        bincode::config::standard(),
-    ) {
+    match bincode::serde::decode_from_slice::<ChannelAnnounce, _>( bytes, bincode::config::standard(), ) {
         Ok((incoming, _)) => {
             let store = ANNOUNCE_STORE.get_or_init(|| Mutex::new(Vec::new()));
             let mut vec = store.lock().unwrap();
@@ -251,7 +248,7 @@ pub fn store_announcement(bytes: &[u8]) -> bool {
 /// Try to validate PIN against stored ChannelAnnounce list
 pub fn join_with_PIN(str_PIN: &str) -> bool {
     let now = Instant::now();
-
+    //println!("{} this is in the secure channel a function called join_with_PIN", str_PIN);
     let tracker = BRUTE_FORCE_STATE.get_or_init(|| Mutex::new(BruteForceTracker::new()));
     let mut guard = tracker.lock().unwrap();
 
@@ -271,7 +268,7 @@ pub fn join_with_PIN(str_PIN: &str) -> bool {
         guard.failed_attempts += 1;
         return false;
     };
-
+    //println!("{} this is in the secure channel a function called join_with_PIN after triming it and doing stuff", str_PIN);
     // 1) Check desktop ANNOUNCE_STORE first (existing behavior)
     {
         let store = ANNOUNCE_STORE.get_or_init(|| Mutex::new(Vec::new()));
@@ -306,7 +303,7 @@ pub fn join_with_PIN(str_PIN: &str) -> bool {
             .lock()
             .unwrap();
         *active = Some(channel);
-
+        //println!("{} this is in the secure channel a function called join_with_PIN this is when it tries the phone announcments", str_PIN);
         // reset brute-force tracker
         guard.failed_attempts = 0;
         guard.locked_until = None;
@@ -352,33 +349,33 @@ pub fn play_ping_sound() {
     }
 }
 
-pub fn generate_QR_code() {
-    if let Some(PIN) = get_host_PIN() {
-        // Convert PIN to string
-        let pin_str = PIN.to_string();
+pub fn generate_QR_code(url: Option<&str>) {
+    clear_QR_code();
+    let payload = match url {
+        Some(u) => u.to_string(),
+        None => {
+            let Some(pin) = get_host_PIN() else {
+                return;
+            };
+            pin.to_string()
+        }
+    };
 
-        // Generate QR code (standard error correction)
-        let qr_code = QrCode::new(pin_str.as_bytes()).unwrap();
+    let qr_code = QrCode::new(payload.as_bytes()).unwrap();
 
-        // Render at 250x250 pixels
-        let qr_image = qr_code
-            .render::<Luma<u8>>()
-            .min_dimensions(250, 250)
-            .build();
+    let qr_image = qr_code
+        .render::<Luma<u8>>()
+        .min_dimensions(250, 250)
+        .build();
 
-        // Convert to PNG bytes
-        let mut byte_vec = Vec::new();
-        let dynamic_image = DynamicImage::ImageLuma8(qr_image);
-        dynamic_image
-            .write_to(&mut Cursor::new(&mut byte_vec), ImageFormat::Png)
-            .unwrap();
+    let mut byte_vec = Vec::new();
+    let dynamic_image = DynamicImage::ImageLuma8(qr_image);
+    dynamic_image
+        .write_to(&mut Cursor::new(&mut byte_vec), ImageFormat::Png)
+        .unwrap();
 
-        // Store globally
-        let lock = QR_IMAGE_BYTES.get_or_init(|| Mutex::new(None));
-        *lock.lock().unwrap() = Some(byte_vec);
-    } else {
-        //println!("Error: Host PIN is not available.");
-    }
+    let lock = QR_IMAGE_BYTES.get_or_init(|| Mutex::new(None));
+    *lock.lock().unwrap() = Some(byte_vec);
 }
 
 pub fn get_QR_image_data() -> Option<Vec<u8>> {
@@ -395,4 +392,9 @@ pub fn get_QR_slint_image() -> Option<Image> {
 
     let buffer = SharedPixelBuffer::clone_from_slice(rgba.as_raw(), width, height);
     Some(Image::from_rgba8(buffer))
+}
+
+pub fn clear_QR_code() {
+    let lock = QR_IMAGE_BYTES.get_or_init(|| Mutex::new(None));
+    *lock.lock().unwrap() = None;
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LanChGo Web</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="icon" type="image/png" href="favicon.png">
+    <!--- if you see this look at the window's code in the web_app.rs line 222-->
+</head>
+<body>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+
+  <div class="chat-shell">
+    <div class="chat-header">
+      <div class="chat-title">
+        <i class="fa-solid fa-comments"></i>
+        <span>LanChGo Web</span>
+      </div>
+
+      <div class="chat-status">
+        <span class="chat-status-dot"></span>
+        <span class="chat-status-text">Connected</span>
+      </div>
+    </div>
+
+    <div id="messages" class="chat-messages">
+      <div id="emptyState" class="empty-state">
+        <i class="fa-solid fa-comments"></i>
+        <h3>No messages yet</h3>
+        <p>Start chatting from your browser.</p>
+      </div>
+    </div>
+
+    <div class="chat-input-wrap">
+      <div class="chat-input-area">
+        <input type="text" id="messageInput" placeholder="Type message..." />
+        <button id="sendBtn" class="send-btn" type="button" aria-label="Send message">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span class="send-label">Send</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
+  

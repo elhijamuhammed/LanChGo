@@ -24,12 +24,12 @@ pub fn start_file_server( registry: Arc<Mutex<OfferRegistry>>, port: u16, ) -> i
                     let reg = Arc::clone(&registry);
 
                     thread::spawn(move || {
-                        if let Err(e) = handle_client(stream, reg) {
+                        if let Err(_e) = handle_client(stream, reg) {
                             //println!("[TCP] handler error: {e}");
                         }
                     });
                 }
-                Err(e) => {
+                Err(_e) => {
                     //println!("[TCP] accept error: {e}");
                 }
             }
@@ -41,7 +41,7 @@ pub fn start_file_server( registry: Arc<Mutex<OfferRegistry>>, port: u16, ) -> i
 
 // ===================== Dispatcher =====================
 
-fn handle_client(mut stream: TcpStream, registry: Arc<Mutex<OfferRegistry>>) -> io::Result<()> {
+fn handle_client(stream: TcpStream, registry: Arc<Mutex<OfferRegistry>>) -> io::Result<()> {
     //println!("[TCP] client connected {:?}", stream.peer_addr().ok());
 
     let _ = stream.set_nodelay(true);
@@ -100,14 +100,14 @@ fn handle_client_windows(mut stream: TcpStream, registry: Arc<Mutex<OfferRegistr
     let mut reader = BufReader::with_capacity(FILE_BUF_SIZE, file);
     let mut buf = vec![0u8; FILE_BUF_SIZE];
 
-    let mut sent: u64 = 0;
+    let mut _sent: u64 = 0;
     loop {
         let n = reader.read(&mut buf)?;
         if n == 0 {
             break;
         }
         stream.write_all(&buf[..n])?;
-        sent += n as u64;
+        _sent += n as u64;
     }
 
     stream.flush()?;
@@ -157,14 +157,14 @@ fn handle_client_mobile(stream: TcpStream, registry: Arc<Mutex<OfferRegistry>>) 
     let mut file_reader = BufReader::with_capacity(FILE_BUF_SIZE, file);
     let mut buf = vec![0u8; FILE_BUF_SIZE];
 
-    let mut sent: u64 = 0;
+    let mut _sent: u64 = 0;
     loop {
         let n = file_reader.read(&mut buf)?;
         if n == 0 {
             break;
         }
         reader.get_mut().write_all(&buf[..n])?;
-        sent += n as u64;
+        _sent += n as u64;
     }
 
     reader.get_mut().flush()?;

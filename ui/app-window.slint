@@ -7,7 +7,7 @@ import { WelcomeOverlay } from "components/WelcomeOverlay.slint";
 import { Toolbar } from "components/Toolbar.slint";
 import { FileTransferPanel } from "components/FileTransferPanel.slint";
 import { FileOfferItem } from "components/types.slint";
-import { AboutPopup } from "components/AboutPopup.slint";
+import { EscCloseHandler } from "components/HelpFunctions.slint";
 
 export component AppWindow inherits Window {
     width: 1000px;
@@ -73,6 +73,16 @@ export component AppWindow inherits Window {
     callback send_clicked();
     callback show_popupmsg();
     show_popupmsg => { msgtoolongpopup.show(); }
+    callback web_join_clicked();
+    callback show_web_join_popup();
+    show_web_join_popup => { webjoinpopup.show(); }
+
+    // web join buttons and UI logic
+    in-out property <bool> web_join_enabled: true;
+    in-out property <bool> web_session_active: false;
+    in-out property <bool> link_copied: false;
+    callback copy_web_url();
+    in-out property <string> url_link;
 
     // ---------------- File transfer ----------------
     callback pick_files_send();
@@ -176,6 +186,7 @@ export component AppWindow inherits Window {
                     host_PIN <=> root.host_PIN;
                     host_PIN_masked <=> root.host_PIN_masked;
                     show_welcome <=> root.show_welcome;
+                    web_session_active <=> root.web_session_active;
 
                     change_channel_mode(mode) => { root.change_channel_mode(mode); }
                     generate_new_PIN() => { root.generate_new_PIN(); }
@@ -185,6 +196,8 @@ export component AppWindow inherits Window {
                     request_open_create_or_join() => { createorjoinpopup.show(); }
                     request_close_create_or_join() => { createorjoinpopup.close(); }
                     request_show_pin() => { showpin.show(); }
+                    web_join_clicked() => { root.web_join_clicked(); }
+                    show_web_join_popup() => {webjoinpopup.show(); }
                 }
 
                 //--- Input row ---
@@ -203,9 +216,12 @@ export component AppWindow inherits Window {
     msgtoolongpopup := PopupWindow {
         width: 500px;
         height: 250px;
-
+        close-policy: no-auto-close;
+        forward-focus: esc_msg;
+        esc_msg := EscCloseHandler { close_me => { msgtoolongpopup.close(); }}
         Rectangle {
-            width: 500px; min-height: 250px;
+            width: 500px;
+            min-height: 250px;
             x: (((parent.width) / 2 ) - 50px);
             y: (((parent.height) / 2 ) - 50px);
             background: #00000066;
@@ -223,7 +239,8 @@ export component AppWindow inherits Window {
         }
 
         TouchArea {
-            width: 100%; height: 100%;
+            width: 100%;
+            height: 100%;
             clicked => { msgtoolongpopup.close(); }
         }
     }
@@ -231,8 +248,14 @@ export component AppWindow inherits Window {
     createorjoinpopup := PopupWindow {
         width: parent.width;
         height: parent.height;
-        close-policy: no-auto-close; 
-
+        close-policy: no-auto-close;
+        forward-focus: esc_create;
+        esc_create := EscCloseHandler { 
+            close_me => {
+                root.channel_mode = "public";
+                root.public_secure_helper = false;
+                root.fix_the_bug_please();
+                createorjoinpopup.close(); }}
         // Dark transparent overlay
         Rectangle {
             width: parent.width;
@@ -304,11 +327,45 @@ export component AppWindow inherits Window {
                     HorizontalBox {
                         spacing: 8px;
 
-                        TextEdit {
+                        line-edit := LineEdit {
                             text <=> joining_PIN;
-                            placeholder-text: "Enter PIN…";
+                            placeholder-text: "Enter 8-digit PIN…";
                             horizontal-stretch: 1;
                             height: 36px;
+                            input-type: number;
+
+                            read-only: joining_PIN.character-count >= 8;
+
+                            key-pressed(event) => {
+                                if (event.text == Key.Backspace) {
+                                    // temporarily unlock so default backspace works
+                                    line-edit.read-only = false;
+
+                                    // let Slint handle deleting one character
+                                    return EventResult.reject;
+                                }
+                                if (joining_PIN.character-count >= 8){
+                                    self.read-only = true;
+                                }
+                                if (event.text == Key.Escape) {
+                                    createorjoinpopup.close();
+                                    root.channel_mode = "public";
+                                    return EventResult.accept;
+                                }
+                                if (event.text == Key.Return && joining_PIN.character-count == 8) {
+                                    root.join_channel(joining_PIN);
+                                    createorjoinpopup.close();
+                                    return EventResult.accept;
+                                }
+                                return EventResult.reject;
+                            }
+
+                            accepted(text) => {
+                                if (text.character-count == 8) {
+                                    root.join_channel(text);
+                                    createorjoinpopup.close();
+                                }
+                            }
                         }
 
                         Button {
@@ -336,12 +393,140 @@ export component AppWindow inherits Window {
             }
         }
     }
+    // --- Web Join ---
+    webjoinpopup := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+
+        forward-focus: esc_web;
+        esc_web := EscCloseHandler {
+            close_me => { webjoinpopup.close(); }
+        }
+
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080;
+
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { }
+            }
+        }
+
+        Rectangle {
+            width: 440px;
+            height: 420px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 18px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                padding: 22px;
+                spacing: 14px;
+
+                Text {
+                    text: "Web Join QR Code";
+                    font-size: 22px;
+                    font-weight: 700;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Open the Web Companion in LanChGo's web page";
+                    font-size: 14px;
+                    color:#c9ced6;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+                
+                Text {
+                    text: "Scan this QR code with your phone to open Web Join.";
+                    font-size: 14px;
+                    color: #c9ced6;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 190px;
+                    border-radius: 14px;
+                    background: #1f2228;
+                    border-width: 1px;
+                    border-color: #3a3f48;
+
+                    Image {
+                        source: root.QR_code_image;
+                        width: 160px;
+                        height: 160px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: center;
+
+                    Text {
+                        text: "Can't scan? " + root.url_link;
+                        font-size: 12px;
+                        color: #c9ced6;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: root.link_copied ? "✅ Copied" : "📋 Copy link";
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: copy_area.has-hover ? #81d4fa : #4fc3f7;
+                        vertical-alignment: center;
+
+                        copy_area := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+
+                            clicked => {
+                                root.copy_web_url();
+                                root.link_copied = true;
+                                reset_copy_timer.start();
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: #3a3f48;
+                }
+
+                Button {
+                    text: "Close";
+                    horizontal-stretch: 1;
+                    height: 38px;
+                    clicked => {
+                        webjoinpopup.close();
+                    }
+                }
+            }
+        }
+    }
     // --- Show pin ---
     showpin := PopupWindow {
         width: parent.width;
         height: parent.height;
         close-policy: no-auto-close;
-
+        forward-focus: esc_pin;
+        esc_pin := EscCloseHandler {
+            close_me => { showpin.close(); }
+        }
         // Dark transparent overlay
         Rectangle {
             width: parent.width;
@@ -407,7 +592,10 @@ export component AppWindow inherits Window {
         width: parent.width;
         height: parent.height;
         close-policy: no-auto-close;
-
+        forward-focus: esc_clear;
+        esc_clear := EscCloseHandler {
+            close_me => { clearchatbox.close(); }
+        }
         Rectangle {
             width: 420px;
             height: 200px;
@@ -540,4 +728,15 @@ export component AppWindow inherits Window {
             self.running = false;     // stop after firing once
         }
     }
+    // general timer
+    reset_copy_timer := Timer {
+        interval: 1.5s;
+        running: false;
+
+        triggered => {
+            root.link_copied = false;
+            self.running = false;
+        }
+    }
+
 }

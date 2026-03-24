@@ -11,6 +11,7 @@ mod udp_receiver;
 mod tcp_file_server;
 mod tcp_file_client;
 mod mobile_download;
+mod web_app;
 
 use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
@@ -19,7 +20,7 @@ use std::io;
 use std::io::ErrorKind;
 use std::net::UdpSocket;
 use std::rc::Rc;
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex, };
+use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex };
 use std::thread::{self, sleep};
 use std::time::Duration;
 use std::process;
@@ -32,9 +33,10 @@ use crate::main_helpers::{
     bind_single_port_socket, clear_chatbox, cleanup_file_offers, collect_interfaces,
     force_switch_to_public, get_broadcast_address, get_broadcast_for_name, get_gateway_for_adapter,
     load_or_create_config, match_getifadd_ipconfig, save_config, set_channel_mode_only,
-    update_ui_PIN };
+    update_ui_PIN, update_ui_qr_only };
 slint::include_modules!();
 
+//static APP_HANDLE: OnceLock<slint::Weak<AppWindow>> = OnceLock::new();
 const MAX_DATAGRAM: usize = 1400;
 
 fn broadcast_the_msg(sock: &UdpSocket, state: &BroadcastState, msg: &[u8]) -> io::Result<()> {
@@ -64,18 +66,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     w.set_maximized(false);
     w.set_size(LogicalSize::new(910.0, 620.0));
 
+    // -------- logic for appending web app companion messages
+    main_helpers::set_app_handle(app.as_weak());
+
     // -------- interfaces list -> UI
     let interfaces = collect_interfaces();
     let iface_rows: Vec<slint::SharedString> = interfaces
-        .iter()
-        .map(|it| {
-            format!(
-                "Name: {}\nBroadcast Address: {}",
-                it.name, it.address_to_broadcast
-            )
-            .into()
-        })
-        .collect();
+        .iter().map(|it| { format!( "Name: {}\nBroadcast Address: {}", it.name, it.address_to_broadcast ).into()}).collect();
     let iface_model = Rc::new(VecModel::from(iface_rows));
     app.set_interfaces(ModelRc::new(iface_model.clone()));
 
@@ -88,13 +85,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file_offer_model = Rc::new(VecModel::<FileOfferItem>::from(Vec::new()));
     app.set_file_offer(ModelRc::new(file_offer_model.clone()));
 
-    let offer_registry =
-        Arc::new(Mutex::new(file_transfer_protocol::OfferRegistry::new()));
+    let offer_registry = Arc::new(Mutex::new(file_transfer_protocol::OfferRegistry::new()));
     // start tcp listner and put it in idle here
     let _tcp_handle = tcp_file_server::start_file_server(
         Arc::clone(&offer_registry),
-        file_transfer_protocol::DEFAULT_TCP_PORT,
-    )?; // <-- starts idle listener thread
+        file_transfer_protocol::DEFAULT_TCP_PORT, )?; // <-- starts idle listener thread
     let remote_windows_offers: Arc<Mutex<RemoteWindowsOfferRegistry>> = Arc::new(Mutex::new(RemoteWindowsOfferRegistry::new()));
     let remote_mobile_offers: Arc<Mutex<RemoteMobileOfferRegistry>> = Arc::new(Mutex::new(RemoteMobileOfferRegistry::new()));
     // for pushing file offers in the Vector
@@ -134,10 +129,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     {
         let model = model.clone();
         app.on_append_message(move |msg: slint::SharedString| {
-            model.push(msg);
+            model.push(msg.clone());
             if model.row_count() > 10 {
                 model.remove(0);
             }
+            // 🔥 send to web clients
+            let payload = serde_json::json!({ "type": "chat", "sender": "app", "text": msg.to_string()});
+            web_app::broadcast_to_web_clients(payload.to_string());
         });
     }
 
@@ -253,6 +251,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 thread::spawn(|| {
                     sleep(Duration::from_secs(1));
+                    let _ = crate::web_app::stop_web_server();
                     process::exit(0);
                 });
 
@@ -347,14 +346,23 @@ fn main() -> Result<(), Box<dyn Error>> {
                         app.set_host_PIN("N/A".into());
                         app.set_host_PIN_masked("N/A".into());
                         app.set_public_secure_helper(false);
+                        app.set_web_join_enabled(true);
                     }
                     "host" => {
+                        let _ = crate::web_app::stop_web_server(); // stop web join
+                        app.set_web_join_enabled(false);           // disable button
+                        app.set_web_session_active(false);
+                        // sending a REQA here because when changing from public to secure the first thing it changes is this
                         const REQA_MAGIC: &[u8] = b"REQA";
                         if let Err(_e) = broadcast_the_msg(&sock, &state, REQA_MAGIC) {
                             app.invoke_show_popupmsg();
                         }
                     }
-                    "joined" => {}
+                    "joined" => {
+                        let _ = crate::web_app::stop_web_server(); // stop web join
+                        app.set_web_join_enabled(false);           // disable button
+                        app.set_web_session_active(false); // just setting the web join active to false
+                    }
                     _ => {}
                 }
             }
@@ -426,7 +434,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            secure_channel_code::generate_QR_code();
+            secure_channel_code::generate_QR_code(None);
             if let Some(app) = weak.upgrade() {
                 update_ui_PIN(&app);
             }
@@ -469,7 +477,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
 
-            secure_channel_code::generate_QR_code();
+            secure_channel_code::generate_QR_code(None);
             if let Some(app) = weak.upgrade() {
                 update_ui_PIN(&app);
             }
@@ -499,10 +507,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     {
         let weak = app.as_weak();
         let channel_mode = Arc::clone(&channel_mode);
-
         app.on_join_channel(move |PIN: slint::SharedString| {
             if let Some(app) = weak.upgrade() {
                 let join_PIN = PIN.to_string();
+                //println!("{} this prints is from the main block in line 512 and above on a comment join channel", join_PIN);
                 let success = secure_channel_code::join_with_PIN(&join_PIN);
                 app.invoke_show_connecting_popup();
                 if success {
@@ -511,13 +519,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                     app.set_channel_mode("joined".into());
                     app.set_public_secure_helper(true);
                     app.invoke_hide_connecting_popup();
-                    app.set_temp_message("✅ Joined secure channel successfully!".into());
+                    app.invoke_show_temp_message("✅ Joined secure channel successfully!".into());
                 } else {
                     set_channel_mode_only(&channel_mode, "public");
                     app.invoke_hide_connecting_popup();
                     app.set_channel_mode("public".into());
                     app.set_public_secure_helper(false);
-                    app.set_temp_message("❌ Incorrect PIN or no secure channel found.".into());
+                    app.invoke_show_temp_message("❌ Incorrect PIN or no secure channel found.".into());
                 }
             }
         });
@@ -544,7 +552,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Exit app
-    { app.on_exit_app(move || { std::process::exit(0); }); }
+    {
+        app.on_exit_app(move || {
+            let _ = crate::web_app::stop_web_server();
+            std::process::exit(0);
+        });
+    }
 
     // files button (broadcast FOFT)
     {
@@ -942,7 +955,69 @@ fn main() -> Result<(), Box<dyn Error>> {
             });
         });
     }
+    // web join button clicked
+    {
+        let weak = app.as_weak();
 
+        app.on_web_join_clicked(move || {
+            let Some(app) = weak.upgrade() else { return; };
+
+            if crate::web_app::is_web_server_running() {
+                match crate::web_app::stop_web_server() {
+                    Ok(()) => {
+                        app.set_web_session_active(false);
+                        app.invoke_show_temp_message("🛑 Web Join server stopped".into());
+                    }
+                    Err(e) => {
+                        app.invoke_show_temp_message(format!("❌ {e}").into());
+                    }
+                }
+            } else {
+                match crate::web_app::start_web_server() {
+                    Ok(()) => {
+                        app.set_web_session_active(true);
+                        update_ui_qr_only(&app);
+
+                        match crate::web_app::get_url_to_main() {
+                            Some(url) => app.set_url_link(url.into()),
+                            None => {
+                                app.invoke_show_temp_message("❌ Failed to get URL".into());
+                                return;
+                            }
+                        }
+
+                        app.invoke_show_temp_message("🌐 Web Join server started".into());
+                        app.invoke_show_web_join_popup();
+                    }
+                    Err(e) => {
+                        app.invoke_show_temp_message(format!("❌ {e}").into());
+                    }
+                }
+            }
+        });
+    }
+    // copy clipboard for the web join clicked
+    {
+        let weak = app.as_weak();
+
+        app.on_copy_web_url(move || {
+            let Some(app) = weak.upgrade() else { return; };
+
+            let url = app.get_url_link().to_string();
+
+            match arboard::Clipboard::new() {
+                Ok(mut clipboard) => {
+                    if clipboard.set_text(url).is_err() {
+                        app.invoke_show_temp_message("❌ Failed to copy link".into());
+                    }
+                }
+                Err(_) => {
+                    app.invoke_show_temp_message("❌ Failed to access clipboard".into());
+                }
+            }
+        });
+    }
+    
     // run
     app.run()?;
     running.store(false, Ordering::Relaxed);

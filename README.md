@@ -1,7 +1,7 @@
 # LanChGo (Windows)
 
 LanChGo is an open-source, privacy-focused LAN messaging application for Windows.  
-It allows devices on the same local network to communicate instantly **without internet access, servers, or accounts**.
+It enables devices on the same local network to communicate instantly — **without internet access, servers, or accounts**.
 
 This repository contains the **Windows implementation** of LanChGo.
 
@@ -16,14 +16,16 @@ This repository contains the **Windows implementation** of LanChGo.
 - End-to-end encrypted secure communication
 - Lightweight and fast
 - Built with Rust and Slint UI
-- Transfer files between devices
+- File transfer between devices
+- Web Companion for browser-based access
 
 ---
 
 ## 🖥️ Platform Scope
 
 - ✅ **Windows** — open-source (this repository)
-- ❌ Android — **not included here**
+- ❌ Android — **not included in this repository**
+- ✅ Web Companion — **the web page source**
 
 The Android app exists as a separate project and is not part of this repository.
 
@@ -63,7 +65,7 @@ cargo run
 
 The compiled binary will be located in:
 ```bash
-Windows/target/release/
+target/release/
 ```
 
 ## 📄 License
@@ -72,7 +74,7 @@ This project is licensed under the MIT License.
 ## 👤 Author
 Developed by Muhammed Abu El-Hija
 
- ## 🌐 Website
+## 🌐 Website
 Official project website:  
 https://lanchgo.com
 
