@@ -5217,7 +5217,7 @@ dependencies = [
 
 [[package]]
 name = "slint-rust-template"
-version = "1.5.0"
+version = "1.6.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -5249,6 +5249,7 @@ dependencies = [
  "slint",
  "slint-build",
  "tokio",
+ "tokio-util",
  "tower-http",
  "uuid",
  "walkdir",
@@ -5895,6 +5896,19 @@ dependencies = [
  "log",
  "tokio",
  "tungstenite",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ae9cec805b01e8fc3fd2fe289f89149a9b66dd16786abd8b19cfa7b48cb0098"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

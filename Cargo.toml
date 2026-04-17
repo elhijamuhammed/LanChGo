@@ -1,6 +1,6 @@
 [package]
 name = "slint-rust-template"
-version = "1.5.0"
+version = "1.6.0"
 edition = "2021"
 
 [[bin]]
@@ -40,9 +40,10 @@ crossbeam-utils = "0.8.21"
 semaphore = "0.4.0"
 axum = { version = "0.8.8", features = ["ws"] }
 tower-http = "0.6.8"
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros", "net"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros", "net", "fs"] }
 arboard = "3.6.1"
 futures-util = "0.3.32"
+tokio-util = { version = "0.7.18", features = ["io"] }
 
 [build-dependencies]
 slint-build = "1.14.1"

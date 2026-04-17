@@ -300,7 +300,6 @@ pub fn spawn_zip_bundle_thread( paths: Vec<PathBuf>, offer_id: [u8; 16], ) -> (m
             }
         }
     });
-
     (rx, handle)
 }
 
@@ -332,17 +331,10 @@ fn build_zip_bundle_packet_no_registry<F: FnMut(u64, u64, &Path)>( paths: &[Path
     let mut buf = vec![0u8; 256 * 1024];
 
     for (path, _file_total) in infos {
-        let name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| "unknown".to_string());
-
-        zip.start_file(name, options)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
-
+        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "unknown".to_string());
+        zip.start_file(name, options).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
         let f = File::open(&path)?;
         let mut r = BufReader::new(f);
-
         loop {
             let n = r.read(&mut buf)?;
             if n == 0 {

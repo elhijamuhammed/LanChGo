@@ -1,5 +1,5 @@
 ==============================================================================
-           LanChGo v1.5.0 — Local Network Communication Made Simple
+           LanChGo v1.6.0 — Local Network Communication Made Simple
 ==============================================================================
 
 Thank you for installing LanChGo!
@@ -63,6 +63,7 @@ Note: All devices must be connected to the same local network.
 - Developer/debug commands (hidden).
 - File transfer feature.
 - Web app companion to chat using the browser.
+- Web Companion now can receive files.
 
 ------------------------------------
  Privacy & Security

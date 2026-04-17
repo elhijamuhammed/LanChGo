@@ -81,6 +81,8 @@ pub fn start_udp_receiver(
                                             || !decrypted.eq_ignore_ascii_case( "/disconnect")
                                             || !decrypted.eq_ignore_ascii_case( "/clearfiles")
                                             || !decrypted.eq_ignore_ascii_case( "/clearall")
+                                            || !decrypted.eq_ignore_ascii_case( "/webjoin")                
+                                            || !decrypted.eq_ignore_ascii_case( "/webstop")
                                         {
                                             app.invoke_append_message(decrypted.into(),);
                                         }
@@ -122,6 +124,8 @@ pub fn start_udp_receiver(
                                                     && !plain.eq_ignore_ascii_case("/disconnect")
                                                     && !plain.eq_ignore_ascii_case("/clearfiles")
                                                     && !plain.eq_ignore_ascii_case("/clearall")
+                                                    && !plain.eq_ignore_ascii_case("/webjoin")
+                                                    && !plain.eq_ignore_ascii_case("/webstop")                                                                                                        
                                                 {
                                                     app.invoke_append_message(
                                                         plain.into(),

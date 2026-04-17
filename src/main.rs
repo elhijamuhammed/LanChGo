@@ -12,6 +12,7 @@ mod tcp_file_server;
 mod tcp_file_client;
 mod mobile_download;
 mod web_app;
+mod web_app_file_transfer;
 
 use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
@@ -86,6 +87,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     app.set_file_offer(ModelRc::new(file_offer_model.clone()));
 
     let offer_registry = Arc::new(Mutex::new(file_transfer_protocol::OfferRegistry::new()));
+    web_app_file_transfer::register_offer_registry(Arc::clone(&offer_registry));
     // start tcp listner and put it in idle here
     let _tcp_handle = tcp_file_server::start_file_server(
         Arc::clone(&offer_registry),
@@ -266,6 +268,39 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             if msg.eq_ignore_ascii_case("/disconnect") {
                 app.invoke_disconnect_channel();
+                app.set_input_text("".into());
+                return;
+            }
+
+            if msg.eq_ignore_ascii_case("/webstop") {
+                match web_app::stop_web_server() {
+                    Ok(()) => {
+                        app.set_web_session_active(false);
+                        app.invoke_show_temp_message("🛑 Web session stopped".into());
+                    }
+                    Err(e) => {
+                        app.invoke_show_temp_message(format!("❌ {e}").into());
+                    }
+                }
+                app.set_input_text("".into());
+                return;
+            }
+
+            if msg.eq_ignore_ascii_case("/webjoin") {
+                match web_app::start_web_server() {
+                    Ok(()) => {
+                        app.set_web_session_active(true);
+                        update_ui_qr_only(&app);
+                        match crate::web_app::get_url_to_main() {
+                            Some(url) => app.set_url_link(url.into()),
+                            None => {}
+                        }
+                        app.invoke_show_temp_message("🌐 Web session started".into());
+                    }
+                    Err(e) => {
+                        app.invoke_show_temp_message(format!("❌ {e}").into());
+                    }
+                }
                 app.set_input_text("".into());
                 return;
             }
@@ -571,18 +606,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         app.on_pick_files_send(move || {
             let Some(app) = weak.upgrade() else { return; };
-
             // 🚫 block re-entry (prevents 2 dialogs / 2 bundle starts)
             if is_picking_files.swap(true, Ordering::SeqCst) {
                 return;
             }
-
             // 🔁 call the async builder (opens dialog; returns Ready or Bundling)
             let build = {
                 let mut reg = offer_registry.lock().unwrap();
                 file_transfer_protocol::pick_and_build_foft_packet_async(&mut reg)
             };
-
             // ✅ IMPORTANT: dialog is closed now → allow clicking Files again
             is_picking_files.store(false, Ordering::SeqCst);
 
@@ -609,6 +641,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         if let Ok(mfoft_packet) = crate::file_transfer_protocol::encode_mfoft_packet(&offer) {
                             let _ = broadcast_the_msg(&s, &st, &mfoft_packet);
                         }
+                        crate::web_app_file_transfer::notify_web_file_offer(&offer.offer_id, &offer.name, offer.size);
                     }
                     app.invoke_show_temp_message("📤 File offer broadcasted".into());
                 }
@@ -694,6 +727,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                         let mut reg = offer_registry2.lock().unwrap();
                                         reg.insert(offer_id, local);
                                     }
+                                    crate::web_app_file_transfer::notify_web_file_offer(&offer_id, &local_name, local_size);
                                     // NOTE: need work and tiding up this block also like the previous note i just want to move on maybe in the future
                                     //debug_print_foft_packet(&packet);
                                     let ok_foft = broadcast_the_msg(&s2, &st2, &packet).is_ok();
@@ -997,6 +1031,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
     }
     // copy clipboard for the web join clicked
+    // Handles "Copy link" button in Web Join popup (copies URL to clipboard)
     {
         let weak = app.as_weak();
 

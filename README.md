@@ -65,7 +65,7 @@ cargo run
 
 The compiled binary will be located in:
 ```bash
-Windows/target/release/
+target/release/
 ```
 
 ## 📄 License

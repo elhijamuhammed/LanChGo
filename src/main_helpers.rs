@@ -339,6 +339,8 @@ pub fn help_message() -> String {
         /clearfiles  Clear file transfer panel
         /clearall    Clear chat and files
         /disconnect  Disconnect from secure channel
+        /webjoin     Starts a web companion session
+        /webstop     Stops a web companion session
         /exit        Exit LanChGo
 
         Tip:

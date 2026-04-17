@@ -93,7 +93,7 @@ export component AppWindow inherits Window {
     callback clear_file_transfer_panel();
     callback download_offer(string);
     in-out property <string> download_folder;
-    //callback debug_add_fake_offer_msg(); // debug
+    callback debug_add_fake_offer_msg(); // debug
 
     // bundling progress
     in-out property <bool> bundle_in_progress: false;
@@ -161,23 +161,37 @@ export component AppWindow inherits Window {
                         messages: root.messages;
                         temp_message: root.temp_message;
                     }
+// keep the block just remove the button or comment it out
+VerticalBox {
+    spacing: 8px;
+    vertical-stretch: 1;
 
-                    FileTransferPanel {
-                        vertical-stretch: 1;
-                        file_offer <=> root.file_offer;
-                        download_folder <=> root.download_folder;
-                        bundle_in_progress: root.bundle_in_progress;
-                        bundle_progress: root.bundle_progress;
-                        bundle_progress_text: root.bundle_progress_text;
-                        download_in_progress: root.download_in_progress;
-                        download_progress: root.download_progress;
-                        download_progress_text: root.download_progress_text;
-                        pick_files() => { root.pick_files_send(); }
-                        pick_download_folder => { root.pick_download_folder(); }
-                        open_download_folder() => { root.open_download_folder(); }
-                        clear_offers() => {root.clear_file_transfer_panel(); }
-                        download_offer(id) => { root.download_offer(id); }
-                    }
+    FileTransferPanel {
+        vertical-stretch: 1;
+        file_offer <=> root.file_offer;
+        download_folder <=> root.download_folder;
+        bundle_in_progress: root.bundle_in_progress;
+        bundle_progress: root.bundle_progress;
+        bundle_progress_text: root.bundle_progress_text;
+        download_in_progress: root.download_in_progress;
+        download_progress: root.download_progress;
+        download_progress_text: root.download_progress_text;
+
+        pick_files() => { root.pick_files_send(); }
+        pick_download_folder => { root.pick_download_folder(); }
+        open_download_folder() => { root.open_download_folder(); }
+        clear_offers() => { root.clear_file_transfer_panel(); }
+        download_offer(id) => { root.download_offer(id); }
+    }
+
+    // Button {
+    //     text: "🧪 Test Web File Offer";
+    //     height: 36px;
+    //     clicked => {
+    //         root.debug_add_fake_offer_msg();
+    //     }
+    // }
+}
                 }
 
                 Toolbar {

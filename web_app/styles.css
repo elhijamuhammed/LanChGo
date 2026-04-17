@@ -357,3 +357,265 @@ body {
         display: none;
     }
 }
+
+.FileTransferPanelButton {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 4px 10px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: linear-gradient(135deg, #b97817, #d9982f);
+    color: #1a1a1a;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 13px;
+    font-weight: 500;
+
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    box-shadow: 0 3px 10px rgba(185, 120, 23, 0.25);
+}
+
+.FileTransferPanelButton:hover {
+    background: linear-gradient(135deg, #c9861f, #e6a93a);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(185, 120, 23, 0.35);
+}
+
+.FileTransferPanelButton:active {
+    transform: translateY(0px) scale(0.96);
+    filter: brightness(0.95);
+}
+
+.FileTransferPanelButton.disabled {
+    background: rgba(120, 140, 160, 0.15);
+    color: #7b91a6;
+    cursor: default;
+    transform: none;
+    filter: none;
+    box-shadow: none;
+}
+
+.FileTransferPanelButton.active {
+    background: linear-gradient(135deg, #e6a93a, #ffd166);
+    box-shadow: 0 0 12px rgba(255, 200, 80, 0.35);
+}
+
+.file-panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+    z-index: 999;
+}
+
+.file-panel-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.file-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(380px, 92vw);
+    height: 100%;
+    background: linear-gradient(180deg, #0f1720, #0b1118);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.35);
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.file-panel-overlay.open .file-panel {
+    transform: translateX(0);
+}
+
+.file-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #f5f7fb;
+    font-weight: 600;
+}
+
+.file-panel-close {
+    border: none;
+    background: transparent;
+    color: #9aa4b2;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.file-panel-close:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+}
+
+.file-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+@media (max-width: 700px) {
+    .file-panel {
+        position: absolute;
+
+        left: 0;
+        right: 0;
+        width: 100%;
+
+        bottom: 0;
+        top: auto;
+
+        height: 70vh;
+
+        margin: 0;
+        padding: 0;
+
+        border-radius: 18px 18px 0 0; /* only top corners */
+        border-left: none;
+
+        transform: translateY(100%);
+        box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .file-panel-overlay.open .file-panel {
+        transform: translateY(0);
+    }
+}
+
+.file-transfer-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    padding: 10px 12px;
+    margin-top: 8px;
+
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    transition: all 0.15s ease;
+}
+
+.file-transfer-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.file-transfer-icon {
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 8px;
+
+    background: rgba(255, 255, 255, 0.06);
+
+    font-size: 14px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.file-transfer-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.file-transfer-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    gap: 10px;
+}
+
+.file-transfer-name {
+    font-weight: 500;
+    color: #f5f7fb;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-transfer-size {
+    font-size: 11px;
+    color: #9aa4b2;
+    flex-shrink: 0;
+}
+
+.file-transfer-status {
+    font-size: 11px;
+    color: #9aa4b2;
+}
+
+.file-transfer-status.ready {
+    color: #7bd88f;
+}
+
+.file-transfer-actions {
+    margin-top: 4px;
+}
+
+.clearFileTransfer {
+    border: none;
+    background: transparent;
+    color: #9aa4b2;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    margin-left: auto;
+    margin-right: 6px;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.clearFileTransfer:hover {
+    background: rgba(255, 80, 80, 0.1);
+    color: #ff6b6b;
+}
+
+.FileTransferPanelButton {
+    position: relative;
+}
+
+.file-transfer-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ff4d4d;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
