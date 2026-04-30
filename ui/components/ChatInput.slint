@@ -3,11 +3,11 @@ import { HorizontalBox, Button, TextEdit } from "std-widgets.slint";
 export component ChatInput inherits HorizontalBox {
     spacing: 5px;
 
-    // Parent binds these
     in-out property <string> input_text;
+
     callback send_clicked();
     callback clear_clicked();
-    //callback add_fake_file_offer();
+    callback open_command_picker();
 
     messageinput := TextEdit {
         text <=> root.input_text;
@@ -15,19 +15,28 @@ export component ChatInput inherits HorizontalBox {
         height: 60px;
         horizontal-stretch: 1;
         font-size: 20px;
-        //has-focus: true;
         placeholder-text: "Type here...";
 
         key-pressed(event) => {
-            if (event.text == "\n" && !event.modifiers.shift) {
-                if (root.input_text != "") { root.send_clicked(); }
-                accept
-            } else {
-                reject
+            // ENTER (without Shift) → SEND
+            if (event.text == "\n" || event.text == Key.Return) && !event.modifiers.shift {
+                if root.input_text != "" {
+                    root.send_clicked();
+                }
+                return accept;
             }
+
+            // UP ARROW → OPEN COMMAND PICKER (only if empty)
+            if (event.text == Key.UpArrow && root.input_text == "") || (event.text == Key.DownArrow && root.input_text == "") {
+                root.open_command_picker();
+                return accept;
+            }
+
+            reject
         }
     }
 
+    // Auto-focus on load
     Timer {
         running: true;
         interval: 200ms;
@@ -40,6 +49,7 @@ export component ChatInput inherits HorizontalBox {
     Button {
         text: "Send";
         enabled: root.input_text != "";
+
         clicked => {
             root.send_clicked();
             messageinput.focus();
@@ -48,13 +58,10 @@ export component ChatInput inherits HorizontalBox {
 
     Button {
         text: "Clear";
-        clicked => { root.clear_clicked(); }
+
+        clicked => {
+            root.clear_clicked();
+            messageinput.focus();
+        }
     }
-
-    // 🧪 DEBUG BUTTON
-    // Button {
-    //     text: "➕ Fake File";
-    //     clicked => add_fake_file_offer();
-    // }
-
 }

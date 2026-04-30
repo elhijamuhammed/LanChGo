@@ -1,0 +1,24 @@
+export component DropFileForTransfer inherits Rectangle {
+
+    // expose hover state if you want to use it later
+    out property <bool> hovering: area.has-hover;
+
+    // keep it visually invisible / neutral
+    background: transparent;
+
+    Text {
+        width: parent.width;
+        height: parent.height;
+        text: "No offers yet";
+        color: #9aa4b2;
+        font-size: 13px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        mouse-cursor: copy; // optional, remove if you want zero feedback
+    }
+}

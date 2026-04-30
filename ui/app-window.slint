@@ -22,18 +22,18 @@ export component AppWindow inherits Window {
 
     // Interface selection
     in-out property <bool> show_welcome;
-    in-out property <[string]> interfaces;        // ["Wi-Fi|10.0.0.255", "Ethernet|192.168.1.255"]
-    in-out property <string> selected_interface;  // e.g. "Wi-Fi"
+    in-out property <[string]> interfaces;
+    in-out property <string> selected_interface;
     callback interface_selected(string);
-    in-out property <bool> changed_networks; // if the network changes show
+    in-out property <bool> changed_networks;
     in-out property <string> broadcast_address;
     in-out property <string> interface_status;
     in-out property <int> ui_port;
 
     // Security / channel status
-    in-out property <string> channel_mode: "public";  // values: "public" | "host" | "joined" // default public
+    in-out property <string> channel_mode: "public";
     callback change_channel_mode(string);
-    callback fix_the_bug_please(); // To fix a bug when you click close it still host
+    callback fix_the_bug_please();
     in-out property <bool> public_secure_helper: false;
     callback create_channel();
     in-out property <string> host_PIN;
@@ -55,11 +55,12 @@ export component AppWindow inherits Window {
     in-out property <string> temp_message: "";
     callback show_temp_message(string);
     show_temp_message(msg) => {
-        hide_temp.stop();           // 🛑 explicitly stop first
-        root.temp_message = "";     // ✅ clear previous message to force UI update
+        hide_temp.stop();
+        root.temp_message = "";
         root.temp_message = msg;
-        hide_temp.start();          // ▶️ then start fresh
+        hide_temp.start();
     }
+
     // Logic for the new version
     callback show_new_version_popup();
     callback exit_app();
@@ -93,23 +94,26 @@ export component AppWindow inherits Window {
     callback clear_file_transfer_panel();
     callback download_offer(string);
     in-out property <string> download_folder;
-    callback debug_add_fake_offer_msg(); // debug
+    callback debug_add_fake_offer_msg();
 
     // bundling progress
     in-out property <bool> bundle_in_progress: false;
     in-out property <float> bundle_progress: 0.0;
     in-out property <string> bundle_progress_text: "";
 
-    // -------- Download Progress ----------
+    // Download Progress
     in-out property <bool> download_in_progress: false;
-    in-out property <float> download_progress: 0.0; // 0.0..1.0
+    in-out property <float> download_progress: 0.0;
     in-out property <string> download_progress_text: "";
 
-    // version 
+    // version
     in-out property <string> show_version;
     property <int> debug_offer_counter: 0;
 
-    
+    // Command picker
+    in-out property <[string]> chat_commands: [ "/info", "/help", "/clear", "/clearfiles", "/clearall", "/disconnect", "/webjoin", "/webstop", "/exit" ];
+    property <int> selected_command_idx: 0;
+
     Rectangle {
         background: blue;
         border-width: 3px;
@@ -132,8 +136,8 @@ export component AppWindow inherits Window {
 
             VerticalBox {
                 spacing: 12px;
-                // Title
-                HeaderBar { 
+
+                HeaderBar {
                     show_version: root.show_version;
                 }
 
@@ -161,37 +165,29 @@ export component AppWindow inherits Window {
                         messages: root.messages;
                         temp_message: root.temp_message;
                     }
-// keep the block just remove the button or comment it out
-VerticalBox {
-    spacing: 8px;
-    vertical-stretch: 1;
 
-    FileTransferPanel {
-        vertical-stretch: 1;
-        file_offer <=> root.file_offer;
-        download_folder <=> root.download_folder;
-        bundle_in_progress: root.bundle_in_progress;
-        bundle_progress: root.bundle_progress;
-        bundle_progress_text: root.bundle_progress_text;
-        download_in_progress: root.download_in_progress;
-        download_progress: root.download_progress;
-        download_progress_text: root.download_progress_text;
+                    VerticalBox {
+                        spacing: 8px;
+                        vertical-stretch: 1;
 
-        pick_files() => { root.pick_files_send(); }
-        pick_download_folder => { root.pick_download_folder(); }
-        open_download_folder() => { root.open_download_folder(); }
-        clear_offers() => { root.clear_file_transfer_panel(); }
-        download_offer(id) => { root.download_offer(id); }
-    }
+                        FileTransferPanel {
+                            vertical-stretch: 1;
+                            file_offer <=> root.file_offer;
+                            download_folder <=> root.download_folder;
+                            bundle_in_progress: root.bundle_in_progress;
+                            bundle_progress: root.bundle_progress;
+                            bundle_progress_text: root.bundle_progress_text;
+                            download_in_progress: root.download_in_progress;
+                            download_progress: root.download_progress;
+                            download_progress_text: root.download_progress_text;
 
-    // Button {
-    //     text: "🧪 Test Web File Offer";
-    //     height: 36px;
-    //     clicked => {
-    //         root.debug_add_fake_offer_msg();
-    //     }
-    // }
-}
+                            pick_files() => { root.pick_files_send(); }
+                            pick_download_folder => { root.pick_download_folder(); }
+                            open_download_folder() => { root.open_download_folder(); }
+                            clear_offers() => { root.clear_file_transfer_panel(); }
+                            download_offer(id) => { root.download_offer(id); }
+                        }
+                    }
                 }
 
                 Toolbar {
@@ -206,12 +202,11 @@ VerticalBox {
                     generate_new_PIN() => { root.generate_new_PIN(); }
                     disconnect_channel() => { root.disconnect_channel(); }
 
-                    // ✅ popup hooks
                     request_open_create_or_join() => { createorjoinpopup.show(); }
                     request_close_create_or_join() => { createorjoinpopup.close(); }
                     request_show_pin() => { showpin.show(); }
                     web_join_clicked() => { root.web_join_clicked(); }
-                    show_web_join_popup() => {webjoinpopup.show(); }
+                    show_web_join_popup() => { webjoinpopup.show(); }
                 }
 
                 //--- Input row ---
@@ -219,25 +214,27 @@ VerticalBox {
                     input_text <=> root.input_text;
                     send_clicked() => { root.send_clicked(); }
                     clear_clicked() => { clearchatbox.show(); }
-                    // add_fake_file_offer() => {
-                    //     root.debug_add_fake_offer_msg();
-                    // }
+                    open_command_picker() => {
+                        root.selected_command_idx = 0;
+                        commandpicker.show();
+                    }
                 }
             }
         }
     }
-    // --- Popup ---
+
+    // --- Message too long ---
     msgtoolongpopup := PopupWindow {
         width: 500px;
         height: 250px;
         close-policy: no-auto-close;
         forward-focus: esc_msg;
-        esc_msg := EscCloseHandler { close_me => { msgtoolongpopup.close(); }}
+        esc_msg := EscCloseHandler { close_me => { msgtoolongpopup.close(); } }
         Rectangle {
             width: 500px;
             min-height: 250px;
-            x: (((parent.width) / 2 ) - 50px);
-            y: (((parent.height) / 2 ) - 50px);
+            x: (((parent.width) / 2) - 50px);
+            y: (((parent.height) / 2) - 50px);
             background: #00000066;
             border-radius: 12px;
 
@@ -251,40 +248,37 @@ VerticalBox {
                 wrap: word-wrap;
             }
         }
-
         TouchArea {
             width: 100%;
             height: 100%;
             clicked => { msgtoolongpopup.close(); }
         }
     }
+
     // --- Create or Join ---
     createorjoinpopup := PopupWindow {
         width: parent.width;
         height: parent.height;
         close-policy: no-auto-close;
         forward-focus: esc_create;
-        esc_create := EscCloseHandler { 
+        esc_create := EscCloseHandler {
             close_me => {
                 root.channel_mode = "public";
                 root.public_secure_helper = false;
                 root.fix_the_bug_please();
-                createorjoinpopup.close(); }}
-        // Dark transparent overlay
+                createorjoinpopup.close();
+            }
+        }
         Rectangle {
             width: parent.width;
             height: parent.height;
             background: #00000080;
-
-            // Prevent clicks on the overlay from closing the popup
             TouchArea {
                 width: parent.width;
                 height: parent.height;
-                clicked => { /* absorb clicks, do nothing */ }
+                clicked => { }
             }
         }
-
-        // Centered dialog card
         Rectangle {
             width: 420px;
             height: 280px;
@@ -299,7 +293,6 @@ VerticalBox {
                 spacing: 18px;
                 padding: 20px;
 
-                // Title
                 Text {
                     text: "Create or Join a Channel";
                     font-size: 22px;
@@ -308,19 +301,17 @@ VerticalBox {
                     vertical-alignment: center;
                 }
 
-                // Create Section
                 Button {
                     text: "🛡 Create Channel";
                     horizontal-stretch: 1;
                     height: 40px;
                     clicked => {
-                            root.create_channel();
-                            root.change_channel_mode("host");
-                            createorjoinpopup.close();
-                        }
+                        root.create_channel();
+                        root.change_channel_mode("host");
+                        createorjoinpopup.close();
+                    }
                 }
 
-                // Divider
                 Rectangle {
                     height: 1px;
                     background: #444;
@@ -328,7 +319,6 @@ VerticalBox {
                     opacity: 0.6;
                 }
 
-                // Join Section
                 VerticalBox {
                     spacing: 6px;
 
@@ -347,18 +337,14 @@ VerticalBox {
                             horizontal-stretch: 1;
                             height: 36px;
                             input-type: number;
-
                             read-only: joining_PIN.character-count >= 8;
 
                             key-pressed(event) => {
                                 if (event.text == Key.Backspace) {
-                                    // temporarily unlock so default backspace works
                                     line-edit.read-only = false;
-
-                                    // let Slint handle deleting one character
                                     return EventResult.reject;
                                 }
-                                if (joining_PIN.character-count >= 8){
+                                if (joining_PIN.character-count >= 8) {
                                     self.read-only = true;
                                 }
                                 if (event.text == Key.Escape) {
@@ -385,18 +371,18 @@ VerticalBox {
                         Button {
                             text: "🔑 Join";
                             height: 36px;
-                            clicked => { 
+                            clicked => {
                                 root.join_channel(joining_PIN);
                                 createorjoinpopup.close();
                             }
                         }
                     }
-                    // Close Button
+
                     Button {
                         text: "❌ Close";
                         horizontal-stretch: 1;
                         height: 36px;
-                        clicked => { 
+                        clicked => {
                             root.channel_mode = "public";
                             root.public_secure_helper = false;
                             root.fix_the_bug_please();
@@ -407,29 +393,26 @@ VerticalBox {
             }
         }
     }
+
     // --- Web Join ---
     webjoinpopup := PopupWindow {
         width: parent.width;
         height: parent.height;
         close-policy: no-auto-close;
-
         forward-focus: esc_web;
         esc_web := EscCloseHandler {
             close_me => { webjoinpopup.close(); }
         }
-
         Rectangle {
             width: parent.width;
             height: parent.height;
             background: #00000080;
-
             TouchArea {
                 width: parent.width;
                 height: parent.height;
                 clicked => { }
             }
         }
-
         Rectangle {
             width: 440px;
             height: 420px;
@@ -455,11 +438,11 @@ VerticalBox {
                 Text {
                     text: "Open the Web Companion in LanChGo's web page";
                     font-size: 14px;
-                    color:#c9ced6;
+                    color: #c9ced6;
                     wrap: word-wrap;
                     horizontal-alignment: center;
                 }
-                
+
                 Text {
                     text: "Scan this QR code with your phone to open Web Join.";
                     font-size: 14px;
@@ -506,7 +489,6 @@ VerticalBox {
                         copy_area := TouchArea {
                             width: parent.width;
                             height: parent.height;
-
                             clicked => {
                                 root.copy_web_url();
                                 root.link_copied = true;
@@ -525,14 +507,13 @@ VerticalBox {
                     text: "Close";
                     horizontal-stretch: 1;
                     height: 38px;
-                    clicked => {
-                        webjoinpopup.close();
-                    }
+                    clicked => { webjoinpopup.close(); }
                 }
             }
         }
     }
-    // --- Show pin ---
+
+    // --- Show PIN ---
     showpin := PopupWindow {
         width: parent.width;
         height: parent.height;
@@ -541,17 +522,14 @@ VerticalBox {
         esc_pin := EscCloseHandler {
             close_me => { showpin.close(); }
         }
-        // Dark transparent overlay
         Rectangle {
             width: parent.width;
             height: parent.height;
             background: #00000080;
         }
-
-        // Centered dialog card
         Rectangle {
             width: 420px;
-            height: 360px; // ↑ increased height to fit QR nicely
+            height: 360px;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             border-radius: 16px;
@@ -581,7 +559,6 @@ VerticalBox {
                     color: #00e0ff;
                 }
 
-                // Center QR code nicely with padding
                 Rectangle {
                     height: 180px;
                     background: transparent;
@@ -602,6 +579,8 @@ VerticalBox {
             }
         }
     }
+
+    // --- Clear chat box ---
     clearchatbox := PopupWindow {
         width: parent.width;
         height: parent.height;
@@ -648,27 +627,27 @@ VerticalBox {
                         text: "❌ Cancel";
                         horizontal-stretch: 1;
                         height: 40px;
-                        clicked => { clearchatbox.close() }
+                        clicked => { clearchatbox.close(); }
                     }
                 }
             }
         }
     }
+
+    // --- New version detected ---
     newversion := PopupWindow {
         width: parent.width;
         height: parent.height;
         close-policy: no-auto-close;
 
-        // Dark transparent background overlay
         Rectangle {
             width: parent.width;
             height: parent.height;
-            background: #00000080; // 👈 black with 50% transparency
+            background: #00000080;
 
-            // Centered dialog card
             Rectangle {
-                width: 500px;          // a bit wider for text
-                height: 240px;         // a bit taller
+                width: 500px;
+                height: 240px;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
                 border-radius: 16px;
@@ -680,14 +659,13 @@ VerticalBox {
                     spacing: 18px;
                     padding: 20px;
 
-                    // Title text
                     Text {
                         text: "⚠️ Config file for an older version detected!";
                         font-size: 20px;
                         font-weight: 600;
                         color: white;
                         horizontal-alignment: center;
-                        wrap: word-wrap;       // 👈 allow multi-line text
+                        wrap: word-wrap;
                     }
 
                     Text {
@@ -695,12 +673,11 @@ VerticalBox {
                         font-size: 16px;
                         color: #dddddd;
                         horizontal-alignment: center;
-                        wrap: word-wrap;       // 👈 wrap the smaller text too
+                        wrap: word-wrap;
                     }
 
-                    // Exit button centered
                     HorizontalBox {
-                        Rectangle { horizontal-stretch: 1; } // left spacer
+                        Rectangle { horizontal-stretch: 1; }
                         Button {
                             text: "🚪 EXIT";
                             horizontal-stretch: 0;
@@ -708,21 +685,24 @@ VerticalBox {
                             height: 42px;
                             clicked => { root.exit_app(); }
                         }
-                        Rectangle { horizontal-stretch: 1; } // right spacer
+                        Rectangle { horizontal-stretch: 1; }
                     }
                 }
             }
         }
     }
+
+    // --- Connecting ---
     connectingpopup := PopupWindow {
         width: parent.width;
         height: parent.height;
         close-policy: no-auto-close;
 
         Rectangle {
-            width: 300px; height: 150px;
-            x: (parent.width - self.width)/2;
-            y: (parent.height - self.height)/2;
+            width: 300px;
+            height: 150px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
             border-radius: 12px;
             background: #2c2f35;
 
@@ -733,24 +713,181 @@ VerticalBox {
             }
         }
     }
+
+    // --- Command Picker ---
+    commandpicker := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: no-auto-close;
+        forward-focus: cmd_keys;
+
+        // Reset selection when opened
+        init => {
+            root.selected_command_idx = 0;
+        }
+
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000080;
+
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { commandpicker.close(); }
+            }
+        }
+
+        Rectangle {
+            width: 380px;
+            height: 56px + 1px + (44px * root.chat_commands.length) + 32px + 40px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: #2c2f35;
+            border-width: 1px;
+            border-color: #3a3f48;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 10px;
+
+                Text {
+                    text: "Commands";
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: #3a3f48;
+                }
+
+                VerticalBox {
+                    spacing: 4px;
+
+                    for cmd[index] in root.chat_commands: Rectangle {
+                        height: 40px;
+                        border-radius: 8px;
+                        background: index == root.selected_command_idx ? #2b7bff : #1f2228;
+                        border-width: index == root.selected_command_idx ? 1px : 0px;
+                        border-color: #7fb2ff;
+
+                        HorizontalBox {
+                            spacing: 8px;
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: index == root.selected_command_idx ? "➜" : "";
+                                width: 20px;
+                                color: #ffffff;
+                                font-size: 15px;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                text: cmd;
+                                color: white;
+                                font-size: 15px;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            Text {
+                                text: index == root.selected_command_idx ? "Enter" : "";
+                                color: #d7e8ff;
+                                font-size: 11px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+
+                            clicked => {
+                                root.input_text = cmd;
+                                commandpicker.close();
+                                root.send_clicked();
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    text: "↑ ↓ navigate    Enter execute    Esc close";
+                    font-size: 11px;
+                    color: #9aa3b2;
+                    horizontal-alignment: center;
+                }
+            }
+
+            cmd_keys := FocusScope {
+                width: parent.width;
+                height: parent.height;
+
+                key-pressed(event) => {
+
+                    // 🔁 Wrap-around UP
+                    if event.text == Key.UpArrow {
+                        if root.selected_command_idx == 0 {
+                            root.selected_command_idx = root.chat_commands.length - 1;
+                        } else {
+                            root.selected_command_idx -= 1;
+                        }
+                        return accept;
+                    }
+
+                    // 🔁 Wrap-around DOWN
+                    if event.text == Key.DownArrow {
+                        if root.selected_command_idx == root.chat_commands.length - 1 {
+                            root.selected_command_idx = 0;
+                        } else {
+                            root.selected_command_idx += 1;
+                        }
+                        return accept;
+                    }
+
+                    // ✅ ENTER = EXECUTE
+                    if event.text == "\n" || event.text == Key.Return {
+                        root.input_text = root.chat_commands[root.selected_command_idx];
+                        commandpicker.close();
+                        root.send_clicked();
+                        return accept;
+                    }
+
+                    // ❌ ESC = CLOSE
+                    if event.text == Key.Escape {
+                        commandpicker.close();
+                        return accept;
+                    }
+
+                    reject
+                }
+            }
+        }
+    }
+    
     // --- Timer to clear temporary messages ---
     hide_temp := Timer {
         interval: 3s;
         running: false;
         triggered => {
-            root.temp_message = "";   // clear the banner text
-            self.running = false;     // stop after firing once
+            root.temp_message = "";
+            self.running = false;
         }
     }
-    // general timer
+
+    // --- General timer ---
     reset_copy_timer := Timer {
         interval: 1.5s;
         running: false;
-
         triggered => {
             root.link_copied = false;
             self.running = false;
         }
     }
-
 }
