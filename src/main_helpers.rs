@@ -1,4 +1,4 @@
-use crate::AppWindow;
+use crate::{AppWindow};
 use crate::classes::{BroadcastState, Config, InterfacesInfo};
 use crate::file_transfer_protocol;
 use crate::FileOfferItem;
@@ -335,6 +335,7 @@ pub fn help_message() -> String {
 
         /info        Show app information
         /help        Show this help message
+        /settings    Opens the settings menu
         /clear       Clear chat messages
         /clearfiles  Clear file transfer panel
         /clearall    Clear chat and files
@@ -366,4 +367,52 @@ pub fn append_message_from_web(text: String) {
             }
         });
     }
+}
+
+pub fn checking_ports(state: &BroadcastState) {
+    let base_port: u16 = 3000;
+
+    for offset in 0..=100 {
+        let candidate = base_port + offset;
+        match UdpSocket::bind(("0.0.0.0", candidate)) {
+            Ok(_) => {
+                state.set_port(candidate);
+                println!("[LanChGo] Using port: {}", state.get_port());
+                return;
+            }
+            Err(_) => continue,
+        }
+    }
+
+    // Last resort
+    if let Ok(sock) = UdpSocket::bind("0.0.0.0:0") {
+        if let Ok(addr) = sock.local_addr() {
+            state.set_port(addr.port());
+        }
+    }
+}
+
+pub fn try_set_manual_port(state: &BroadcastState, config: &Arc<Mutex<Config>>, port: u16) -> Result<u16, String> {
+    if !(1024..=65535).contains(&port) {
+        return Err("Port out of valid range (1024–65535)".into());
+    }
+    match UdpSocket::bind(("0.0.0.0", port)) {
+        Ok(_) => {
+            state.set_port(port);
+            let mut cfg = config.lock().unwrap();
+            cfg.port = Some(port);
+            save_config(&cfg);
+            println!("[LanChGo] Port set manually to {}", port);
+            Ok(port)
+        }
+        Err(_) => Err(format!("Port {} is already in use", port)),
+    }
+}
+
+pub fn reset_port_to_auto(state: &BroadcastState, config: &Arc<Mutex<Config>>) {
+    let mut cfg = config.lock().unwrap();
+    cfg.port = None;
+    save_config(&cfg);
+    drop(cfg); // drop before checking_ports
+    checking_ports(state);
 }

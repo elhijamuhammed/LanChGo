@@ -55,6 +55,7 @@ fn broadcast_the_msg(sock: &UdpSocket, state: &BroadcastState, msg: &[u8]) -> io
 // ===================== main =====================
 
 fn main() -> Result<(), Box<dyn Error>> {
+
     let state = Arc::new(BroadcastState {
         broadcast_address: Mutex::new(String::new()),
         port: Mutex::new(3000),
@@ -142,6 +143,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // ===================== config creation + download folder =====================
+
     let default_iface_name = match_getifadd_ipconfig(&state);
     let default_broadcast = get_broadcast_for_name(&interfaces, &default_iface_name)
         .unwrap_or_else(|| state.get_broadcast_address());
@@ -159,6 +161,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         last_broadcast: default_broadcast.clone(),
         last_gateway: default_gateway.clone(),
         save_to_folder: default_download_folder,
+        port: None
     };
 
     let (config_loaded, first_run) = load_or_create_config(&default_config, &app);
@@ -195,6 +198,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     app.set_changed_networks(lan_changed);
     state.set_broadcast_address(current_broadcast_for_config.clone());
 
+    // reading saved port from config file
+    {
+        let saved_port = config.lock().unwrap().port;
+
+        match saved_port {
+            Some(port) => {
+                match main_helpers::try_set_manual_port(&state, &config, port) {
+                    Ok(_) => {
+                        app.set_manual_port_mode(true);
+                    }
+                    Err(_) => {
+                        main_helpers::checking_ports(&state);
+                        app.set_manual_port_mode(false);
+                        app.invoke_show_temp_message(
+                            format!("⚠️ Saved port {} was in use, switched to {}", port, state.get_port()).into()
+                        );
+                    }
+                }
+            }
+            None => {
+                main_helpers::checking_ports(&state);
+                app.set_manual_port_mode(false); // ✅ and this
+            }
+        }
+    }
+
     app.set_show_welcome(first_run || lan_changed);
     app.set_selected_interface(selected_iface_for_ui.clone().into());
     app.set_broadcast_address(state.get_broadcast_address().into());
@@ -204,6 +233,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     } else {
         app.set_interface_status("IfOperStatusDown".into());
     }
+
+    //main_helpers::checking_ports(&state);
 
     app.set_ui_port(state.get_port() as i32);
     app.set_show_version(env!("CARGO_PKG_VERSION").into());
@@ -331,6 +362,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 app.set_input_text("".into());
                 return;
             }
+
+            if trimmed.eq_ignore_ascii_case("/settings") {
+                app.set_show_welcome(true);
+                app.set_input_text("".into());
+                return;
+            }            
 
             if trimmed.is_empty() {
                 app.set_input_text("".into());
@@ -1052,7 +1089,45 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         });
     }
-    
+    // setting the port for UDP manually
+    {        
+        app.on_apply_manual_port({
+            let state = Arc::clone(&state);
+            let weak = app.as_weak();
+            let config = Arc::clone(&config);
+            move |port| {
+                if let Some(app) = weak.upgrade() {
+                    match main_helpers::try_set_manual_port(&state, &config, port as u16) {
+                        Ok(p) => {
+                            app.set_ui_port(p as i32);
+                            app.set_port_status("✅ Port available".into());
+                            app.set_show_welcome(false);
+                        }
+                        Err(e) => {
+                            app.set_port_status(e.into());
+                        }
+                    }
+                }
+            }
+        });
+    }
+    // reseting port setting to default (automatic)
+    {
+        app.on_reset_port_to_auto({
+            let state = Arc::clone(&state);
+            let weak = app.as_weak();
+            let config = Arc::clone(&config);
+            move || {
+                main_helpers::reset_port_to_auto(&state, &config);
+                if let Some(app) = weak.upgrade() {
+                    app.set_ui_port(state.get_port() as i32);
+                    app.set_port_status("".into());
+                    app.set_manual_port_mode(false); // flip toggle back to auto
+                }
+            }
+        });
+    }
+
     // run
     app.run()?;
     running.store(false, Ordering::Relaxed);

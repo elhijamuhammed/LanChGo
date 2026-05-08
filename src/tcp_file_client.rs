@@ -1,10 +1,4 @@
-use std::{
-    fs::{OpenOptions},
-    io::{self, BufWriter, Read, Write},
-    net::{IpAddr, TcpStream},
-    path::PathBuf,
-    time::{Duration, Instant},
-};
+use std::{ fs::{OpenOptions}, io::{self, BufWriter, Read, Write}, net::{IpAddr, TcpStream}, path::PathBuf, time::{Duration, Instant}, };
 
 pub fn download_offer( sender_ip: IpAddr, tcp_port: u16, offer_id: [u8; 16], save_path: PathBuf, mut on_progress: impl FnMut(u64, u64), ) -> io::Result<()> {
     // connect (small retry helps on Wi-Fi)
@@ -116,8 +110,12 @@ pub fn download_offer( sender_ip: IpAddr, tcp_port: u16, offer_id: [u8; 16], sav
             ));
         }
 
-        out.flush()?; // ensure buffered bytes hit the OS
+        let needs_sync = matches!(
+            save_path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase().as_str(),"iso" | "img" | "bin" | "dmg" | "vhd" | "vhdx" | "vmdk"
+        );
 
+        out.flush()?; // ensure buffered bytes hit the OS
+        if needs_sync { out.get_ref().sync_all()?; }
         // ⚠️ sync_all is very slow on Windows; only enable if you *need* durability guarantees.
         // If you want it as an option:
         // out.get_ref().sync_all()?;
@@ -127,10 +125,7 @@ pub fn download_offer( sender_ip: IpAddr, tcp_port: u16, offer_id: [u8; 16], sav
         Ok(())
     })();
 
-    if res.is_err() {
-        let _ = std::fs::remove_file(&part_path);
-    }
-
+    if res.is_err() { let _ = std::fs::remove_file(&part_path); }
     res
 }
 

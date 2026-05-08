@@ -2,110 +2,300 @@ import { ListView } from "std-widgets.slint";
 
 export component WelcomeOverlay inherits Rectangle {
     
-    in-out property <bool> changed_networks; // if the network changes show
-    in-out property <string> selected_interface;  // e.g. "Wi-Fi"
-    in-out property <[string]> interfaces;        // ["Wi-Fi|10.0.0.255", "Ethernet|192.168.1.255"]
+    in-out property <bool> changed_networks;
+    in-out property <string> selected_interface;
+    in-out property <[string]> interfaces;
     in-out property <bool> show_welcome;
+    in-out property <int> ui_port;
+    in-out property <bool> manual_port_mode: false;
+    in-out property <string> port_status: "";
     callback interface_selected(string);
+    property <int> typed_port: root.ui_port;
+    callback apply_manual_port(int);
+    callback reset_port_to_auto();
 
-    background: #00000080;   // dim overlay
+    background: #00000080;
 
     VerticalLayout {
-        Rectangle { vertical-stretch: 1; }   // top spacer
+        Rectangle { vertical-stretch: 0.5; }
 
         HorizontalLayout {
-            Rectangle { horizontal-stretch: 1; } // left spacer
+            Rectangle { horizontal-stretch: 1; }
 
             Rectangle {
-                width: 680px;
-                height: 420px;
-                border-radius: 16px;
-                background: #2c2f35;
+                width: 720px;
+                height: 390px;
+                border-radius: 20px;
+                background: #1e2128;
                 border-width: 1px;
                 border-color: #3a3f48;
+                drop-shadow-blur: 24px;
+                drop-shadow-color: #00000088;
 
+                forward-focus: overlay_keys;
+                overlay_keys := FocusScope {
+                    width: parent.width;
+                    height: parent.height;
+                    key-pressed(event) => {
+                        if event.text == Key.Return || event.text == Key.Escape {
+                            root.interface_selected(root.selected_interface);
+                            root.show_welcome = false;
+                            return accept;
+                        }
+                        reject
+                    }
+                }
+                
                 VerticalLayout {
                     padding: 20px;
-                    spacing: 6px;  // tighter spacing
+                    spacing: 12px;
 
-                    Text {
-                        text: "Welcome to LanChGo";
-                        color: white;
-                        font-size: 22px;
-                        horizontal-alignment: center;
+                    // --- Title ---
+                    VerticalLayout {
+                        spacing: 2px;
+                        Text {
+                            text: "Welcome to LanChGo";
+                            color: white;
+                            font-size: 19px;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: root.changed_networks
+                                ? "Your network changed — pick an interface to continue."
+                                : "Pick your network interface to get started.";
+                            color: #666666;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                        }
                     }
 
-                    Text {
-                        text: "Pick your network interface, all receiving ends should be on the same subnet.";
-                        color: #cccccc;
-                        font-size: 14px;
-                        wrap: word-wrap;
-                        horizontal-alignment: center;
-                        //padding-bottom: 8px; // spacing before list
-                        visible: !root.changed_networks;
-                    }
-                    Text {
-                        text: "Pick your network interface, all receiving ends should be on the same subnet. Network changed";
-                        color: #cccccc;
-                        font-size: 14px;
-                        wrap: word-wrap;
-                        horizontal-alignment: center;
-                        //padding-bottom: 8px; // spacing before list
-                        visible: root.changed_networks;
-                    }
-
-                    // --- Interface List ---
-                    ListView {
-                        width: parent.width;
-                        height: 200px;
+                    // --- Interface Grid ---
+                    HorizontalLayout {
+                        spacing: 10px;
+                        height: 100px;
 
                         for iface in root.interfaces: Rectangle {
-                            width: parent.width * 0.85;
-                            height: 72px;
+                            horizontal-stretch: 1;
                             border-radius: 12px;
-                            background: root.selected_interface == iface
-                                ? #2b7bff
-                                : #2c2f35;
                             border-width: 2px;
-                            border-color: root.selected_interface == iface ? #66aaff : #3a3f48;
-                            x: (parent.width - self.width) / 2;
+                            border-color: root.selected_interface == iface ? #2b7bff : #2c2f35;
+                            background: root.selected_interface == iface ? #1a3a6e : #2c2f35;
+                            animate background { duration: 120ms; }
+                            animate border-color { duration: 120ms; }
 
-                            HorizontalLayout {
-                                spacing: 12px;
-                                Rectangle {width:12px;}
-                                // Circle indicator
-                                Rectangle {
-                                    width: 18px;
-                                    height: 18px;
-                                    border-radius: 9px;
-                                    border-width: 2px;
-                                    border-color: root.selected_interface == iface ? #66aaff : white;
-                                    background: root.selected_interface == iface ? #66aaff : transparent;
-                                    y: (parent.height - self.height) / 2;
-                                    //padding-left: 8px;
+                            VerticalLayout {
+                                padding: 10px;
+                                spacing: 6px;
+                                alignment: center;
+
+                                HorizontalLayout {
+                                    alignment: center;
+                                    Rectangle {
+                                        width: 26px;
+                                        height: 26px;
+                                        border-radius: 13px;
+                                        background: root.selected_interface == iface ? #2b7bff : #3a3f48;
+                                        animate background { duration: 120ms; }
+
+                                        Text {
+                                            text: "⬡";
+                                            color: white;
+                                            font-size: 13px;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                            width: parent.width;
+                                            height: parent.height;
+                                        }
+                                    }
                                 }
 
-                                VerticalLayout {
-                                    spacing: 4px;
-                                    Text{
-                                        text: " ";
-                                        font-size: 5px;
-                                    }
-                                    Text {
-                                        text: iface;
-                                        font-size: 16px;
-                                        color: white;
-                                    }
+                                Text {
+                                    text: iface;
+                                    color: white;
+                                    font-size: 11px;
+                                    horizontal-alignment: center;
+                                    wrap: word-wrap;
                                 }
                             }
+
                             TouchArea {
                                 width: parent.width;
                                 height: parent.height;
+                                clicked => { root.selected_interface = iface; }
+                            }
+                        }
+                    }
+
+                    // --- Divider ---
+                    Rectangle {
+                        width: parent.width;
+                        height: 1px;
+                        background: #2c2f35;
+                    }
+
+                    // --- Port Section ---
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        Text {
+                            text: "UDP Port";
+                            color: root.manual_port_mode ? #cccccc : #444444;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                            animate color { duration: 150ms; }
+                        }
+
+                        Text {
+                            text: root.manual_port_mode ? "" : "(Auto: " + root.ui_port + ")";
+                            color: #444444;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+
+                        Rectangle { horizontal-stretch: 1; }
+
+                        Text {
+                            text: "Auto";
+                            color: root.manual_port_mode ? #444444 : white;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                            animate color { duration: 150ms; }
+                        }
+
+                        Rectangle {
+                            width: 44px;
+                            height: 24px;
+                            border-radius: 12px;
+                            background: root.manual_port_mode ? #2b7bff : #3a3f48;
+                            animate background { duration: 150ms; }
+
+                            Rectangle {
+                                width: 18px;
+                                height: 18px;
+                                border-radius: 9px;
+                                background: white;
+                                x: root.manual_port_mode ? 23px : 3px;
+                                y: 3px;
+                                animate x { duration: 150ms; }
+                            }
+
+                            TouchArea {
                                 clicked => {
-                                    root.selected_interface = iface;
-                                    //root.interface_selected(iface);
+                                    if root.manual_port_mode {
+                                        root.reset_port_to_auto(); // Rust handles setting manual_port_mode = false
+                                        root.show_welcome = false;
+                                    } else {
+                                        root.manual_port_mode = true; // only flip when switching TO manual
+                                    }
+                                    root.port_status = "";
                                 }
                             }
+                        }
+
+                        Text {
+                            text: "Manual";
+                            color: root.manual_port_mode ? white : #444444;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                            animate color { duration: 150ms; }
+                        }
+                    }
+
+                    // --- Port input row — always visible, disabled in auto ---
+                    HorizontalLayout {
+                        spacing: 8px;
+
+                        Rectangle {
+                            width: 120px;
+                            height: 30px;
+                            border-radius: 6px;
+                            background: #12151a;
+                            border-width: 1px;
+                            border-color: root.manual_port_mode ? #3a3f48 : #252830;
+                            opacity: root.manual_port_mode ? 1.0 : 0.35;
+                            animate opacity { duration: 150ms; }
+
+                            TextInput {
+                                width: parent.width - 16px;
+                                height: parent.height;
+                                x: 8px;
+                                color: white;
+                                font-size: 13px;
+                                input-type: number;
+                                vertical-alignment: center;
+                                text: root.typed_port;
+                                enabled: root.manual_port_mode;
+                                edited => {
+                                    root.typed_port = self.text.to-float();
+                                }
+                            }
+                        }
+
+                        // Apply button
+                        Rectangle {
+                            width: 70px;
+                            height: 30px;
+                            border-radius: 6px;
+                            background: root.manual_port_mode
+                                ? (apply_area.has-hover ? #3a8dff : #2b7bff)
+                                : #2c2f35;
+                            opacity: root.manual_port_mode ? 1.0 : 0.35;
+                            animate opacity { duration: 150ms; }
+                            animate background { duration: 150ms; }
+
+                            Text {
+                                text: "Apply";
+                                color: white;
+                                font-size: 12px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                                height: parent.height;
+                            }
+
+                            apply_area := TouchArea {
+                                enabled: root.manual_port_mode;
+                                clicked => { root.apply_manual_port(root.typed_port); }
+                            }
+                        }
+
+                        // Reset button
+                        Rectangle {
+                            width: 70px;
+                            height: 30px;
+                            border-radius: 6px;
+                            background: root.manual_port_mode
+                                ? (reset_area.has-hover ? #ff5555 : #3a3f48)
+                                : #2c2f35;
+                            opacity: root.manual_port_mode ? 1.0 : 0.35;
+                            animate opacity { duration: 150ms; }
+                            animate background { duration: 150ms; }
+
+                            Text {
+                                text: "Reset";
+                                color: white;
+                                font-size: 12px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                                height: parent.height;
+                            }
+
+                            reset_area := TouchArea {
+                                enabled: root.manual_port_mode;
+                                clicked => { 
+                                    root.reset_port_to_auto();
+                                    root.show_welcome = false;
+                                 }
+                            }
+                        }
+
+                        Text {
+                            text: root.port_status;
+                            color: root.port_status == "✅ Port available" ? #44cc77 : #ff5555;
+                            font-size: 12px;
+                            vertical-alignment: center;
                         }
                     }
 
@@ -114,15 +304,17 @@ export component WelcomeOverlay inherits Rectangle {
                         Rectangle { horizontal-stretch: 1; }
 
                         Rectangle {
-                            width: 120px;
-                            height: 42px;
-                            border-radius: 8px;
+                            width: 130px;
+                            height: 36px;
+                            border-radius: 10px;
                             background: continue_area.has-hover ? #3a8dff : #2b7bff;
+                            animate background { duration: 120ms; }
 
                             Text {
                                 text: "Continue";
                                 color: white;
-                                font-size: 14px;
+                                font-size: 13px;
+                                font-weight: 600;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                                 width: parent.width;
@@ -132,9 +324,9 @@ export component WelcomeOverlay inherits Rectangle {
                             continue_area := TouchArea {
                                 width: parent.width;
                                 height: parent.height;
-                                clicked => { 
+                                clicked => {
                                     root.interface_selected(root.selected_interface);
-                                    root.show_welcome = false; 
+                                    root.show_welcome = false;
                                 }
                             }
                         }
@@ -144,9 +336,9 @@ export component WelcomeOverlay inherits Rectangle {
                 }
             }
 
-            Rectangle { horizontal-stretch: 1; } // right spacer
+            Rectangle { horizontal-stretch: 1; }
         }
 
-        Rectangle { vertical-stretch: 1; }   // bottom spacer
-    }   
+        Rectangle { vertical-stretch: 1; }
+    }
 }

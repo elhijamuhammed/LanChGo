@@ -15,9 +15,9 @@ impl BroadcastState {
     pub fn get_broadcast_address(&self) -> String {
         self.broadcast_address.lock().unwrap().clone()
     }
-    // pub fn set_port(&self, p: u16) {
-    //     *self.port.lock().unwrap() = p;
-    // }
+    pub fn set_port(&self, p: u16) {
+        *self.port.lock().unwrap() = p;
+    }
     pub fn get_port(&self) -> u16 {
         *self.port.lock().unwrap()
     }
@@ -38,6 +38,7 @@ pub struct Config {
     pub last_gateway: String,
     #[serde(default)]
     pub save_to_folder: String,
+    pub port: Option<u16>, // if none then it is automatically sat, if some x then user sat it manually
 }
 
 #[derive(Debug, Clone)]

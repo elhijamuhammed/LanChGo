@@ -111,8 +111,16 @@ export component AppWindow inherits Window {
     property <int> debug_offer_counter: 0;
 
     // Command picker
-    in-out property <[string]> chat_commands: [ "/info", "/help", "/clear", "/clearfiles", "/clearall", "/disconnect", "/webjoin", "/webstop", "/exit" ];
+    in-out property <[string]> chat_commands: [
+        "/info", "/help", "/settings", "/clear", "/clearfiles", "/clearall", "/disconnect", "/webjoin", "/webstop", "/exit" 
+    ];
     property <int> selected_command_idx: 0;
+
+    // setting port manually
+    in-out property <bool> manual_port_mode: false;
+    in-out property <string> port_status: "";
+    callback apply_manual_port(int);
+    callback reset_port_to_auto();
 
     Rectangle {
         background: blue;
@@ -148,9 +156,11 @@ export component AppWindow inherits Window {
                     selected_interface <=> root.selected_interface;
                     interfaces <=> root.interfaces;
                     show_welcome <=> root.show_welcome;
-                    interface_selected() => {
-                        root.interface_selected(root.selected_interface);
-                    }
+                    ui_port <=> root.ui_port;
+                    manual_port_mode <=> root.manual_port_mode;
+                    interface_selected() => { root.interface_selected(root.selected_interface); }
+                    apply_manual_port (port) => { root.apply_manual_port(port); }
+                    reset_port_to_auto () => { root.reset_port_to_auto(); }
                 }
 
                 // ======= MAIN ROW: Chat + File transfers =======
