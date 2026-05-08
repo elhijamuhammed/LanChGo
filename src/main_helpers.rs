@@ -377,7 +377,7 @@ pub fn checking_ports(state: &BroadcastState) {
         match UdpSocket::bind(("0.0.0.0", candidate)) {
             Ok(_) => {
                 state.set_port(candidate);
-                println!("[LanChGo] Using port: {}", state.get_port());
+                //println!("[LanChGo] Using port: {}", state.get_port());
                 return;
             }
             Err(_) => continue,
@@ -402,7 +402,7 @@ pub fn try_set_manual_port(state: &BroadcastState, config: &Arc<Mutex<Config>>, 
             let mut cfg = config.lock().unwrap();
             cfg.port = Some(port);
             save_config(&cfg);
-            println!("[LanChGo] Port set manually to {}", port);
+            //println!("[LanChGo] Port set manually to {}", port);
             Ok(port)
         }
         Err(_) => Err(format!("Port {} is already in use", port)),
