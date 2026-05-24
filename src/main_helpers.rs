@@ -16,6 +16,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 use slint::{ComponentHandle, SharedString, Model};
 use rodio::{Decoder, OutputStreamBuilder, Sink};
+use std::env;
+use std::process::Command;
 
 const NUTELLA_BYTES: &[u8] = include_bytes!("../nutella.ogg");
 static APP_HANDLE: OnceLock<Weak<AppWindow>> = OnceLock::new();
@@ -334,14 +336,17 @@ pub fn help_message() -> String {
         "Available Commands
 
         /info        Show app information
+        /rescale     Rescales the app's UI
         /help        Show this help message
         /settings    Opens the settings menu
+        /downloads   Opens the download folder
         /clear       Clear chat messages
         /clearfiles  Clear file transfer panel
         /clearall    Clear chat and files
         /disconnect  Disconnect from secure channel
         /webjoin     Starts a web companion session
         /webstop     Stops a web companion session
+        /restart     Restarts the app ( might not always re-open )
         /exit        Exit LanChGo
 
         Tip:
@@ -369,28 +374,28 @@ pub fn append_message_from_web(text: String) {
     }
 }
 
-pub fn checking_ports(state: &BroadcastState) {
-    let base_port: u16 = 3000;
+// pub fn checking_ports(state: &BroadcastState) {
+//     let base_port: u16 = 3000;
 
-    for offset in 0..=100 {
-        let candidate = base_port + offset;
-        match UdpSocket::bind(("0.0.0.0", candidate)) {
-            Ok(_) => {
-                state.set_port(candidate);
-                //println!("[LanChGo] Using port: {}", state.get_port());
-                return;
-            }
-            Err(_) => continue,
-        }
-    }
+//     for offset in 0..=100 {
+//         let candidate = base_port + offset;
+//         match UdpSocket::bind(("0.0.0.0", candidate)) {
+//             Ok(_) => {
+//                 state.set_port(candidate);
+//                 //println!("[LanChGo] Using port: {}", state.get_port());
+//                 return;
+//             }
+//             Err(_) => continue,
+//         }
+//     }
 
-    // Last resort
-    if let Ok(sock) = UdpSocket::bind("0.0.0.0:0") {
-        if let Ok(addr) = sock.local_addr() {
-            state.set_port(addr.port());
-        }
-    }
-}
+//     // Last resort
+//     if let Ok(sock) = UdpSocket::bind("0.0.0.0:0") {
+//         if let Ok(addr) = sock.local_addr() {
+//             state.set_port(addr.port());
+//         }
+//     }
+// }
 
 pub fn try_set_manual_port(state: &BroadcastState, config: &Arc<Mutex<Config>>, port: u16) -> Result<u16, String> {
     if !(1024..=65535).contains(&port) {
@@ -409,10 +414,74 @@ pub fn try_set_manual_port(state: &BroadcastState, config: &Arc<Mutex<Config>>, 
     }
 }
 
-pub fn reset_port_to_auto(state: &BroadcastState, config: &Arc<Mutex<Config>>) {
+pub fn reset_port_to_auto(_state: &BroadcastState, config: &Arc<Mutex<Config>>) {
     let mut cfg = config.lock().unwrap();
     cfg.port = None;
     save_config(&cfg);
     drop(cfg); // drop before checking_ports
-    checking_ports(state);
+    //checking_ports(state);
+}
+
+pub fn restart_app_after_delay(ms: u64) {
+    let exe_path = match env::current_exe() {
+        Ok(path) => path,
+        Err(_) => return,
+    };
+
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(ms));
+
+        let _ = Command::new(exe_path).spawn();
+
+        std::process::exit(0);
+    });
+}
+
+pub fn check_for_update() -> Result<Option<String>, Box<dyn std::error::Error>> {
+    use semver::Version;
+    use serde_json::Value;
+
+    // Current version from Cargo.toml
+    let current = env!("CARGO_PKG_VERSION");
+
+    // GitHub latest release API
+    let url = "https://api.github.com/repos/elhijamuhammed/LanChGo/releases/latest";
+
+    // Request latest release
+    let client = reqwest::blocking::Client::new();
+
+    let response: Value = client
+        .get(url)
+        .header("User-Agent", "LanChGo")
+        .send()?
+        .json()?;
+
+    // Example GitHub tag:
+    // "v1.7.0"
+    let latest = response["tag_name"]
+        .as_str()
+        .unwrap_or("")
+        .trim_start_matches('v')
+        .trim_start_matches('V');
+
+    // Parse versions safely
+    let current_v = Version::parse(current)?;
+    let latest_v = Version::parse(latest)?;
+
+    // Compare versions
+    if latest_v > current_v {
+        Ok(Some(latest.to_string()))
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn open_download_folder_from_config( config: &Arc<Mutex<Config>>, ) -> Result<(), String> {
+    let folder = {
+        let cfg = config.lock().unwrap();
+        cfg.save_to_folder.clone()
+    };
+    if folder.trim().is_empty() { return Err("Download folder not set".into()); }
+    open::that(&folder).map_err(|e| format!("Failed to open folder: {}", e))?;
+    Ok(())
 }

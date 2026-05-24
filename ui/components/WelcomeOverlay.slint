@@ -9,6 +9,7 @@ export component WelcomeOverlay inherits Rectangle {
     in-out property <int> ui_port;
     in-out property <bool> manual_port_mode: false;
     in-out property <string> port_status: "";
+    in-out property <float> global_scale;
     callback interface_selected(string);
     property <int> typed_port: root.ui_port;
     callback apply_manual_port(int);
@@ -23,13 +24,13 @@ export component WelcomeOverlay inherits Rectangle {
             Rectangle { horizontal-stretch: 1; }
 
             Rectangle {
-                width: 720px;
-                height: 390px;
-                border-radius: 20px;
+                width: 720px * root.global_scale;
+                height: 390px * root.global_scale;
+                border-radius: 20px * root.global_scale;
                 background: #1e2128;
-                border-width: 1px;
+                border-width: 1px * root.global_scale;
                 border-color: #3a3f48;
-                drop-shadow-blur: 24px;
+                drop-shadow-blur: 24px * root.global_scale;
                 drop-shadow-color: #00000088;
 
                 forward-focus: overlay_keys;
@@ -47,16 +48,16 @@ export component WelcomeOverlay inherits Rectangle {
                 }
                 
                 VerticalLayout {
-                    padding: 20px;
-                    spacing: 12px;
+                    padding: 20px * root.global_scale;
+                    spacing: 12px * root.global_scale;
 
                     // --- Title ---
                     VerticalLayout {
-                        spacing: 2px;
+                        spacing: 2px * root.global_scale;
                         Text {
                             text: "Welcome to LanChGo";
                             color: white;
-                            font-size: 19px;
+                            font-size: 19px * root.global_scale;
                             font-weight: 700;
                             horizontal-alignment: center;
                         }
@@ -65,43 +66,43 @@ export component WelcomeOverlay inherits Rectangle {
                                 ? "Your network changed — pick an interface to continue."
                                 : "Pick your network interface to get started.";
                             color: #666666;
-                            font-size: 12px;
+                            font-size: 12px * root.global_scale;
                             horizontal-alignment: center;
                         }
                     }
 
                     // --- Interface Grid ---
                     HorizontalLayout {
-                        spacing: 10px;
-                        height: 100px;
+                        spacing: 10px * root.global_scale;
+                        height: 100px * root.global_scale;
 
                         for iface in root.interfaces: Rectangle {
                             horizontal-stretch: 1;
-                            border-radius: 12px;
-                            border-width: 2px;
+                            border-radius: 12px * root.global_scale;
+                            border-width: 2px * root.global_scale;
                             border-color: root.selected_interface == iface ? #2b7bff : #2c2f35;
                             background: root.selected_interface == iface ? #1a3a6e : #2c2f35;
                             animate background { duration: 120ms; }
                             animate border-color { duration: 120ms; }
 
                             VerticalLayout {
-                                padding: 10px;
-                                spacing: 6px;
+                                padding: 10px * root.global_scale;
+                                spacing: 6px * root.global_scale;
                                 alignment: center;
 
                                 HorizontalLayout {
                                     alignment: center;
                                     Rectangle {
-                                        width: 26px;
-                                        height: 26px;
-                                        border-radius: 13px;
+                                        width: 26px * root.global_scale;
+                                        height: 26px * root.global_scale;
+                                        border-radius: 13px * root.global_scale;
                                         background: root.selected_interface == iface ? #2b7bff : #3a3f48;
                                         animate background { duration: 120ms; }
 
                                         Text {
                                             text: "⬡";
                                             color: white;
-                                            font-size: 13px;
+                                            font-size: 13px * root.global_scale;
                                             horizontal-alignment: center;
                                             vertical-alignment: center;
                                             width: parent.width;
@@ -113,7 +114,7 @@ export component WelcomeOverlay inherits Rectangle {
                                 Text {
                                     text: iface;
                                     color: white;
-                                    font-size: 11px;
+                                    font-size: 11px * root.global_scale;
                                     horizontal-alignment: center;
                                     wrap: word-wrap;
                                 }
@@ -130,18 +131,18 @@ export component WelcomeOverlay inherits Rectangle {
                     // --- Divider ---
                     Rectangle {
                         width: parent.width;
-                        height: 1px;
+                        height: 1px * root.global_scale;
                         background: #2c2f35;
                     }
 
                     // --- Port Section ---
                     HorizontalLayout {
-                        spacing: 10px;
+                        spacing: 10px * root.global_scale;
 
                         Text {
                             text: "UDP Port";
                             color: root.manual_port_mode ? #cccccc : #444444;
-                            font-size: 13px;
+                            font-size: 13px * root.global_scale;
                             vertical-alignment: center;
                             animate color { duration: 150ms; }
                         }
@@ -149,7 +150,7 @@ export component WelcomeOverlay inherits Rectangle {
                         Text {
                             text: root.manual_port_mode ? "" : "(Auto: " + root.ui_port + ")";
                             color: #444444;
-                            font-size: 12px;
+                            font-size: 12px * root.global_scale;
                             vertical-alignment: center;
                         }
 
@@ -158,25 +159,25 @@ export component WelcomeOverlay inherits Rectangle {
                         Text {
                             text: "Auto";
                             color: root.manual_port_mode ? #444444 : white;
-                            font-size: 12px;
+                            font-size: 12px * root.global_scale;
                             vertical-alignment: center;
                             animate color { duration: 150ms; }
                         }
 
                         Rectangle {
-                            width: 44px;
-                            height: 24px;
-                            border-radius: 12px;
+                            width: 44px * root.global_scale;
+                            height: 24px * root.global_scale;
+                            border-radius: 12px * root.global_scale;
                             background: root.manual_port_mode ? #2b7bff : #3a3f48;
                             animate background { duration: 150ms; }
 
                             Rectangle {
-                                width: 18px;
-                                height: 18px;
-                                border-radius: 9px;
+                                width: 18px * root.global_scale;
+                                height: 18px * root.global_scale;
+                                border-radius: 9px * root.global_scale;
                                 background: white;
-                                x: root.manual_port_mode ? 23px : 3px;
-                                y: 3px;
+                                x: root.manual_port_mode ? 23px * root.global_scale : 3px * root.global_scale;
+                                y: 3px * root.global_scale;
                                 animate x { duration: 150ms; }
                             }
 
@@ -196,7 +197,7 @@ export component WelcomeOverlay inherits Rectangle {
                         Text {
                             text: "Manual";
                             color: root.manual_port_mode ? white : #444444;
-                            font-size: 12px;
+                            font-size: 12px * root.global_scale;
                             vertical-alignment: center;
                             animate color { duration: 150ms; }
                         }
@@ -204,24 +205,24 @@ export component WelcomeOverlay inherits Rectangle {
 
                     // --- Port input row — always visible, disabled in auto ---
                     HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 8px * root.global_scale;
 
                         Rectangle {
-                            width: 120px;
-                            height: 30px;
-                            border-radius: 6px;
+                            width: 120px * root.global_scale;
+                            height: 30px * root.global_scale;
+                            border-radius: 6px * root.global_scale;
                             background: #12151a;
-                            border-width: 1px;
+                            border-width: 1px * root.global_scale;
                             border-color: root.manual_port_mode ? #3a3f48 : #252830;
                             opacity: root.manual_port_mode ? 1.0 : 0.35;
                             animate opacity { duration: 150ms; }
 
                             TextInput {
-                                width: parent.width - 16px;
+                                width: parent.width - (16px * root.global_scale);
                                 height: parent.height;
-                                x: 8px;
+                                x: 8px * root.global_scale;
                                 color: white;
-                                font-size: 13px;
+                                font-size: 13px * root.global_scale;
                                 input-type: number;
                                 vertical-alignment: center;
                                 text: root.typed_port;
@@ -234,9 +235,9 @@ export component WelcomeOverlay inherits Rectangle {
 
                         // Apply button
                         Rectangle {
-                            width: 70px;
-                            height: 30px;
-                            border-radius: 6px;
+                            width: 70px * root.global_scale;
+                            height: 30px * root.global_scale;
+                            border-radius: 6px * root.global_scale;
                             background: root.manual_port_mode
                                 ? (apply_area.has-hover ? #3a8dff : #2b7bff)
                                 : #2c2f35;
@@ -247,7 +248,7 @@ export component WelcomeOverlay inherits Rectangle {
                             Text {
                                 text: "Apply";
                                 color: white;
-                                font-size: 12px;
+                                font-size: 12px * root.global_scale;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                                 width: parent.width;
@@ -262,9 +263,9 @@ export component WelcomeOverlay inherits Rectangle {
 
                         // Reset button
                         Rectangle {
-                            width: 70px;
-                            height: 30px;
-                            border-radius: 6px;
+                            width: 70px * root.global_scale;
+                            height: 30px * root.global_scale;
+                            border-radius: 6px * root.global_scale;
                             background: root.manual_port_mode
                                 ? (reset_area.has-hover ? #ff5555 : #3a3f48)
                                 : #2c2f35;
@@ -275,7 +276,7 @@ export component WelcomeOverlay inherits Rectangle {
                             Text {
                                 text: "Reset";
                                 color: white;
-                                font-size: 12px;
+                                font-size: 12px * root.global_scale;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                                 width: parent.width;
@@ -294,7 +295,7 @@ export component WelcomeOverlay inherits Rectangle {
                         Text {
                             text: root.port_status;
                             color: root.port_status == "✅ Port available" ? #44cc77 : #ff5555;
-                            font-size: 12px;
+                            font-size: 12px * root.global_scale;
                             vertical-alignment: center;
                         }
                     }
@@ -304,16 +305,16 @@ export component WelcomeOverlay inherits Rectangle {
                         Rectangle { horizontal-stretch: 1; }
 
                         Rectangle {
-                            width: 130px;
-                            height: 36px;
-                            border-radius: 10px;
+                            width: 130px * root.global_scale;
+                            height: 36px * root.global_scale;
+                            border-radius: 10px * root.global_scale;
                             background: continue_area.has-hover ? #3a8dff : #2b7bff;
                             animate background { duration: 120ms; }
 
                             Text {
                                 text: "Continue";
                                 color: white;
-                                font-size: 13px;
+                                font-size: 13px * root.global_scale;
                                 font-weight: 600;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;

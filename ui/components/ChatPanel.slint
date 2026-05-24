@@ -1,73 +1,151 @@
 import { VerticalBox, HorizontalBox, TextEdit, ListView } from "std-widgets.slint";
 
 export component ChatPanel inherits Rectangle {
-    // ✅ inputs from AppWindow
     in property <string> temp_message;
     in property <[string]> messages;
 
-    background: #2c2f35;
-    border-radius: 8px;
-    height: 450px;
-        HorizontalLayout {
-            Rectangle { horizontal-stretch: 1; }   // left spacer
+    in-out property <bool> update_available: false;
+    in-out property <string> latest_version: "";
+    in-out property <float> global_scale;
 
-            VerticalBox {                          // stack Slint logo and text together
+    background: #2c2f35;
+    border-radius: 8px * root.global_scale;
+    height: 450px* root.global_scale;
+
+    HorizontalLayout {
+        Rectangle { horizontal-stretch: 1; }
+
+        VerticalBox {
+            spacing: 2px* root.global_scale;
+
+            Text {
+                text: "© Muhammed Abu El-Hija 2025, All rights reserved";
+                font-size: 16px* root.global_scale;
+                color: white;
+                opacity: 25%;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: "Send messages and files to devices on the same Wi-Fi / network";
+                font-size: 18px* root.global_scale;
+                color: white;
+                opacity: 25%;
+                horizontal-alignment: center;
+            }
+        }
+
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    if root.temp_message != "": Rectangle {
+        background: #444;
+        border-radius: 8px * root.global_scale;
+        width: parent.width * 0.4;
+        height: 40px * root.global_scale;
+        x: (parent.width - self.width) / 2;
+        y: 6px * root.global_scale;
+        z: 100;
+
+        Text {
+            text: root.temp_message;
+            color: white;
+            font-size: 16px* root.global_scale;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+        }
+    }
+
+    if root.update_available: Rectangle {
+        background: #3a2f12;
+        border-radius: 8px * root.global_scale;
+        border-width: 1px * root.global_scale;
+        border-color: #d89b2b;
+
+        width: parent.width - (20px * root.global_scale);
+        height: 38px* root.global_scale;
+        x: 10px* root.global_scale;
+        y: 42px* root.global_scale;
+        z: 90;
+
+        HorizontalBox {
+            padding-left: 14px* root.global_scale;
+            padding-right: 10px* root.global_scale;
+            spacing: 10px* root.global_scale;
+
+            Text {
+                text: "🚀 LanChGo v" + root.latest_version + " is available";
+                color: #ffd27a;
+                font-size: 13px* root.global_scale;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            Text {
+                text: "Download from GitHub Releases";
+                color: #ffffff;
+                font-size: 12px* root.global_scale;
+                vertical-alignment: center;
+            }
+
+            Rectangle {
+                width: 28px* root.global_scale;
+                height: 24px* root.global_scale;
+                border-radius: 6px * root.global_scale;
+                background: close_update_area.has-hover ? #5a4118 : transparent;
+
                 Text {
-                    text: "© Muhammed Abu El-Hija 2025, All rights reserved";
-                    font-size: 16px;
-                    color: white;
-                    opacity: 25%;
-                    horizontal-alignment: center;  // center text inside its box
+                    text: "X";
+                    color: #ffd27a;
+                    font-size: 14px* root.global_scale;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+                }
+
+                close_update_area := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        root.update_available = false;
+                    }
                 }
             }
-
-            Rectangle { horizontal-stretch: 1; }   // right spacer
         }
-        // Temporary banner for short-lived messages
-        if root.temp_message != "": Rectangle {
-            background: #444;
-            border-radius: 8px;
-            width: parent.width * 0.4;
-            height: 40px;
-            x: (parent.width - self.width) / 2;
-            y: 6px;
-            z: 100;
-            Text {
-                text: root.temp_message;
-                color: white;
-                font-size: 16px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
-            }
-        }
+    }
 
     ListView {
         width: parent.width;
         height: parent.height;
+        y: root.update_available ? (88px * root.global_scale) : 0px;
 
         for m[i] in root.messages: Rectangle {
             width: parent.width;
-            height: bubble.height + 8px;
+            height: bubble.height + 8px * root.global_scale;
 
             bubble := Rectangle {
                 background: #3a3f48;
-                border-radius: 12px;
-                x: 10px;
+                border-radius: 12px * root.global_scale;
+                x: 10px * root.global_scale;
 
-                width: min(parent.width * 0.85, msg.preferred-width + 20px);
-                height: msg.preferred-height + 16px;
+                width: min(parent.width * 0.85, msg.preferred-width + 20px * root.global_scale);
+                height: msg.preferred-height + (16px * root.global_scale);
 
                 msg := TextInput {
                     text: m;
                     read-only: true;
                     color: white;
-                    font-size: 18px;
+                    font-size: 18px* root.global_scale;
                     wrap: word-wrap;
                     single-line: false;
-                    x: 10px; y: 8px;
-                    width: parent.width - 20px;
+                    x: 10px * root.global_scale; y : 8px* root.global_scale;
+                    width: parent.width - (20px * root.global_scale);
                 }
             }
         }

@@ -83,6 +83,8 @@ pub fn start_udp_receiver(
                                             || !decrypted.eq_ignore_ascii_case( "/clearall")
                                             || !decrypted.eq_ignore_ascii_case( "/webjoin")                
                                             || !decrypted.eq_ignore_ascii_case( "/webstop")
+                                            || !decrypted.eq_ignore_ascii_case( "/restart")
+                                            || !decrypted.eq_ignore_ascii_case( "/downloads")
                                         {
                                             app.invoke_append_message(decrypted.into(),);
                                         }
@@ -125,7 +127,9 @@ pub fn start_udp_receiver(
                                                     && !plain.eq_ignore_ascii_case("/clearfiles")
                                                     && !plain.eq_ignore_ascii_case("/clearall")
                                                     && !plain.eq_ignore_ascii_case("/webjoin")
-                                                    && !plain.eq_ignore_ascii_case("/webstop")                                                                                                        
+                                                    && !plain.eq_ignore_ascii_case("/webstop")
+                                                    && !plain.eq_ignore_ascii_case("/restart")
+                                                    && !plain.eq_ignore_ascii_case("/downloads")
                                                 {
                                                     app.invoke_append_message(
                                                         plain.into(),

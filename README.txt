@@ -1,5 +1,5 @@
 ==============================================================================
-           LanChGo v1.6.0 — Local Network Communication Made Simple
+           LanChGo v1.7.0 — Local Network Communication Made Simple
 ==============================================================================
 
 Thank you for installing LanChGo!

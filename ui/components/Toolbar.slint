@@ -3,6 +3,7 @@ import { HorizontalBox, VerticalBox } from "std-widgets.slint";
 export component Toolbar inherits Rectangle {
     in-out property <string> channel_mode: "public";
     callback change_channel_mode(string);
+    in-out property <float> global_scale;
 
     in-out property <bool> public_secure_helper: false;
     in-out property <string> host_PIN;
@@ -39,25 +40,25 @@ export component Toolbar inherits Rectangle {
     }
 
     background: #11161c;
-    border-radius: 16px;
-    border-width: 1px;
+    border-radius: 16px * root.global_scale;
+    border-width: 1px * root.global_scale;
     border-color: #26313c;
-    height: 68px;
+    height: 68px * root.global_scale;
 
     HorizontalLayout {
-        padding-left: 10px;
-        padding-right: 10px;
-        padding-top: 10px;
-        padding-bottom: 10px;
-        spacing: 8px;
+        padding-left: 10px * root.global_scale;
+        padding-right: 10px * root.global_scale;
+        padding-top: 10px * root.global_scale;
+        padding-bottom: 10px * root.global_scale;
+        spacing: 8px * root.global_scale;
         alignment: center;
 
         // -------- Web Join / End Session — CYAN --------
         Rectangle {
-            width: 120px;
-            height: 42px;
-            border-radius: 10px;
-            border-width: 1px;
+            width: 120px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 10px * root.global_scale;
+            border-width: 1px * root.global_scale;
             border-color: root.channel_mode == "public"
                 ? (root.web_session_active ? #7f1d1d : #0e7490)
                 : #39424c;
@@ -71,7 +72,7 @@ export component Toolbar inherits Rectangle {
             Text {
                 text: root.web_session_active ? "⛔ End Session" : "🌐 Web Join";
                 color: root.channel_mode == "public" ? #0a0f14 : #8d98a3;
-                font-size: 13px;
+                font-size: 13px * root.global_scale;
                 font-weight: 700;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -89,20 +90,20 @@ export component Toolbar inherits Rectangle {
 
         // -------- Mode Segmented Control — AMBER / TEAL --------
         Rectangle {
-            width: 210px;
-            height: 42px;
-            border-radius: 12px;
+            width: 210px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 12px * root.global_scale;
             background: #1a222b;
-            border-width: 1px;
+            border-width: 1px * root.global_scale;
             border-color: #2d3742;
 
             HorizontalLayout {
-                padding: 3px;
-                spacing: 3px;
+                padding: 3px * root.global_scale;
+                spacing: 3px * root.global_scale;
 
                 // Public — amber
                 Rectangle {
-                    border-radius: 9px;
+                    border-radius: 9px * root.global_scale;
                     background: root.channel_mode == "public"
                         ? (pub_area.has-hover ? #ffb830 : #f0a500)
                         : (pub_area.has-hover ? #1e2d3d : #1a222b);
@@ -111,7 +112,7 @@ export component Toolbar inherits Rectangle {
                     Text {
                         text: "🌍 Public";
                         color: root.channel_mode == "public" ? #0a0f14 : #a7b1bb;
-                        font-size: 13px;
+                        font-size: 13px * root.global_scale;
                         font-weight: 700;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -129,7 +130,7 @@ export component Toolbar inherits Rectangle {
 
                 // Secure — teal
                 Rectangle {
-                    border-radius: 9px;
+                    border-radius: 9px * root.global_scale;
                     background: root.channel_mode == "host"
                         ? (sec_area.has-hover ? #00c9b0 : #00a896)
                         : (sec_area.has-hover ? #1e2d3d : #1a222b);
@@ -138,7 +139,7 @@ export component Toolbar inherits Rectangle {
                     Text {
                         text: "🔒 Secure";
                         color: root.channel_mode == "host" ? #0a0f14 : #a7b1bb;
-                        font-size: 13px;
+                        font-size: 13px * root.global_scale;
                         font-weight: 700;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -158,23 +159,23 @@ export component Toolbar inherits Rectangle {
 
         // -------- PIN Info Chip --------
         Rectangle {
-            width: 130px;
-            height: 42px;
-            border-radius: 10px;
+            width: 130px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 10px * root.global_scale;
             background: #182028;
-            border-width: 1px;
+            border-width: 1px * root.global_scale;
             border-color: #2a3540;
 
             HorizontalLayout {
-                padding-left: 10px;
-                padding-right: 10px;
-                spacing: 6px;
+                padding-left: 10px * root.global_scale;
+                padding-right: 10px * root.global_scale;
+                spacing: 6px * root.global_scale;
                 alignment: center;
 
                 Text {
                     text: "PIN";
                     color: #8d98a3;
-                    font-size: 12px;
+                    font-size: 12px * root.global_scale;
                     font-weight: 600;
                     vertical-alignment: center;
                 }
@@ -182,7 +183,7 @@ export component Toolbar inherits Rectangle {
                 Text {
                     text: root.channel_mode == "public" ? "N/A" : root.host_PIN_masked;
                     color: root.channel_mode == "public" ? #6b7280 : #08d3f7;
-                    font-size: 14px;
+                    font-size: 14px * root.global_scale;
                     font-weight: 700;
                     vertical-alignment: center;
                 }
@@ -191,19 +192,18 @@ export component Toolbar inherits Rectangle {
 
         // -------- Show PIN / Show Web — BLUE --------
         Rectangle {
-            width: 108px;
-            height: 42px;
-            border-radius: 10px;
-            border-width: 1px;
+            width: 108px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 10px * root.global_scale;
+            border-width: 1px * root.global_scale;
             border-color: (root.web_session_active || root.channel_mode == "host") ? #1d4ed8 : #39424c;
             background: (root.web_session_active || root.channel_mode == "host")
-                ? (show_btn_area.has-hover ? #3b82f6 : #2563eb)
-                : #202831;
+                ? (show_btn_area.has-hover ? #3b82f6 : #2563eb) : #202831;
 
             Text {
                 text: root.web_session_active ? "🌐 Show Web" : "👁 Show PIN";
                 color: (root.web_session_active || root.channel_mode == "host") ? white : #8d98a3;
-                font-size: 13px;
+                font-size: 13px * root.global_scale;
                 font-weight: 700;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -227,10 +227,10 @@ export component Toolbar inherits Rectangle {
 
         // -------- New PIN — GREEN --------
         Rectangle {
-            width: 100px;
-            height: 42px;
-            border-radius: 10px;
-            border-width: 1px;
+            width: 100px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 10px * root.global_scale;
+            border-width: 1px * root.global_scale;
             border-color: root.channel_mode == "host" ? #166534 : #39424c;
             background: root.channel_mode == "host"
                 ? (new_pin_area.has-hover ? #22c55e : #16a34a)
@@ -239,7 +239,7 @@ export component Toolbar inherits Rectangle {
             Text {
                 text: "🔄 New PIN";
                 color: root.channel_mode == "host" ? white : #8d98a3;
-                font-size: 13px;
+                font-size: 13px * root.global_scale;
                 font-weight: 700;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -257,10 +257,10 @@ export component Toolbar inherits Rectangle {
 
         // -------- Disconnect — RED --------
         Rectangle {
-            width: 108px;
-            height: 42px;
-            border-radius: 10px;
-            border-width: 1px;
+            width: 108px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 10px * root.global_scale;
+            border-width: 1px * root.global_scale;
             border-color: root.channel_mode != "public" ? #7f1d1d : #39424c;
             background: root.channel_mode != "public"
                 ? (disconnect_area.has-hover ? #ef4444 : #dc2626)
@@ -269,7 +269,7 @@ export component Toolbar inherits Rectangle {
             Text {
                 text: "⏏ Disconnect";
                 color: root.channel_mode != "public" ? white : #8d98a3;
-                font-size: 13px;
+                font-size: 13px * root.global_scale;
                 font-weight: 700;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -287,17 +287,17 @@ export component Toolbar inherits Rectangle {
 
         // -------- Settings — PURPLE --------
         Rectangle {
-            width: 96px;
-            height: 42px;
-            border-radius: 10px;
-            border-width: 1px;
+            width: 96px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 10px * root.global_scale;
+            border-width: 1px * root.global_scale;
             border-color: #4b0082;
             background: settings_area.has-hover ? #9370db : #6a5acd;
 
             Text {
                 text: "⚙ Settings";
                 color: white;
-                font-size: 13px;
+                font-size: 13px * root.global_scale;
                 font-weight: 700;
                 horizontal-alignment: center;
                 vertical-alignment: center;

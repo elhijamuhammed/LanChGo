@@ -10,8 +10,8 @@ import { FileOfferItem } from "components/types.slint";
 import { EscCloseHandler } from "components/HelpFunctions.slint";
 
 export component AppWindow inherits Window {
-    width: 1000px;
-    height: 720px;
+    width: 1000px * root.global_scale;
+    height: 720px * root.global_scale;
     title: "LanChGo";
     icon: @image-url("assets/LanChGo_icon.png");
 
@@ -112,7 +112,7 @@ export component AppWindow inherits Window {
 
     // Command picker
     in-out property <[string]> chat_commands: [
-        "/info", "/help", "/settings", "/clear", "/clearfiles", "/clearall", "/disconnect", "/webjoin", "/webstop", "/exit" 
+        "/info", "/rescale", "/help", "/settings", "/downloads", "/clear", "/clearfiles", "/clearall", "/disconnect", "/webjoin", "/webstop", "/restart", "/exit" 
     ];
     property <int> selected_command_idx: 0;
 
@@ -122,10 +122,17 @@ export component AppWindow inherits Window {
     callback apply_manual_port(int);
     callback reset_port_to_auto();
 
+    // update available
+    in-out property <bool> update_available: false;
+    in-out property <string> latest_version: "";
+
+    // global factor scale
+    in-out property <float> global_scale: 1.0;
+
     Rectangle {
         background: blue;
-        border-width: 3px;
-        border-bottom-left-radius: 3px;
+        border-width: 3px * root.global_scale;
+        border-bottom-left-radius: 3px * root.global_scale;
         border-color: white;
 
         // ---------- Main UI ----------
@@ -140,18 +147,21 @@ export component AppWindow inherits Window {
                 channel_mode <=> root.channel_mode;
                 broadcast_address: root.broadcast_address;
                 interface_status: root.interface_status;
+                global_scale: root.global_scale;
             }
 
             VerticalBox {
-                spacing: 12px;
+                spacing: 12px * root.global_scale;
 
                 HeaderBar {
                     show_version: root.show_version;
+                    global_scale: root.global_scale;
                 }
 
                 if root.show_welcome: WelcomeOverlay {
                     width: parent.width;
                     height: parent.height;
+                    global_scale: root.global_scale;
                     changed_networks <=> root.changed_networks;
                     selected_interface <=> root.selected_interface;
                     interfaces <=> root.interfaces;
@@ -165,7 +175,7 @@ export component AppWindow inherits Window {
 
                 // ======= MAIN ROW: Chat + File transfers =======
                 HorizontalBox {
-                    spacing: 12px;
+                    spacing: 12px * root.global_scale;
                     horizontal-stretch: 1;
                     vertical-stretch: 1;
 
@@ -174,14 +184,18 @@ export component AppWindow inherits Window {
                         vertical-stretch: 1;
                         messages: root.messages;
                         temp_message: root.temp_message;
+                        update_available <=> root.update_available;
+                        latest_version <=> root.latest_version;
+                        global_scale: root.global_scale;
                     }
 
                     VerticalBox {
-                        spacing: 8px;
+                        spacing: 8px * root.global_scale;
                         vertical-stretch: 1;
 
                         FileTransferPanel {
                             vertical-stretch: 1;
+                            global_scale: root.global_scale;
                             file_offer <=> root.file_offer;
                             download_folder <=> root.download_folder;
                             bundle_in_progress: root.bundle_in_progress;
@@ -201,6 +215,7 @@ export component AppWindow inherits Window {
                 }
 
                 Toolbar {
+                    global_scale: root.global_scale;
                     channel_mode <=> root.channel_mode;
                     public_secure_helper <=> root.public_secure_helper;
                     host_PIN <=> root.host_PIN;
@@ -221,6 +236,7 @@ export component AppWindow inherits Window {
 
                 //--- Input row ---
                 ChatInput {
+                    global_scale: root.global_scale;
                     input_text <=> root.input_text;
                     send_clicked() => { root.send_clicked(); }
                     clear_clicked() => { clearchatbox.show(); }
@@ -235,24 +251,24 @@ export component AppWindow inherits Window {
 
     // --- Message too long ---
     msgtoolongpopup := PopupWindow {
-        width: 500px;
-        height: 250px;
+        width: 500px * root.global_scale;
+        height: 250px * root.global_scale;
         close-policy: no-auto-close;
         forward-focus: esc_msg;
         esc_msg := EscCloseHandler { close_me => { msgtoolongpopup.close(); } }
         Rectangle {
-            width: 500px;
-            min-height: 250px;
-            x: (((parent.width) / 2) - 50px);
-            y: (((parent.height) / 2) - 50px);
+            width: 500px * root.global_scale;
+            min-height: 250px * root.global_scale;
+            x: (((parent.width) / 2) - 50px * root.global_scale);
+            y: (((parent.height) / 2) - 50px * root.global_scale);
             background: #00000066;
-            border-radius: 12px;
+            border-radius: 12px * root.global_scale;
 
             Text {
-                width: parent.width - 32px;
-                x: 16px; y: 16px;
+                width: parent.width - 32px * root.global_scale;
+                x: 16px * root.global_scale; y: 16px * root.global_scale;
                 text: root.popup_msg;
-                font-size: 24px;
+                font-size: 24px * root.global_scale;
                 color: white;
                 horizontal-alignment: center;
                 wrap: word-wrap;
@@ -290,22 +306,22 @@ export component AppWindow inherits Window {
             }
         }
         Rectangle {
-            width: 420px;
-            height: 280px;
+            width: 420px * root.global_scale;
+            height: 280px * root.global_scale;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 16px;
+            border-radius: 16px * root.global_scale;
             background: #2c2f35;
-            border-width: 1px;
+            border-width: 1px * root.global_scale;
             border-color: #3a3f48;
 
             VerticalBox {
-                spacing: 18px;
-                padding: 20px;
+                spacing: 18px * root.global_scale;
+                padding: 20px * root.global_scale;
 
                 Text {
                     text: "Create or Join a Channel";
-                    font-size: 22px;
+                    font-size: 22px * root.global_scale;
                     color: white;
                     horizontal-alignment: center;
                     vertical-alignment: center;
@@ -314,7 +330,7 @@ export component AppWindow inherits Window {
                 Button {
                     text: "🛡 Create Channel";
                     horizontal-stretch: 1;
-                    height: 40px;
+                    height: 40px * root.global_scale;
                     clicked => {
                         root.create_channel();
                         root.change_channel_mode("host");
@@ -323,29 +339,29 @@ export component AppWindow inherits Window {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * root.global_scale;
                     background: #444;
                     width: parent.width;
                     opacity: 0.6;
                 }
 
                 VerticalBox {
-                    spacing: 6px;
+                    spacing: 6px * root.global_scale;
 
                     Text {
                         text: "Join with PIN:";
-                        font-size: 16px;
+                        font-size: 16px * root.global_scale;
                         color: #dddddd;
                     }
 
                     HorizontalBox {
-                        spacing: 8px;
+                        spacing: 8px * root.global_scale;
 
                         line-edit := LineEdit {
                             text <=> joining_PIN;
                             placeholder-text: "Enter 8-digit PIN…";
                             horizontal-stretch: 1;
-                            height: 36px;
+                            height: 36px * root.global_scale;
                             input-type: number;
                             read-only: joining_PIN.character-count >= 8;
 
@@ -380,7 +396,7 @@ export component AppWindow inherits Window {
 
                         Button {
                             text: "🔑 Join";
-                            height: 36px;
+                            height: 36px * root.global_scale;
                             clicked => {
                                 root.join_channel(joining_PIN);
                                 createorjoinpopup.close();
@@ -391,7 +407,7 @@ export component AppWindow inherits Window {
                     Button {
                         text: "❌ Close";
                         horizontal-stretch: 1;
-                        height: 36px;
+                        height: 36px * root.global_scale;
                         clicked => {
                             root.channel_mode = "public";
                             root.public_secure_helper = false;
@@ -424,22 +440,22 @@ export component AppWindow inherits Window {
             }
         }
         Rectangle {
-            width: 440px;
-            height: 420px;
+            width: 440px * root.global_scale;
+            height: 420px * root.global_scale;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 18px;
+            border-radius: 18px * root.global_scale;
             background: #2c2f35;
-            border-width: 1px;
+            border-width: 1px * root.global_scale;
             border-color: #3a3f48;
 
             VerticalBox {
-                padding: 22px;
-                spacing: 14px;
+                padding: 22px * root.global_scale;
+                spacing: 14px * root.global_scale;
 
                 Text {
                     text: "Web Join QR Code";
-                    font-size: 22px;
+                    font-size: 22px * root.global_scale;
                     font-weight: 700;
                     color: white;
                     horizontal-alignment: center;
@@ -447,7 +463,7 @@ export component AppWindow inherits Window {
 
                 Text {
                     text: "Open the Web Companion in LanChGo's web page";
-                    font-size: 14px;
+                    font-size: 14px * root.global_scale;
                     color: #c9ced6;
                     wrap: word-wrap;
                     horizontal-alignment: center;
@@ -455,7 +471,7 @@ export component AppWindow inherits Window {
 
                 Text {
                     text: "Scan this QR code with your phone to open Web Join.";
-                    font-size: 14px;
+                    font-size: 14px * root.global_scale;
                     color: #c9ced6;
                     wrap: word-wrap;
                     horizontal-alignment: center;
@@ -463,35 +479,35 @@ export component AppWindow inherits Window {
 
                 Rectangle {
                     horizontal-stretch: 1;
-                    height: 190px;
-                    border-radius: 14px;
+                    height: 190px * root.global_scale;
+                    border-radius: 14px * root.global_scale;
                     background: #1f2228;
-                    border-width: 1px;
+                    border-width: 1px * root.global_scale;
                     border-color: #3a3f48;
 
                     Image {
                         source: root.QR_code_image;
-                        width: 160px;
-                        height: 160px;
+                        width: 160px * root.global_scale;
+                        height: 160px * root.global_scale;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
                     }
                 }
 
                 HorizontalLayout {
-                    spacing: 6px;
+                    spacing: 6px * root.global_scale;
                     alignment: center;
 
                     Text {
                         text: "Can't scan? " + root.url_link;
-                        font-size: 12px;
+                        font-size: 12px * root.global_scale;
                         color: #c9ced6;
                         vertical-alignment: center;
                     }
 
                     Text {
                         text: root.link_copied ? "✅ Copied" : "📋 Copy link";
-                        font-size: 12px;
+                        font-size: 12px * root.global_scale;
                         font-weight: 600;
                         color: copy_area.has-hover ? #81d4fa : #4fc3f7;
                         vertical-alignment: center;
@@ -509,14 +525,14 @@ export component AppWindow inherits Window {
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * root.global_scale;
                     background: #3a3f48;
                 }
 
                 Button {
                     text: "Close";
                     horizontal-stretch: 1;
-                    height: 38px;
+                    height: 38px * root.global_scale;
                     clicked => { webjoinpopup.close(); }
                 }
             }
@@ -538,22 +554,22 @@ export component AppWindow inherits Window {
             background: #00000080;
         }
         Rectangle {
-            width: 420px;
-            height: 360px;
+            width: 420px * root.global_scale;
+            height: 360px * root.global_scale;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 16px;
+            border-radius: 16px * root.global_scale;
             background: #2c2f35;
-            border-width: 1px;
+            border-width: 1px * root.global_scale;
             border-color: #3a3f48;
 
             VerticalBox {
-                spacing: 16px;
-                padding: 20px;
+                spacing: 16px * root.global_scale;
+                padding: 20px * root.global_scale;
 
                 Text {
                     text: "Your Channel PIN:";
-                    font-size: 18px;
+                    font-size: 18px * root.global_scale;
                     color: white;
                     horizontal-alignment: center;
                 }
@@ -562,21 +578,21 @@ export component AppWindow inherits Window {
                     text: root.host_PIN;
                     read-only: true;
                     horizontal-stretch: 1;
-                    height: 38px;
-                    font-size: 22px;
+                    height: 38px * root.global_scale;
+                    font-size: 22px * root.global_scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     color: #00e0ff;
                 }
 
                 Rectangle {
-                    height: 180px;
+                    height: 180px * root.global_scale;
                     background: transparent;
 
                     Image {
                         source: root.QR_code_image;
-                        width: 160px;
-                        height: 160px;
+                        width: 160px * root.global_scale;
+                        height: 160px * root.global_scale;
                         horizontal-alignment: center;
                     }
                 }
@@ -600,34 +616,34 @@ export component AppWindow inherits Window {
             close_me => { clearchatbox.close(); }
         }
         Rectangle {
-            width: 420px;
-            height: 200px;
+            width: 420px * root.global_scale;
+            height: 200px * root.global_scale;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 16px;
+            border-radius: 16px * root.global_scale;
             background: #2c2f35;
-            border-width: 1px;
+            border-width: 1px * root.global_scale;
             border-color: #3a3f48;
 
             VerticalBox {
-                spacing: 16px;
-                padding: 20px;
+                spacing: 16px * root.global_scale;
+                padding: 20px * root.global_scale;
 
                 Text {
                     text: "Are you sure you want to clear the chat box?";
-                    font-size: 20px;
+                    font-size: 20px * root.global_scale;
                     font-weight: 500;
                     color: #e4e4e4;
                     horizontal-alignment: center;
                 }
 
                 HorizontalBox {
-                    spacing: 12px;
+                    spacing: 12px * root.global_scale;
 
                     Button {
                         text: "✅ Confirm";
                         horizontal-stretch: 1;
-                        height: 40px;
+                        height: 40px * root.global_scale;
                         clicked => {
                             root.clear_chatbox();
                             clearchatbox.close();
@@ -636,7 +652,7 @@ export component AppWindow inherits Window {
                     Button {
                         text: "❌ Cancel";
                         horizontal-stretch: 1;
-                        height: 40px;
+                        height: 40px * root.global_scale;
                         clicked => { clearchatbox.close(); }
                     }
                 }
@@ -656,22 +672,22 @@ export component AppWindow inherits Window {
             background: #00000080;
 
             Rectangle {
-                width: 500px;
-                height: 240px;
+                width: 500px * root.global_scale;
+                height: 240px * root.global_scale;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
-                border-radius: 16px;
+                border-radius: 16px * root.global_scale;
                 background: #2c2f35;
-                border-width: 1px;
+                border-width: 1px * root.global_scale;
                 border-color: #3a3f48;
 
                 VerticalBox {
-                    spacing: 18px;
-                    padding: 20px;
+                    spacing: 18px * root.global_scale;
+                    padding: 20px * root.global_scale;
 
                     Text {
                         text: "⚠️ Config file for an older version detected!";
-                        font-size: 20px;
+                        font-size: 20px * root.global_scale;
                         font-weight: 600;
                         color: white;
                         horizontal-alignment: center;
@@ -680,7 +696,7 @@ export component AppWindow inherits Window {
 
                     Text {
                         text: "Please restart LanChGo to continue with a fresh configuration.";
-                        font-size: 16px;
+                        font-size: 16px * root.global_scale;
                         color: #dddddd;
                         horizontal-alignment: center;
                         wrap: word-wrap;
@@ -691,8 +707,8 @@ export component AppWindow inherits Window {
                         Button {
                             text: "🚪 EXIT";
                             horizontal-stretch: 0;
-                            width: 120px;
-                            height: 42px;
+                            width: 120px * root.global_scale;
+                            height: 42px * root.global_scale;
                             clicked => { root.exit_app(); }
                         }
                         Rectangle { horizontal-stretch: 1; }
@@ -709,15 +725,15 @@ export component AppWindow inherits Window {
         close-policy: no-auto-close;
 
         Rectangle {
-            width: 300px;
-            height: 150px;
+            width: 300px * root.global_scale;
+            height: 150px * root.global_scale;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 12px;
+            border-radius: 12px * root.global_scale;
             background: #2c2f35;
 
             VerticalBox {
-                spacing: 12px;
+                spacing: 12px * root.global_scale;
                 Text { text: "Connecting to secure channel..."; color: white; horizontal-alignment: center; }
                 Text { text: "🔄 Please wait"; color: #aaaaaa; horizontal-alignment: center; }
             }
@@ -749,59 +765,63 @@ export component AppWindow inherits Window {
         }
 
         Rectangle {
-            width: 380px;
-            height: 56px + 1px + (44px * root.chat_commands.length) + 32px + 40px;
+            width: 380px * root.global_scale;
+            height:(56px * root.global_scale)
+            + (1px * root.global_scale)
+            + ((44px * root.chat_commands.length) * root.global_scale)
+            + (32px * root.global_scale)
+            + (40px * root.global_scale);
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 16px;
+            border-radius: 16px * root.global_scale;
             background: #2c2f35;
-            border-width: 1px;
+            border-width: 1px * root.global_scale;
             border-color: #3a3f48;
 
             VerticalBox {
-                padding: 16px;
-                spacing: 10px;
+                padding: 16px * root.global_scale;
+                spacing: 10px * root.global_scale;
 
                 Text {
                     text: "Commands";
-                    font-size: 20px;
+                    font-size: 20px * root.global_scale;
                     font-weight: 600;
                     color: white;
                     horizontal-alignment: center;
                 }
 
                 Rectangle {
-                    height: 1px;
+                    height: 1px * root.global_scale;
                     background: #3a3f48;
                 }
 
                 VerticalBox {
-                    spacing: 4px;
+                    spacing: 4px * root.global_scale;
 
                     for cmd[index] in root.chat_commands: Rectangle {
-                        height: 40px;
-                        border-radius: 8px;
+                        height: 40px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
                         background: index == root.selected_command_idx ? #2b7bff : #1f2228;
-                        border-width: index == root.selected_command_idx ? 1px : 0px;
+                        border-width: index == root.selected_command_idx ? 1px * root.global_scale : 0px * root.global_scale;
                         border-color: #7fb2ff;
 
                         HorizontalBox {
-                            spacing: 8px;
-                            padding-left: 12px;
-                            padding-right: 12px;
+                            spacing: 8px * root.global_scale;
+                            padding-left: 12px * root.global_scale;
+                            padding-right: 12px * root.global_scale;
 
                             Text {
-                                text: index == root.selected_command_idx ? "➜" : "";
-                                width: 20px;
+                                text: index == root.selected_command_idx ? "▶" : "";
+                                width: 20px * root.global_scale;
                                 color: #ffffff;
-                                font-size: 15px;
+                                font-size: 15px * root.global_scale;
                                 vertical-alignment: center;
                             }
 
                             Text {
                                 text: cmd;
                                 color: white;
-                                font-size: 15px;
+                                font-size: 15px * root.global_scale;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                             }
@@ -809,7 +829,7 @@ export component AppWindow inherits Window {
                             Text {
                                 text: index == root.selected_command_idx ? "Enter" : "";
                                 color: #d7e8ff;
-                                font-size: 11px;
+                                font-size: 11px * root.global_scale;
                                 vertical-alignment: center;
                             }
                         }
@@ -829,7 +849,7 @@ export component AppWindow inherits Window {
 
                 Text {
                     text: "↑ ↓ navigate    Enter execute    Esc close";
-                    font-size: 11px;
+                    font-size: 11px * root.global_scale;
                     color: #9aa3b2;
                     horizontal-alignment: center;
                 }

@@ -161,7 +161,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         last_broadcast: default_broadcast.clone(),
         last_gateway: default_gateway.clone(),
         save_to_folder: default_download_folder,
-        port: None
+        port: None,
+        ui_scale: None
     };
 
     let (config_loaded, first_run) = load_or_create_config(&default_config, &app);
@@ -184,6 +185,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (current_broadcast_for_config, _current_gateway_for_config, lan_changed, selected_iface_for_ui) =
     {
         let cfg = config.lock().unwrap();
+        if let Some(scale) = cfg.ui_scale { app.set_global_scale(scale); }
         let current_broadcast_for_config =
             get_broadcast_for_name(&interfaces, &cfg.selected_interface)
                 .unwrap_or_else(|| state.get_broadcast_address());
@@ -209,7 +211,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         app.set_manual_port_mode(true);
                     }
                     Err(_) => {
-                        main_helpers::checking_ports(&state);
+                        //main_helpers::checking_ports(&state);
                         app.set_manual_port_mode(false);
                         app.invoke_show_temp_message(
                             format!("⚠️ Saved port {} was in use, switched to {}", port, state.get_port()).into()
@@ -218,7 +220,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
             None => {
-                main_helpers::checking_ports(&state);
+                //main_helpers::checking_ports(&state);
                 app.set_manual_port_mode(false); // ✅ and this
             }
         }
@@ -238,6 +240,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     app.set_ui_port(state.get_port() as i32);
     app.set_show_version(env!("CARGO_PKG_VERSION").into());
+
+    {
+        let weak = app.as_weak();
+        std::thread::spawn(move || {
+            if let Ok(Some(version)) = main_helpers::check_for_update() {
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(app) = weak.upgrade() {
+                        app.set_latest_version(version.into());
+                        app.set_update_available(true);
+                    }
+                });
+            }
+        });
+    }
 
     // ===================== UDP receiver =====================
     let sock = bind_single_port_socket(state.get_port())?;
@@ -262,6 +278,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let running2 = Arc::clone(&running);
         let file_offer_model2 = file_offer_model.clone();
         let model2 = model.clone();
+        let config_for_commands = Arc::clone(&config);
 
         app.on_send_clicked(move || {
             let Some(app) = weak.upgrade() else { return; };
@@ -368,6 +385,43 @@ fn main() -> Result<(), Box<dyn Error>> {
                 app.set_input_text("".into());
                 return;
             }            
+
+            if trimmed.eq_ignore_ascii_case("/restart") {
+                main_helpers::restart_app_after_delay(900);
+                app.set_input_text("".into());
+                return;
+            }  
+
+            if msg.eq_ignore_ascii_case("/downloads") {
+                match main_helpers::open_download_folder_from_config(&config_for_commands) {
+                    Ok(()) => {
+                        app.invoke_show_temp_message("📁 Download folder opened".into());
+                    }
+                    Err(e) => {
+                        app.invoke_show_temp_message(format!("❌ {}", e).into());
+                    }
+                }
+
+                app.set_input_text("".into());
+                return;
+            }
+
+            if msg.eq_ignore_ascii_case("/rescale") {
+                let current = app.get_global_scale();
+                let next = if current > 0.90 { 0.85 }
+                    else if current > 0.80 { 0.75 }
+                    else { 1.0 };
+                app.set_global_scale(next);
+                app.set_input_text("".into());
+                app.invoke_show_temp_message(format!("🔎 UI scale set to {:.2}", next).into());
+                // Save to config  <-- add this block
+                {
+                    let mut cfg = config_for_commands.lock().unwrap();
+                    cfg.ui_scale = Some(next);
+                    save_config(&cfg);
+                }
+                return;
+            }
 
             if trimmed.is_empty() {
                 app.set_input_text("".into());
@@ -868,18 +922,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         app.on_open_download_folder(move || {
             let Some(app) = weak.upgrade() else { return; };
 
-            let folder = {
-                let cfg = config.lock().unwrap();
-                cfg.save_to_folder.clone()
-            };
-
-            if folder.trim().is_empty() {
-                app.invoke_show_temp_message("❌ Download folder not set".into());
-                return;
-            }
-
-            if let Err(e) = open::that(&folder) {
-                app.invoke_show_temp_message(format!("❌ Failed to open folder: {}", e).into());
+            match main_helpers::open_download_folder_from_config(&config) {
+                Ok(()) => {
+                    app.invoke_show_temp_message("📁 Download folder opened".into());
+                }
+                Err(e) => {
+                    app.invoke_show_temp_message(format!("❌ {}", e).into());
+                }
             }
         });
     }
@@ -1101,7 +1150,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                         Ok(p) => {
                             app.set_ui_port(p as i32);
                             app.set_port_status("✅ Port available".into());
+                            app.invoke_show_temp_message(
+                                format!("✅ Port set to {}. Restarting LanChGo...", p).into()
+                            );
+
                             app.set_show_welcome(false);
+
+                            main_helpers::restart_app_after_delay(900);
                         }
                         Err(e) => {
                             app.set_port_status(e.into());
@@ -1122,7 +1177,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 if let Some(app) = weak.upgrade() {
                     app.set_ui_port(state.get_port() as i32);
                     app.set_port_status("".into());
-                    app.set_manual_port_mode(false); // flip toggle back to auto
+                    app.set_manual_port_mode(false);
+                    app.invoke_show_temp_message(
+                        "🔄 Returning to automatic port mode... Restarting LanChGo.".into()
+                    );
+                    app.set_show_welcome(false);
+                    main_helpers::restart_app_after_delay(900);
                 }
             }
         });

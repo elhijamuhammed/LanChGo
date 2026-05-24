@@ -39,6 +39,7 @@ pub struct Config {
     #[serde(default)]
     pub save_to_folder: String,
     pub port: Option<u16>, // if none then it is automatically sat, if some x then user sat it manually
+    pub ui_scale: Option<f32>,
 }
 
 #[derive(Debug, Clone)]

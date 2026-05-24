@@ -26,42 +26,45 @@ export component FileTransferPanel inherits Rectangle {
     callback download_offer(string);
     callback clear_offers();
 
+    // -------- Global scale --------
+    in-out property <float> global_scale;
+
     // -------- Layout / styling --------
-    width: 260px;
+    width: 260px * root.global_scale;
     vertical-stretch: 1;
     background: #1a1d23;
-    border-width: 1px;
+    border-width: 1px * root.global_scale;
     border-color: #2f3640;
-    border-radius: 12px;
+    border-radius: 12px * root.global_scale;
 
     VerticalBox {
-        padding: 10px;
-        spacing: 8px;
+        padding: 10px * root.global_scale;
+        spacing: 8px * root.global_scale;
         horizontal-stretch: 1;
         vertical-stretch: 1;
 
         // ===== Header =====
         HorizontalBox {
-            spacing: 8px;
+            spacing: 8px * root.global_scale;
 
             Text {
                 text: "📦 File Transfers";
                 color: white;
-                font-size: 16px;
+                font-size: 16px * root.global_scale;
                 horizontal-stretch: 1;
             }
 
             Rectangle {
-                width: 70px;
-                height: 24px;
-                border-radius: 7px;
+                width: 70px * root.global_scale;
+                height: 24px * root.global_scale;
+                border-radius: 7px * root.global_scale;
                 opacity: file_offer.length > 0 ? 1 : 0.45;
                 background: clear_area.has-hover ? #ff5a5a : #d64545;
 
                 Text {
                     text: "🧹 Clear";
                     color: white;
-                    font-size: 11px;
+                    font-size: 11px * root.global_scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     width: parent.width;
@@ -79,25 +82,25 @@ export component FileTransferPanel inherits Rectangle {
         }
 
         Rectangle {
-            height: 1px;
+            height: 1px * root.global_scale;
             background: #2a2f38;
             opacity: 0.6;
         }
 
         // ===== Action buttons =====
         HorizontalBox {
-            spacing: 8px;
+            spacing: 8px * root.global_scale;
 
             Rectangle {
                 horizontal-stretch: 1;
-                height: 32px;
-                border-radius: 8px;
+                height: 32px * root.global_scale;
+                border-radius: 8px * root.global_scale;
                 background: files_area.has-hover ? #2b7bff : #1e5fd6;
 
                 Text {
                     text: "📄 Files";
                     color: white;
-                    font-size: 13px;
+                    font-size: 13px * root.global_scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     width: parent.width;
@@ -113,14 +116,14 @@ export component FileTransferPanel inherits Rectangle {
 
             Rectangle {
                 horizontal-stretch: 1;
-                height: 32px;
-                border-radius: 6px;
+                height: 32px * root.global_scale;
+                border-radius: 6px * root.global_scale;
                 background: save_area.has-hover ? #ffb347 : #d9942f;
 
                 Text {
                     text: "💾 Save to…";
                     color: #1a1a1a;
-                    font-size: 13px;
+                    font-size: 13px * root.global_scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     width: parent.width;
@@ -136,15 +139,15 @@ export component FileTransferPanel inherits Rectangle {
 
             Rectangle {
                 horizontal-stretch: 1;
-                height: 32px;
-                border-radius: 8px;
+                height: 32px * root.global_scale;
+                border-radius: 8px * root.global_scale;
                 opacity: download_folder != "" ? 1 : 0.45;
                 background: open_area.has-hover ? #2a2f38 : #20242c;
 
                 Text {
                     text: "📂 Open";
                     color: white;
-                    font-size: 13px;
+                    font-size: 13px * root.global_scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     width: parent.width;
@@ -166,8 +169,8 @@ export component FileTransferPanel inherits Rectangle {
             horizontal-stretch: 1;
             vertical-stretch: 1;
             background: #12151a;
-            border-radius: 10px;
-            border-width: 1px;
+            border-radius: 10px * root.global_scale;
+            border-width: 1px * root.global_scale;
             border-color: #2a2f38;
 
             VerticalBox {
@@ -184,7 +187,7 @@ export component FileTransferPanel inherits Rectangle {
                         visible: file_offer.length == 0;
                         text: "No offers yet";
                         color: #9aa3ad;
-                        font-size: 13px;
+                        font-size: 13px * root.global_scale;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                         width: parent.width;
@@ -197,35 +200,35 @@ export component FileTransferPanel inherits Rectangle {
                         height: parent.height;
 
                         for offer in file_offer: Rectangle {
-                            width: parent.width - 10px;
-                            height: 56px;
+                            width: parent.width - (10px * root.global_scale);
+                            height: 56px * root.global_scale;
 
                             HorizontalBox {
-                                padding: 10px;
-                                spacing: 10px;
+                                padding: 10px * root.global_scale;
+                                spacing: 10px * root.global_scale;
 
                                 VerticalBox {
-                                    spacing: 2px;
+                                    spacing: 2px * root.global_scale;
                                     horizontal-stretch: 1;
 
                                     Text {
                                         text: offer.name;
                                         color: white;
-                                        font-size: 14px;
+                                        font-size: 14px * root.global_scale;
                                     }
 
                                     Text {
                                         text: offer.size_text;
                                         color: #9aa3ad;
-                                        font-size: 12px;
+                                        font-size: 12px * root.global_scale;
                                     }
                                 }
 
                                 // ✅ ONE fixed control = never moves
                                 Rectangle {
-                                    width: 44px;
-                                    height: 34px;
-                                    border-radius: 8px;
+                                    width: 44px * root.global_scale;
+                                    height: 34px * root.global_scale;
+                                    border-radius: 8px * root.global_scale;
 
                                     // change look based on state
                                     background: offer.is_downloading
@@ -235,7 +238,7 @@ export component FileTransferPanel inherits Rectangle {
                                     Text {
                                         text: offer.is_downloading ? offer.progress_text : "⬇";
                                         color: white;
-                                        font-size: offer.is_downloading ? 11px : 14px;
+                                        font-size: offer.is_downloading ? (11px * root.global_scale) : (14px * root.global_scale);
                                         horizontal-alignment: center;
                                         vertical-alignment: center;
                                         width: parent.width;
@@ -264,35 +267,35 @@ export component FileTransferPanel inherits Rectangle {
                 // Bottom bundling progress bar
                 Rectangle {
                     visible: bundle_in_progress;
-                    height: 44px;
+                    height: 44px * root.global_scale;
                     horizontal-stretch: 1;
                     background: #0f1217;
-                    border-width: 1px;
+                    border-width: 1px * root.global_scale;
                     border-color: #2a2f38;
 
                     HorizontalBox {
-                        padding: 10px;
-                        spacing: 10px;
+                        padding: 10px * root.global_scale;
+                        spacing: 10px * root.global_scale;
 
                         Text {
                             text: bundle_progress_text;
                             color: white;
-                            font-size: 12px;
+                            font-size: 12px * root.global_scale;
                             horizontal-stretch: 1;
                             wrap: word-wrap;
-                            max-height: 28px;
+                            max-height: 28px * root.global_scale;
                         }
 
                         Rectangle {
-                            width: 80px;
-                            height: 6px;
-                            border-radius: 6px;
+                            width: 80px * root.global_scale;
+                            height: 6px * root.global_scale;
+                            border-radius: 6px * root.global_scale;
                             background: #20242c;
 
                             Rectangle {
                                 width: parent.width * bundle_progress;
                                 height: parent.height;
-                                border-radius: 6px;
+                                border-radius: 6px * root.global_scale;
                                 background: #2b7bff;
                             }
                         }
@@ -302,35 +305,35 @@ export component FileTransferPanel inherits Rectangle {
                 // Bottom download progress bar
                 Rectangle {
                     visible: download_in_progress;
-                    height: 44px;
+                    height: 44px * root.global_scale;
                     horizontal-stretch: 1;
                     background: #0f1217;
-                    border-width: 1px;
+                    border-width: 1px * root.global_scale;
                     border-color: #2a2f38;
 
                     HorizontalBox {
-                        padding: 10px;
-                        spacing: 10px;
+                        padding: 10px * root.global_scale;
+                        spacing: 10px * root.global_scale;
 
                         Text {
                             text: download_progress_text;
                             color: white;
-                            font-size: 12px;
+                            font-size: 12px * root.global_scale;
                             horizontal-stretch: 1;
                             wrap: word-wrap;
-                            max-height: 28px;
+                            max-height: 28px * root.global_scale;
                         }
 
                         Rectangle {
-                            width: 80px;
-                            height: 6px;
-                            border-radius: 6px;
+                            width: 80px * root.global_scale;
+                            height: 6px * root.global_scale;
+                            border-radius: 6px * root.global_scale;
                             background: #20242c;
 
                             Rectangle {
                                 width: parent.width * download_progress;
                                 height: parent.height;
-                                border-radius: 6px;
+                                border-radius: 6px * root.global_scale;
                                 background: #2b7bff;
                             }
                         }
