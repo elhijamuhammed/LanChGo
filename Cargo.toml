@@ -37,7 +37,7 @@ uuid = { version = "1.19.0", features = ["v4"] }
 open = "5.3.3"
 crossbeam-utils = "0.8.21"
 semaphore = "0.4.0"
-axum = { version = "0.8.8", features = ["ws"] }
+axum = { version = "0.8.8", features = ["ws", "multipart"] }
 tower-http = "0.6.8"
 tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros", "net", "fs"] }
 arboard = "3.6.1"
@@ -45,6 +45,7 @@ futures-util = "0.3.32"
 tokio-util = { version = "0.7.18", features = ["io"] }
 reqwest = { version = "0.13.3", features = ["blocking", "json"] }
 semver = "1.0.28"
+fs2 = "0.4.3"
 
 [build-dependencies]
 slint-build = "1.14.1"

@@ -123,7 +123,8 @@ async fn run_server(shutdown_rx: oneshot::Receiver<()>) -> Result<(), String> {
         .route("/app.js", get(app_js))
         .route("/favicon.png", get(favicon))
         .route("/ws", get(ws_handler))
-        .merge(crate::web_app_file_transfer::file_transfer_router());
+        .merge(crate::web_app_file_transfer::file_transfer_router())
+        .layer(axum::extract::DefaultBodyLimit::disable());
     let addr = SocketAddr::from(([0, 0, 0, 0], WEB_PORT));
     let listener = TcpListener::bind(addr)
         .await

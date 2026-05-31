@@ -485,3 +485,22 @@ pub fn open_download_folder_from_config( config: &Arc<Mutex<Config>>, ) -> Resul
     open::that(&folder).map_err(|e| format!("Failed to open folder: {}", e))?;
     Ok(())
 }
+
+pub fn notify_web_upload_received(name: String, offer_id_hex: String, size: u64) {
+    if let Some(app_weak) = APP_HANDLE.get() {
+        let app_weak = app_weak.clone();
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = app_weak.upgrade() {
+                app.invoke_add_file_offer(crate::FileOfferItem {
+                    offer_id: offer_id_hex.into(),
+                    name: crate::file_transfer_protocol::truncate_name(&name, 16).into(),
+                    size_text: crate::file_transfer_protocol::human_size(size).into(),
+                    is_downloading: false,
+                    progress_text: "".into(),
+                    is_mobile: false,
+                    is_web: true,
+                });
+            }
+        });
+    }
+}

@@ -254,6 +254,29 @@ pub fn cleanup_temp_offers(registry: &mut OfferRegistry) {
     }
 }
 
+pub fn make_temp_upload_path(offer_id: &[u8; 16], filename: &str) -> PathBuf {
+    let mut dir = std::env::temp_dir();
+    dir.push("LanChGo");
+    dir.push("uploads");
+    std::fs::create_dir_all(&dir).ok();
+    
+    let hex: String = offer_id.iter().map(|b| format!("{:02x}", b)).collect();
+    dir.push(format!("{hex}_{filename}"));
+    dir
+}
+
+pub fn cleanup_temp_uploads() {
+    let mut dir = std::env::temp_dir();
+    dir.push("LanChGo");
+    dir.push("uploads");
+    
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
+}
+
 pub fn build_unique_download_path(dir: &Path, filename: &str, offer_id_hex: &str) -> PathBuf {
     let mut ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)

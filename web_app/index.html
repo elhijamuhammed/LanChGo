@@ -33,13 +33,22 @@
 
     <div id="filePanelOverlay" class="file-panel-overlay">
       <div class="file-panel">
-        <div class="file-panel-header">
-          <span>File Transfers</span>
-          <button id="clearFileTransfer" class="clearFileTransfer">🗑 Clear List</button>
-          <button id="filePanelClose" class="file-panel-close">✕</button>
-        </div>
-        <div id="filePanelBody" class="file-panel-body">
-        </div>
+          <div class="file-panel-header">
+              <span>File Transfers</span>
+              <button id="clearFileTransfer" class="clearFileTransfer">🗑 Clear List</button>
+              <button id="filePanelClose" class="file-panel-close">✕</button>
+          </div>
+
+          <!-- upload area outside filePanelBody so clear doesn't delete it -->
+          <div class="upload-area" style="padding: 8px 12px;">
+              <input type="file" id="fileUploadInput" style="display:none;" />
+              <button id="uploadBtn" class="FileTransferPanelButton" style="width:100%; margin-bottom:4px;">
+                  📤 Send File to Windows
+              </button>
+          </div>
+
+          <div id="filePanelBody" class="file-panel-body">
+          </div>
       </div>
     </div>
 

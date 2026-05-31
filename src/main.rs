@@ -296,7 +296,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     file_transfer_protocol::cleanup_temp_offers(&mut reg);
                     reg.clear();
                 }
-
+                file_transfer_protocol::cleanup_temp_uploads();
                 file_offer_model2.set_vec(Vec::new());
 
                 thread::spawn(|| {
@@ -680,6 +680,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Exit app
     {
         app.on_exit_app(move || {
+            crate::file_transfer_protocol::cleanup_temp_uploads();
             let _ = crate::web_app::stop_web_server();
             std::process::exit(0);
         });
@@ -943,6 +944,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         let sem = Arc::clone(&download_semaphore);
 
         app.on_download_offer(move |offer_id_hex| {
+            // check if it is a web upload
+            if web_app_file_transfer::save_web_upload_to_folder(
+                offer_id_hex.as_str(),
+                &config.lock().unwrap().save_to_folder
+            ) {
+                let weak_ui = weak.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(app) = weak_ui.upgrade() {
+                        secure_channel_code::play_ping_sound();
+                        app.invoke_show_temp_message("✅ File saved to download folder".into());
+                    }
+                });
+                return;
+            }
         // Try to take a slot (non-blocking)
             let permit = match sem.try_access() {
                 Ok(guard) => guard, // SemaphoreGuard<()> held while download runs :contentReference[oaicite:3]{index=3}

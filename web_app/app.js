@@ -35,6 +35,9 @@ ws.onmessage = (e) => {
     else if (msg.type === "file_offer") {
         addFileTransferOffer(msg);
     }
+    else if (msg.type === "file_received") {
+        addUploadedFileCard(msg);
+    }
 };
 
 ws.onclose = () => {
@@ -262,4 +265,138 @@ if (clearFileTransfer) {
     clearFileTransfer.addEventListener("click", () => {
         if (filePanelBody) filePanelBody.innerHTML = "";
     });
+}
+
+// ==================== UPLOAD ====================
+const uploadBtn = document.getElementById("uploadBtn");
+const fileUploadInput = document.getElementById("fileUploadInput");
+
+uploadBtn.addEventListener("click", () => fileUploadInput.click());
+
+fileUploadInput.addEventListener("change", async () => {
+    const file = fileUploadInput.files[0];
+    if (!file) return;
+
+    uploadBtn.textContent = "Checking storage...";
+    uploadBtn.disabled = true;
+
+    // preflight check
+    try {
+        const preflight = await fetch("/upload/preflight", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ size: file.size })
+        });
+
+        if (!preflight.ok) {
+            const msg = await preflight.text();
+            uploadBtn.textContent = "❌ " + msg;
+            setTimeout(() => {
+                uploadBtn.textContent = "📤 Send File to Windows";
+                uploadBtn.disabled = false;
+            }, 4000);
+            fileUploadInput.value = "";
+            return;
+        }
+    } catch {
+        uploadBtn.textContent = "❌ Error checking storage";
+        setTimeout(() => {
+            uploadBtn.textContent = "📤 Send File to Windows";
+            uploadBtn.disabled = false;
+        }, 3000);
+        fileUploadInput.value = "";
+        return;
+    }
+
+    // storage ok, proceed with upload
+    uploadBtn.textContent = "✅ Storage OK, uploading...";
+
+    try {
+        await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener("progress", (e) => {
+                if (e.lengthComputable) {
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    uploadBtn.textContent = `Uploading... ${pct}%`;
+                }
+            });
+
+            xhr.addEventListener("load", () => {
+                if (xhr.status === 200) resolve();
+                else reject();
+            });
+
+            xhr.addEventListener("error", reject);
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            xhr.open("POST", "/upload");
+            xhr.send(formData);
+        });
+
+        uploadBtn.textContent = "✅ Sent!";
+        setTimeout(() => {
+            uploadBtn.textContent = "📤 Send File to Windows";
+            uploadBtn.disabled = false;
+        }, 2000);
+
+    } catch {
+        uploadBtn.textContent = "❌ Failed";
+        setTimeout(() => {
+            uploadBtn.textContent = "📤 Send File to Windows";
+            uploadBtn.disabled = false;
+        }, 3000);
+    }
+
+    fileUploadInput.value = "";
+});
+
+function addUploadedFileCard(msg) {
+    if (!filePanelBody) return;
+
+    const card = document.createElement("div");
+    card.className = "file-transfer-card";
+
+    const icon = document.createElement("div");
+    icon.className = "file-transfer-icon";
+    icon.textContent = "📤";
+
+    const content = document.createElement("div");
+    content.className = "file-transfer-content";
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "file-transfer-name";
+    const name = msg.name || "Unknown file";
+    nameEl.textContent = name.length > 20 ? name.slice(0, 10) + "..." : name;
+
+    const sizeEl = document.createElement("div");
+    sizeEl.className = "file-transfer-size";
+    sizeEl.textContent = formatBytes(msg.size || 0);
+
+    const actions = document.createElement("div");
+    actions.className = "file-transfer-actions";
+
+    const btn = document.createElement("button");
+    btn.className = "FileTransferPanelButton";
+    btn.textContent = "Download";
+    btn.addEventListener("click", () => {
+        requestDownload(msg.offer_id);
+        btn.textContent = "Downloading...";
+        btn.disabled = true;
+    });
+
+    actions.appendChild(btn);
+    content.appendChild(nameEl);
+    content.appendChild(sizeEl);
+    content.appendChild(actions);
+    card.appendChild(icon);
+    card.appendChild(content);
+    filePanelBody.appendChild(card);
+
+    // open panel so user sees it
+    filePanelOverlay.classList.add("open");
+    unreadFileOffers = 0;
+    updateFileBadge();
 }

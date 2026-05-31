@@ -78,7 +78,7 @@ pub fn start_udp_receiver(
                                         }
                                         if !decrypted.eq_ignore_ascii_case("/exit")
                                             || !decrypted.eq_ignore_ascii_case("/clear")
-                                            || !decrypted.eq_ignore_ascii_case( "/disconnect")
+                                            || !decrypted.eq_ignore_ascii_case( "   ")
                                             || !decrypted.eq_ignore_ascii_case( "/clearfiles")
                                             || !decrypted.eq_ignore_ascii_case( "/clearall")
                                             || !decrypted.eq_ignore_ascii_case( "/webjoin")                
@@ -223,6 +223,7 @@ pub fn start_udp_receiver(
                                             is_downloading: false,
                                             progress_text: "".into(),
                                             is_mobile: false,
+                                            is_web: false,
                                         };
 
                                         app.invoke_add_file_offer(item);
@@ -271,6 +272,7 @@ pub fn start_udp_receiver(
                                             is_downloading: false,
                                             progress_text: "".into(),
                                             is_mobile: true,
+                                            is_web: false,
                                         });
                                     }
                                 })
