@@ -112,7 +112,7 @@ export component AppWindow inherits Window {
 
     // Command picker
     in-out property <[string]> chat_commands: [
-        "/info", "/rescale", "/help", "/settings", "/downloads", "/clear", "/clearfiles", "/clearall", "/disconnect", "/webjoin", "/webstop", "/restart", "/exit" 
+        "/info", "/rescale", "/help", "/settings", "/downloads", "/clearall", "/secure", "/disconnect", "/webjoin", "/webstop", "/restart", "/exit" 
     ];
     property <int> selected_command_idx: 0;
 
@@ -128,6 +128,10 @@ export component AppWindow inherits Window {
 
     // global factor scale
     in-out property <float> global_scale: 1.0;
+
+    // wiring secure button to a command
+    callback request_open_create_or_join();
+    request_open_create_or_join => { createorjoinpopup.show(); }
 
     Rectangle {
         background: blue;

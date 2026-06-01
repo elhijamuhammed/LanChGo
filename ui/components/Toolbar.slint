@@ -23,6 +23,10 @@ export component Toolbar inherits Rectangle {
     callback set_public_mode();
     callback set_secure_mode();
 
+    in-out property <bool> secure_popup_open: false;
+    in-out property <bool> web_popup_open: false;
+    in-out property <bool> tools_popup_open: false;
+
     set_public_mode => {
         root.public_secure_helper = false;
         root.channel_mode = "public";
@@ -30,6 +34,9 @@ export component Toolbar inherits Rectangle {
         root.host_PIN = "";
         root.host_PIN_masked = "N/A";
         root.request_close_create_or_join();
+        root.secure_popup_open = false;
+        root.web_popup_open = false;
+        root.tools_popup_open = false;
     }
 
     set_secure_mode => {
@@ -37,6 +44,9 @@ export component Toolbar inherits Rectangle {
         root.channel_mode = "host";
         root.change_channel_mode("host");
         root.request_open_create_or_join();
+        root.secure_popup_open = false;
+        root.web_popup_open = false;
+        root.tools_popup_open = false;
     }
 
     background: #11161c;
@@ -53,42 +63,154 @@ export component Toolbar inherits Rectangle {
         spacing: 8px * root.global_scale;
         alignment: center;
 
-        // -------- Web Join / End Session — CYAN --------
+        // -------- Web Button --------
         Rectangle {
             width: 120px * root.global_scale;
             height: 42px * root.global_scale;
             border-radius: 10px * root.global_scale;
             border-width: 1px * root.global_scale;
             border-color: root.channel_mode == "public"
-                ? (root.web_session_active ? #7f1d1d : #0e7490)
+                ? (root.web_session_active ? #166534 : #0e7490)
                 : #39424c;
-
             background: root.channel_mode == "public"
-                ? (root.web_session_active
-                    ? (web_join_area.pressed ? #b91c1c : web_join_area.has-hover ? #ef4444 : #dc2626)
-                    : (web_join_area.pressed ? #00b4d8 : web_join_area.has-hover ? #35e4ff : #08d3f7))
+                ? (web_btn_area.has-hover ? #0ea5e9 : #0284c7)
                 : #202831;
 
-            Text {
-                text: root.web_session_active ? "⛔ End Session" : "🌐 Web Join";
-                color: root.channel_mode == "public" ? #0a0f14 : #8d98a3;
-                font-size: 13px * root.global_scale;
-                font-weight: 700;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
+            HorizontalLayout {
+                alignment: center;
+                spacing: 7px * root.global_scale;
+
+                Text {
+                    text: root.web_session_active ? "🌐 Web ●" : "🌐 Web";
+                    color: root.channel_mode == "public" ? white : #8d98a3;
+                    font-size: 13px * root.global_scale;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: root.web_popup_open ? "▲" : "▼";
+                    color: root.channel_mode == "public" ? white : #8d98a3;
+                    font-size: 13px * root.global_scale;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
             }
 
-            web_join_area := TouchArea {
+            web_btn_area := TouchArea {
                 width: parent.width;
                 height: parent.height;
                 enabled: root.channel_mode == "public";
-                clicked => { root.web_join_clicked(); }
+                clicked => {
+                    root.secure_popup_open = false;
+                    root.tools_popup_open = false;
+                    root.web_popup_open = !root.web_popup_open;
+                }
+            }
+
+            if root.web_popup_open: Rectangle {
+                x: 0px;
+                y: -(132px * root.global_scale);
+                width: 180px * root.global_scale;
+                height: 118px * root.global_scale;
+                background: #11161c;
+                border-radius: 12px * root.global_scale;
+                border-width: 1px * root.global_scale;
+                border-color: #2a3540;
+                drop-shadow-blur: 24px * root.global_scale;
+                drop-shadow-color: #000000dd;
+                drop-shadow-offset-y: 8px * root.global_scale;
+
+                VerticalLayout {
+                    padding: 8px * root.global_scale;
+                    spacing: 6px * root.global_scale;
+
+                    Rectangle {
+                        height: 32px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: #182028;
+
+                        Text {
+                            text: root.web_session_active ? "Web session active" : "Web session off";
+                            color: root.web_session_active ? #22c55e : #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 32px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        border-width: 1px * root.global_scale;
+                        border-color: root.web_session_active ? #1d4ed8 : #0e7490;
+                        background: root.web_session_active
+                            ? (show_web_btn.has-hover ? #3b82f6 : #2563eb)
+                            : (show_web_btn.has-hover ? #06b6d4 : #0891b2);
+
+                        Text {
+                            text: root.web_session_active ? "🌐 Show Session" : "🌐 Start Session";
+                            color: white;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+
+                        show_web_btn := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            clicked => {
+                                root.web_popup_open = false;
+                                if (root.web_session_active) {
+                                    root.show_web_join_popup();
+                                } else {
+                                    root.web_join_clicked();
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 32px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        border-width: 1px * root.global_scale;
+                        border-color: root.web_session_active ? #7f1d1d : #39424c;
+                        background: root.web_session_active
+                            ? (end_web_btn.has-hover ? #ef4444 : #dc2626)
+                            : #202831;
+
+                        Text {
+                            text: "⛔ End Session";
+                            color: root.web_session_active ? white : #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+
+                        end_web_btn := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            enabled: root.web_session_active;
+                            clicked => {
+                                root.web_popup_open = false;
+                                root.web_join_clicked();
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        // -------- Mode Segmented Control — AMBER / TEAL --------
+        // -------- Public / Secure Segmented Control --------
         Rectangle {
             width: 210px * root.global_scale;
             height: 42px * root.global_scale;
@@ -101,13 +223,11 @@ export component Toolbar inherits Rectangle {
                 padding: 3px * root.global_scale;
                 spacing: 3px * root.global_scale;
 
-                // Public — amber
                 Rectangle {
                     border-radius: 9px * root.global_scale;
                     background: root.channel_mode == "public"
                         ? (pub_area.has-hover ? #ffb830 : #f0a500)
                         : (pub_area.has-hover ? #1e2d3d : #1a222b);
-                    animate background { duration: 150ms; }
 
                     Text {
                         text: "🌍 Public";
@@ -118,7 +238,6 @@ export component Toolbar inherits Rectangle {
                         vertical-alignment: center;
                         width: parent.width;
                         height: parent.height;
-                        animate color { duration: 150ms; }
                     }
 
                     pub_area := TouchArea {
@@ -128,164 +247,315 @@ export component Toolbar inherits Rectangle {
                     }
                 }
 
-                // Secure — teal
                 Rectangle {
                     border-radius: 9px * root.global_scale;
-                    background: root.channel_mode == "host"
+                    background: (root.channel_mode == "host" || root.channel_mode == "joined")
                         ? (sec_area.has-hover ? #00c9b0 : #00a896)
                         : (sec_area.has-hover ? #1e2d3d : #1a222b);
-                    animate background { duration: 150ms; }
 
-                    Text {
-                        text: "🔒 Secure";
-                        color: root.channel_mode == "host" ? #0a0f14 : #a7b1bb;
-                        font-size: 13px * root.global_scale;
-                        font-weight: 700;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        width: parent.width;
-                        height: parent.height;
-                        animate color { duration: 150ms; }
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 7px * root.global_scale;
+
+                        Text {
+                            text: "🔒 Secure";
+                            color: (root.channel_mode == "host" || root.channel_mode == "joined") ? #0a0f14 : #a7b1bb;
+                            font-size: 13px * root.global_scale;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+
+                        if (root.channel_mode == "host" || root.channel_mode == "joined"): Text {
+                            text: root.secure_popup_open ? "▲" : "▼";
+                            color: #0a0f14;
+                            font-size: 13px * root.global_scale;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
                     }
 
                     sec_area := TouchArea {
                         width: parent.width;
                         height: parent.height;
-                        clicked => { root.set_secure_mode(); }
+                        clicked => {
+                            root.web_popup_open = false;
+                            root.tools_popup_open = false;
+
+                            if (root.channel_mode == "host" || root.channel_mode == "joined") {
+                                root.secure_popup_open = !root.secure_popup_open;
+                            } else {
+                                root.set_secure_mode();
+                            }
+                        }
+                    }
+
+                    if root.secure_popup_open: Rectangle {
+                        x: 0px;
+                        y: -(182px * root.global_scale);
+                        width: 205px * root.global_scale;
+                        height: 165px * root.global_scale;
+                        background: #11161c;
+                        border-radius: 12px * root.global_scale;
+                        border-width: 1px * root.global_scale;
+                        border-color: #2a3540;
+                        drop-shadow-blur: 16px * root.global_scale;
+                        drop-shadow-color: #000000aa;
+                        drop-shadow-offset-y: 4px * root.global_scale;
+
+                        VerticalLayout {
+                            padding: 8px * root.global_scale;
+                            spacing: 6px * root.global_scale;
+
+                            Rectangle {
+                                height: 32px * root.global_scale;
+                                border-radius: 8px * root.global_scale;
+                                background: #182028;
+
+                                Text {
+                                    text: "🔒 PIN: " + root.host_PIN_masked;
+                                    color: #08d3f7;
+                                    font-size: 13px * root.global_scale;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                    height: parent.height;
+                                }
+                            }
+
+                            Rectangle {
+                                height: 32px * root.global_scale;
+                                border-radius: 8px * root.global_scale;
+                                border-width: 1px * root.global_scale;
+                                border-color: root.channel_mode == "host" ? #1d4ed8 : #39424c;
+                                background: root.channel_mode == "host"
+                                    ? (show_pin_btn.has-hover ? #3b82f6 : #2563eb)
+                                    : #202831;
+
+                                Text {
+                                    text: "👁 Show PIN";
+                                    color: root.channel_mode == "host" ? white : #8d98a3;
+                                    font-size: 12px * root.global_scale;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                    height: parent.height;
+                                }
+
+                                show_pin_btn := TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    enabled: root.channel_mode == "host";
+                                    clicked => {
+                                        root.secure_popup_open = false;
+                                        root.request_show_pin();
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                height: 32px * root.global_scale;
+                                border-radius: 8px * root.global_scale;
+                                border-width: 1px * root.global_scale;
+                                border-color: root.channel_mode == "host" ? #166534 : #39424c;
+                                background: root.channel_mode == "host"
+                                    ? (new_pin_btn.has-hover ? #22c55e : #16a34a)
+                                    : #202831;
+
+                                Text {
+                                    text: "🔄 New PIN";
+                                    color: root.channel_mode == "host" ? white : #8d98a3;
+                                    font-size: 12px * root.global_scale;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                    height: parent.height;
+                                }
+
+                                new_pin_btn := TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    enabled: root.channel_mode == "host";
+                                    clicked => {
+                                        root.generate_new_PIN();
+                                        root.secure_popup_open = false;
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                height: 32px * root.global_scale;
+                                border-radius: 8px * root.global_scale;
+                                border-width: 1px * root.global_scale;
+                                border-color: #7f1d1d;
+                                background: disconnect_btn.has-hover ? #ef4444 : #dc2626;
+
+                                Text {
+                                    text: "⏏ Disconnect";
+                                    color: white;
+                                    font-size: 12px * root.global_scale;
+                                    font-weight: 700;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                    width: parent.width;
+                                    height: parent.height;
+                                }
+
+                                disconnect_btn := TouchArea {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    clicked => {
+                                        root.disconnect_channel();
+                                        root.secure_popup_open = false;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // -------- PIN Info Chip --------
+        // -------- Tools Button --------
         Rectangle {
-            width: 130px * root.global_scale;
+            width: 120px * root.global_scale;
             height: 42px * root.global_scale;
             border-radius: 10px * root.global_scale;
-            background: #182028;
             border-width: 1px * root.global_scale;
-            border-color: #2a3540;
+            border-color: root.channel_mode == "public" ? #7c3aed : #39424c;
+            background: root.channel_mode == "public"
+                ? (tools_area.has-hover ? #8b5cf6 : #6d28d9)
+                : #202831;
 
             HorizontalLayout {
-                padding-left: 10px * root.global_scale;
-                padding-right: 10px * root.global_scale;
-                spacing: 6px * root.global_scale;
                 alignment: center;
+                spacing: 7px * root.global_scale;
 
                 Text {
-                    text: "PIN";
-                    color: #8d98a3;
-                    font-size: 12px * root.global_scale;
-                    font-weight: 600;
+                    text: "🧰 Tools";
+                    color: root.channel_mode == "public" ? white : #8d98a3;
+                    font-size: 13px * root.global_scale;
+                    font-weight: 700;
                     vertical-alignment: center;
                 }
 
                 Text {
-                    text: root.channel_mode == "public" ? "N/A" : root.host_PIN_masked;
-                    color: root.channel_mode == "public" ? #6b7280 : #08d3f7;
-                    font-size: 14px * root.global_scale;
+                    text: root.tools_popup_open ? "▲" : "▼";
+                    color: root.channel_mode == "public" ? white : #8d98a3;
+                    font-size: 13px * root.global_scale;
                     font-weight: 700;
                     vertical-alignment: center;
                 }
             }
-        }
 
-        // -------- Show PIN / Show Web — BLUE --------
-        Rectangle {
-            width: 108px * root.global_scale;
-            height: 42px * root.global_scale;
-            border-radius: 10px * root.global_scale;
-            border-width: 1px * root.global_scale;
-            border-color: (root.web_session_active || root.channel_mode == "host") ? #1d4ed8 : #39424c;
-            background: (root.web_session_active || root.channel_mode == "host")
-                ? (show_btn_area.has-hover ? #3b82f6 : #2563eb) : #202831;
-
-            Text {
-                text: root.web_session_active ? "🌐 Show Web" : "👁 Show PIN";
-                color: (root.web_session_active || root.channel_mode == "host") ? white : #8d98a3;
-                font-size: 13px * root.global_scale;
-                font-weight: 700;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            tools_area := TouchArea {
                 width: parent.width;
                 height: parent.height;
+                enabled: root.channel_mode == "public";
+                clicked => {
+                    root.web_popup_open = false;
+                    root.secure_popup_open = false;
+                    root.tools_popup_open = !root.tools_popup_open;
+                }
             }
 
-            show_btn_area := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                enabled: root.web_session_active || root.channel_mode == "host";
-                clicked => {
-                    if (root.web_session_active) {
-                        root.show_web_join_popup();
-                    } else {
-                        root.request_show_pin();
+            if root.tools_popup_open: Rectangle {
+                x: 0px;
+                y: -(198px * root.global_scale);
+                width: 205px * root.global_scale;
+                height: 180px * root.global_scale;
+                background: #11161c;
+                border-radius: 12px * root.global_scale;
+                border-width: 1px * root.global_scale;
+                border-color: #2a3540;
+                drop-shadow-blur: 16px * root.global_scale;
+                drop-shadow-color: #000000aa;
+                drop-shadow-offset-y: 4px * root.global_scale;
+
+                VerticalLayout {
+                    padding: 8px * root.global_scale;
+                    spacing: 6px * root.global_scale;
+
+                    Rectangle {
+                        height: 32px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: #182028;
+
+                        Text {
+                            text: "🧰 LAN Tools";
+                            color: #c4b5fd;
+                            font-size: 13px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 32px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: #202831;
+                        border-width: 1px * root.global_scale;
+                        border-color: #39424c;
+
+                        Text {
+                            text: "🖱 Phone Mouse";
+                            color: #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 32px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: #202831;
+                        border-width: 1px * root.global_scale;
+                        border-color: #39424c;
+
+                        Text {
+                            text: "⌨ Phone Keyboard";
+                            color: #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 32px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: #202831;
+                        border-width: 1px * root.global_scale;
+                        border-color: #39424c;
+
+                        Text {
+                            text: "📷 Camera / 🎤 Mic";
+                            color: #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width;
+                            height: parent.height;
+                        }
                     }
                 }
             }
         }
 
-        // -------- New PIN — GREEN --------
-        Rectangle {
-            width: 100px * root.global_scale;
-            height: 42px * root.global_scale;
-            border-radius: 10px * root.global_scale;
-            border-width: 1px * root.global_scale;
-            border-color: root.channel_mode == "host" ? #166534 : #39424c;
-            background: root.channel_mode == "host"
-                ? (new_pin_area.has-hover ? #22c55e : #16a34a)
-                : #202831;
-
-            Text {
-                text: "🔄 New PIN";
-                color: root.channel_mode == "host" ? white : #8d98a3;
-                font-size: 13px * root.global_scale;
-                font-weight: 700;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
-            }
-
-            new_pin_area := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                enabled: root.channel_mode == "host";
-                clicked => { root.generate_new_PIN(); }
-            }
-        }
-
-        // -------- Disconnect — RED --------
-        Rectangle {
-            width: 108px * root.global_scale;
-            height: 42px * root.global_scale;
-            border-radius: 10px * root.global_scale;
-            border-width: 1px * root.global_scale;
-            border-color: root.channel_mode != "public" ? #7f1d1d : #39424c;
-            background: root.channel_mode != "public"
-                ? (disconnect_area.has-hover ? #ef4444 : #dc2626)
-                : #202831;
-
-            Text {
-                text: "⏏ Disconnect";
-                color: root.channel_mode != "public" ? white : #8d98a3;
-                font-size: 13px * root.global_scale;
-                font-weight: 700;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
-            }
-
-            disconnect_area := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                enabled: root.channel_mode != "public";
-                clicked => { root.disconnect_channel(); }
-            }
-        }
-
-        // -------- Settings — PURPLE --------
+        // -------- Settings --------
         Rectangle {
             width: 96px * root.global_scale;
             height: 42px * root.global_scale;
@@ -308,7 +578,12 @@ export component Toolbar inherits Rectangle {
             settings_area := TouchArea {
                 width: parent.width;
                 height: parent.height;
-                clicked => { root.show_welcome = true; }
+                clicked => {
+                    root.secure_popup_open = false;
+                    root.web_popup_open = false;
+                    root.tools_popup_open = false;
+                    root.show_welcome = true;
+                }
             }
         }
     }

@@ -314,6 +314,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                 return;
             }
 
+            if msg.eq_ignore_ascii_case("/secure") {
+                app.set_public_secure_helper(true);
+                app.set_channel_mode("host".into());
+                app.invoke_change_channel_mode("host".into());
+                app.invoke_request_open_create_or_join();
+                app.set_input_text("".into());
+                return;
+            }
+
             if msg.eq_ignore_ascii_case("/disconnect") {
                 app.invoke_disconnect_channel();
                 app.set_input_text("".into());

@@ -343,6 +343,7 @@ pub fn help_message() -> String {
         /clear       Clear chat messages
         /clearfiles  Clear file transfer panel
         /clearall    Clear chat and files
+        /secure      Switches from public to secure mode
         /disconnect  Disconnect from secure channel
         /webjoin     Starts a web companion session
         /webstop     Stops a web companion session
