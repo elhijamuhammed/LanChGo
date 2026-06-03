@@ -49,6 +49,17 @@ pub struct InterfacesInfo {
     pub status: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MToolPacket {
+    pub tool: String,
+    pub device_name: String,
+    pub platform: String,
+    pub tcp_port: u16,
+    pub session_id: String,
+    pub device_id: String,
+    pub version: u32,
+}
+
 //#[derive(Clone)]
 // pub struct InterfaceItem {
 //     pub name: slint::SharedString,

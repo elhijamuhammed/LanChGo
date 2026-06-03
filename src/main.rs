@@ -87,6 +87,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file_offer_model = Rc::new(VecModel::<FileOfferItem>::from(Vec::new()));
     app.set_file_offer(ModelRc::new(file_offer_model.clone()));
 
+    // -------- tools devices model
+    let tool_devices_model = Rc::new(VecModel::<ToolDevice>::from(Vec::new()));
+    app.set_tool_devices(ModelRc::new(tool_devices_model.clone()));
+
     let offer_registry = Arc::new(Mutex::new(file_transfer_protocol::OfferRegistry::new()));
     web_app_file_transfer::register_offer_registry(Arc::clone(&offer_registry));
     // start tcp listner and put it in idle here
@@ -100,6 +104,48 @@ fn main() -> Result<(), Box<dyn Error>> {
         let file_offer_model = file_offer_model.clone();
         app.on_add_file_offer(move |item: FileOfferItem| {
             file_offer_model.push(item);
+        });
+    }
+
+    // for pushing discovered tool devices
+    {
+        let tool_devices_model = tool_devices_model.clone();
+        app.on_add_tool_device(move |device_id, name, ip, platform, tcp_port, version, tool| {
+            // Remove old entry for same device + tool, add fresh one
+            for i in 0..tool_devices_model.row_count() {
+                if let Some(row) = tool_devices_model.row_data(i) {
+                    if row.id == device_id && row.tool == tool {
+                        tool_devices_model.remove(i);
+                        break;
+                    }
+                }
+            }
+            let icon: slint::SharedString =
+                if platform.to_lowercase() == "android" {
+                    "📱".into()
+                } else {
+                    "🖥".into()
+                };
+
+            tool_devices_model.push(ToolDevice {
+                id: device_id,
+                name,
+                ip: format!("{}:{}", ip, tcp_port).into(),
+                status: format!("{} v{}", platform, version).into(),
+                icon,
+                tool,
+            });
+        });
+    }
+
+    // for clearing discovered tool devices
+    {
+        let tool_devices_model = tool_devices_model.clone();
+
+        app.on_clear_tool_devices(move || {
+            tool_devices_model.set_vec(Vec::new());
+
+            println!("[TOOLS] device list cleared");
         });
     }
 

@@ -505,3 +505,29 @@ pub fn notify_web_upload_received(name: String, offer_id_hex: String, size: u64)
         });
     }
 }
+
+pub fn recieve_tools_packet( payload: &[u8], sender_ip: std::net::IpAddr, ui_weak: slint::Weak<AppWindow>, ) {
+    let packet: crate::classes::MToolPacket =
+        match serde_json::from_slice(payload) {
+            Ok(packet) => packet,
+            Err(e) => {
+                println!("[TOOLS] Failed to decode MTOOL packet: {}", e);
+                return;
+            }
+        };
+    println!("[TOOLS] Received packet: {:?}", packet);
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(app) = ui_weak.upgrade() {
+            app.invoke_add_tool_device(
+                packet.device_id.into(),
+                //packet.session_id.into(), // no need, but kept it for future use maybe
+                packet.device_name.into(),
+                sender_ip.to_string().into(),
+                packet.platform.into(),
+                packet.tcp_port as i32,
+                packet.version as i32,
+                packet.tool.into(),
+            );
+        }
+    });
+}

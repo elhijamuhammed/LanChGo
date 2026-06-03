@@ -1,0 +1,323 @@
+import { VerticalBox, HorizontalBox, ListView } from "std-widgets.slint";
+
+export struct ToolDevice {
+    id: string,
+    name: string,
+    ip: string,
+    status: string,
+    icon: string,
+    tool: string,
+}
+
+component CustomLineEdit {
+    in-out property <string> text <=> input.text;
+    in property <string> placeholder-text: "";
+    in property <float> global_scale: 1.0;
+    callback accepted(string);
+
+    forward-focus: input;
+
+    Rectangle {
+        background: #3b3f45;
+        border-radius: 6px * global_scale;
+        border-width: 1px * global_scale;
+        border-color: input.has-focus ? #008b7a : #4a4f57;
+
+        input := TextInput {
+            width: parent.width - 16px * global_scale;
+            height: parent.height;
+            x: 8px * global_scale;
+            font-size: 13px * global_scale;
+            color: #f1f1f1;
+            vertical-alignment: center;
+            single-line: true;
+
+            accepted => {
+                root.accepted(self.text);
+            }
+        }
+
+        if text == "" : Text {
+            x: 8px * global_scale;
+            text: placeholder-text;
+            font-size: 13px * global_scale;
+            color: #9aa0a6;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component SecondaryButton {
+    in property <string> text;
+    in property <float> global_scale: 1.0;
+    callback clicked;
+
+    touch := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    Rectangle {
+        background: touch.pressed ? #2b2f34 : (touch.has-hover ? #4a4f57 : #3b3f45);
+        border-radius: 6px * global_scale;
+        border-width: 1px * global_scale;
+        border-color: touch.has-hover ? #5b626b : #4a4f57;
+
+        animate background { duration: 100ms; }
+        animate border-color { duration: 100ms; }
+
+        Text {
+            text: root.text;
+            color: touch.has-hover ? #ffffff : #d6d8dc;
+            font-size: 12px * global_scale;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component PrimaryButton {
+    in property <string> text;
+    in property <float> global_scale: 1.0;
+    callback clicked;
+
+    touch := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    Rectangle {
+        background: touch.pressed ? #2b2f34 : (touch.has-hover ? #4a4f57 : #3b3f45);
+        border-radius: 6px * global_scale;
+        border-width: 1px * global_scale;
+        border-color: touch.has-hover ? #5b626b : #4a4f57;
+
+        animate background { duration: 100ms; }
+        animate border-color { duration: 100ms; }
+
+        Text {
+            text: root.text;
+            color: #ffffff;
+            font-size: 13px * global_scale;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component DevicesList inherits Rectangle {
+    in-out property <float> global_scale: 1.0;
+
+    in-out property <string> tool_title: "";
+    in-out property <string> tool_icon: "";
+    in-out property <string> display_name: "LanChGo PC";
+    in-out property <string> active_tool: "";
+    in-out property <[ToolDevice]> devices: [];
+
+    callback refresh_clicked();
+    callback close_clicked();
+    callback display_name_changed(string);
+    callback device_selected(string);
+    callback clear_tool_devices();
+
+    background: #2f3338;
+    border-radius: 12px * root.global_scale;
+    border-width: 1px * root.global_scale;
+    border-color: #454a52;
+
+    VerticalBox {
+        padding: 22px * root.global_scale;
+        spacing: 14px * root.global_scale;
+        alignment: start;
+
+        Text {
+            text: root.tool_icon + "  " + root.tool_title;
+            color: #f1f1f1;
+            font-size: 22px * root.global_scale;
+            font-weight: 500;
+            horizontal-alignment: center;
+        }
+
+        Rectangle {
+            height: 1px * root.global_scale;
+            background: #454a52;
+        }
+
+        Text {
+            text: "Display name:";
+            color: #f1f1f1;
+            font-size: 14px * root.global_scale;
+            font-weight: 500;
+        }
+
+        name_input := CustomLineEdit {
+            text <=> root.display_name;
+            placeholder-text: "Enter device name...";
+            global_scale: root.global_scale;
+            height: 36px * root.global_scale;
+
+            accepted(text) => {
+                root.display_name_changed(text);
+            }
+        }
+
+        HorizontalBox {
+            spacing: 8px * root.global_scale;
+
+            Text {
+                text: "Available Devices";
+                color: #f1f1f1;
+                font-size: 14px * root.global_scale;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            SecondaryButton {
+                text: "Clear";
+                global_scale: root.global_scale;
+                width: 92px * root.global_scale;
+                height: 32px * root.global_scale;
+                clicked => {
+                    root.clear_tool_devices();
+                }
+            }
+        }
+
+        if root.devices.length == 0: Rectangle {
+            min-height: 190px * root.global_scale;
+            border-radius: 8px * root.global_scale;
+            background: #202327;
+            border-width: 1px * root.global_scale;
+            border-color: #3f444b;
+
+            VerticalBox {
+                padding: 22px * root.global_scale;
+                spacing: 10px * root.global_scale;
+                alignment: center;
+
+                Text {
+                    text: root.tool_icon;
+                    font-size: 32px * root.global_scale;
+                    color: #008b7a;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "No devices discovered";
+                    color: #f1f1f1;
+                    font-size: 14px * root.global_scale;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Launch " + root.tool_title + " on your destination device.";
+                    color: #9aa0a6;
+                    font-size: 12px * root.global_scale;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        if root.devices.length > 0: Rectangle {
+            height: 190px * root.global_scale;
+            border-radius: 8px * root.global_scale;
+            background: #202327;
+            border-width: 1px * root.global_scale;
+            border-color: #3f444b;
+
+            ListView {
+                width: parent.width;
+                height: parent.height;
+
+                for device in root.devices: Rectangle {
+                    height: device.tool == root.active_tool ? 62px * root.global_scale : 0px;
+                    visible: device.tool == root.active_tool;
+
+                    border-radius: 8px * root.global_scale;
+                    background: device_area.has-hover ? #3a4047 : transparent;
+                    border-width: 1px * root.global_scale;
+                    border-color: device_area.has-hover ? #008b7a : transparent;
+
+                    HorizontalBox {
+                        padding-left: 14px * root.global_scale;
+                        padding-right: 14px * root.global_scale;
+                        spacing: 10px * root.global_scale;
+
+                        Text {
+                            text: device.icon;
+                            font-size: 18px * root.global_scale;
+                            vertical-alignment: center;
+                        }
+
+                        VerticalBox {
+                            alignment: center;
+                            spacing: 2px * root.global_scale;
+
+                            Text {
+                                text: device.name;
+                                color: #f1f1f1;
+                                font-size: 13px * root.global_scale;
+                                font-weight: 600;
+                            }
+
+                            Text {
+                                text: device.ip + " • " + device.status;
+                                color: #9aa0a6;
+                                font-size: 11px * root.global_scale;
+                            }
+                        }
+
+                        Rectangle { horizontal-stretch: 1; }
+
+                        Rectangle {
+                            border-radius: 6px * root.global_scale;
+
+                            background: device_area.has-hover
+                                ? #00c7b5
+                                : #00a89a;
+
+                            border-width: 1px * root.global_scale;
+                            border-color: #00d4bd;
+
+                            min-width: 88px * root.global_scale;
+                            height: 32px * root.global_scale;
+
+                            Text {
+                                text: "Connect";
+                                color: white;
+                                font-size: 12px * root.global_scale;
+                                font-weight: 700;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    device_area := TouchArea {
+                        clicked => {
+                            root.device_selected(device.id);
+                        }
+                    }
+                }
+            }
+        }
+
+        PrimaryButton {
+            text: "Close";
+            global_scale: root.global_scale;
+            height: 36px * root.global_scale;
+
+            clicked => {
+                root.close_clicked();
+            }
+        }
+    }
+}

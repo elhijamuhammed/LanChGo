@@ -8,12 +8,14 @@ import { Toolbar } from "components/Toolbar.slint";
 import { FileTransferPanel } from "components/FileTransferPanel.slint";
 import { FileOfferItem } from "components/types.slint";
 import { EscCloseHandler } from "components/HelpFunctions.slint";
+import { DevicesList, ToolDevice } from "components/Tools UI/DevicesList.slint";
 
 export component AppWindow inherits Window {
     width: 1000px * root.global_scale;
     height: 720px * root.global_scale;
     title: "LanChGo";
     icon: @image-url("assets/LanChGo_icon.png");
+    forward-focus: main_key_handler;
 
     // Reactive list provided by Rust (ModelRc)
     in-out property <[string]> messages;
@@ -133,6 +135,25 @@ export component AppWindow inherits Window {
     callback request_open_create_or_join();
     request_open_create_or_join => { createorjoinpopup.show(); }
 
+    // Tools
+    in-out property <bool> tools_device_list_open: false;
+    in-out property <string> tools_device_list_title: "";
+    in-out property <string> tools_device_list_icon: "";
+    in-out property <string> active_tool: "";
+    callback open_tools_devices_list(string, string, string);
+    in-out property <[ToolDevice]> tool_devices: [];
+    callback add_tool_device( string, string, string, string, int, int, string);
+    callback tool_device_selected(string);
+    callback refresh_tool_devices();
+    callback clear_tool_devices();
+
+    open_tools_devices_list(title, icon, tool_id) => {
+        root.tools_device_list_title = title;
+        root.tools_device_list_icon = icon;
+        root.active_tool = tool_id;
+        root.tools_device_list_open = true;
+    }
+
     Rectangle {
         background: blue;
         border-width: 3px * root.global_scale;
@@ -152,6 +173,23 @@ export component AppWindow inherits Window {
                 broadcast_address: root.broadcast_address;
                 interface_status: root.interface_status;
                 global_scale: root.global_scale;
+            }
+
+            // ESC to close toolbar popups
+            main_key_handler := FocusScope {
+                key-pressed(event) => {
+                    if event.text == Key.Escape {
+                        if root.tools_device_list_open {
+                            root.tools_device_list_open = false;
+                            return accept;
+                        }
+
+                        toolbar-inst.close_all_popups();
+                        return accept;
+                    }
+
+                    reject
+                }
             }
 
             VerticalBox {
@@ -178,47 +216,62 @@ export component AppWindow inherits Window {
                 }
 
                 // ======= MAIN ROW: Chat + File transfers =======
-                HorizontalBox {
-                    spacing: 12px * root.global_scale;
+                Rectangle {
                     horizontal-stretch: 1;
                     vertical-stretch: 1;
+                    background: transparent;
 
-                    ChatPanel {
-                        horizontal-stretch: 1;
-                        vertical-stretch: 1;
-                        messages: root.messages;
-                        temp_message: root.temp_message;
-                        update_available <=> root.update_available;
-                        latest_version <=> root.latest_version;
-                        global_scale: root.global_scale;
+                    HorizontalBox {
+                        spacing: 12px * root.global_scale;
+                        width: parent.width;
+                        height: parent.height;
+
+                        ChatPanel {
+                            horizontal-stretch: 1;
+                            vertical-stretch: 1;
+                            messages: root.messages;
+                            temp_message: root.temp_message;
+                            update_available <=> root.update_available;
+                            latest_version <=> root.latest_version;
+                            global_scale: root.global_scale;
+                        }
+
+                        VerticalBox {
+                            spacing: 8px * root.global_scale;
+                            vertical-stretch: 1;
+
+                            FileTransferPanel {
+                                vertical-stretch: 1;
+                                global_scale: root.global_scale;
+                                file_offer <=> root.file_offer;
+                                download_folder <=> root.download_folder;
+                                bundle_in_progress: root.bundle_in_progress;
+                                bundle_progress: root.bundle_progress;
+                                bundle_progress_text: root.bundle_progress_text;
+                                download_in_progress: root.download_in_progress;
+                                download_progress: root.download_progress;
+                                download_progress_text: root.download_progress_text;
+
+                                pick_files() => { root.pick_files_send(); }
+                                pick_download_folder => { root.pick_download_folder(); }
+                                open_download_folder() => { root.open_download_folder(); }
+                                clear_offers() => { root.clear_file_transfer_panel(); }
+                                download_offer(id) => { root.download_offer(id); }
+                            }
+                        }
                     }
 
-                    VerticalBox {
-                        spacing: 8px * root.global_scale;
-                        vertical-stretch: 1;
-
-                        FileTransferPanel {
-                            vertical-stretch: 1;
-                            global_scale: root.global_scale;
-                            file_offer <=> root.file_offer;
-                            download_folder <=> root.download_folder;
-                            bundle_in_progress: root.bundle_in_progress;
-                            bundle_progress: root.bundle_progress;
-                            bundle_progress_text: root.bundle_progress_text;
-                            download_in_progress: root.download_in_progress;
-                            download_progress: root.download_progress;
-                            download_progress_text: root.download_progress_text;
-
-                            pick_files() => { root.pick_files_send(); }
-                            pick_download_folder => { root.pick_download_folder(); }
-                            open_download_folder() => { root.open_download_folder(); }
-                            clear_offers() => { root.clear_file_transfer_panel(); }
-                            download_offer(id) => { root.download_offer(id); }
+                    // click outside toolbar popups closes them without becoming a VerticalBox layout item.
+                    if toolbar-inst.web_popup_open || toolbar-inst.secure_popup_open || toolbar-inst.tools_popup_open: TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => {
+                            toolbar-inst.close_all_popups();
                         }
                     }
                 }
 
-                Toolbar {
+                toolbar-inst := Toolbar {
                     global_scale: root.global_scale;
                     channel_mode <=> root.channel_mode;
                     public_secure_helper <=> root.public_secure_helper;
@@ -236,6 +289,13 @@ export component AppWindow inherits Window {
                     request_show_pin() => { showpin.show(); }
                     web_join_clicked() => { root.web_join_clicked(); }
                     show_web_join_popup() => { webjoinpopup.show(); }
+
+                    open_tools_devices_list(title, icon, tool_id) => {
+                        root.tools_device_list_title = title;
+                        root.tools_device_list_icon = icon;
+                        root.active_tool = tool_id;
+                        root.tools_device_list_open = true;
+                    }
                 }
 
                 //--- Input row ---
@@ -247,6 +307,74 @@ export component AppWindow inherits Window {
                     open_command_picker() => {
                         root.selected_command_idx = 0;
                         commandpicker.show();
+                    }
+                }
+            }
+            // --- Tools Device List Popup ---
+            if root.tools_device_list_open: FocusScope {
+                width: parent.width;
+                height: parent.height;
+
+                init => {
+                    self.focus();
+                }
+
+                key-pressed(event) => {
+                    if event.text == Key.Escape {
+                        root.tools_device_list_open = false;
+                        return accept;
+                    }
+
+                    reject
+                }
+
+                Rectangle {
+                    width: parent.width;
+                    height: parent.height;
+                    background: #00000080;
+
+                    TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+
+                        clicked => {
+                            root.tools_device_list_open = false;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 500px * root.global_scale;
+                        height: 490px * root.global_scale;
+
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+
+                        background: transparent;
+
+                        TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+                            clicked => { }
+                        }
+
+                        DevicesList {
+                            width: parent.width;
+                            height: parent.height;
+
+                            global_scale: root.global_scale;
+                            tool_title: root.tools_device_list_title;
+                            tool_icon: root.tools_device_list_icon;
+                            devices <=> root.tool_devices;
+                            active_tool: root.active_tool;
+
+                            close_clicked() => { root.tools_device_list_open = false; }
+                            clear_tool_devices() => { root.clear_tool_devices(); }
+
+                            device_selected(id) => {
+                                root.tool_device_selected(id);
+                                root.tools_device_list_open = false;
+                            }
+                        }
                     }
                 }
             }

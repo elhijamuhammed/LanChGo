@@ -23,6 +23,15 @@ export component Toolbar inherits Rectangle {
     callback set_public_mode();
     callback set_secure_mode();
 
+    // Tools
+    callback close_all_popups();
+    close_all_popups => {
+        root.web_popup_open = false;
+        root.secure_popup_open = false;
+        root.tools_popup_open = false; 
+    }
+    callback open_tools_devices_list(string, string, string);
+
     in-out property <bool> secure_popup_open: false;
     in-out property <bool> web_popup_open: false;
     in-out property <bool> tools_popup_open: false;
@@ -425,10 +434,7 @@ export component Toolbar inherits Rectangle {
             border-radius: 10px * root.global_scale;
             border-width: 1px * root.global_scale;
             border-color: root.channel_mode == "public" ? #7c3aed : #39424c;
-            background: root.channel_mode == "public"
-                ? (tools_area.has-hover ? #8b5cf6 : #6d28d9)
-                : #202831;
-
+            background: root.channel_mode == "public" ? (tools_area.has-hover ? #8b5cf6 : #6d28d9) : #202831;
             HorizontalLayout {
                 alignment: center;
                 spacing: 7px * root.global_scale;
@@ -498,13 +504,13 @@ export component Toolbar inherits Rectangle {
                     Rectangle {
                         height: 32px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: #202831;
+                        background: mouse_area.has-hover ? #2563eb : #202831;
                         border-width: 1px * root.global_scale;
-                        border-color: #39424c;
+                        border-color: mouse_area.has-hover ? #3b82f6 : #39424c;
 
                         Text {
                             text: "🖱 Phone Mouse";
-                            color: #8d98a3;
+                            color: white;
                             font-size: 12px * root.global_scale;
                             font-weight: 700;
                             horizontal-alignment: center;
@@ -512,24 +518,44 @@ export component Toolbar inherits Rectangle {
                             width: parent.width;
                             height: parent.height;
                         }
+
+                        mouse_area := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+
+                            clicked => {
+                                root.tools_popup_open = false;
+                                root.open_tools_devices_list("Phone Mouse", "🖱", "remote_input");
+                            }
+                        }
                     }
 
                     Rectangle {
                         height: 32px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: #202831;
+                        background: keyboard_area.has-hover ? #2563eb : #202831;
                         border-width: 1px * root.global_scale;
-                        border-color: #39424c;
+                        border-color: keyboard_area.has-hover ? #3b82f6 : #39424c;
 
                         Text {
                             text: "⌨ Phone Keyboard";
-                            color: #8d98a3;
+                            color: white;
                             font-size: 12px * root.global_scale;
                             font-weight: 700;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                             width: parent.width;
                             height: parent.height;
+                        }
+
+                        keyboard_area := TouchArea {
+                            width: parent.width;
+                            height: parent.height;
+
+                            clicked => {
+                                root.tools_popup_open = false;
+                                root.open_tools_devices_list("Phone Keyboard", "⌨", "remote_input");
+                            }
                         }
                     }
 
