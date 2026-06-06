@@ -13,13 +13,15 @@ mod tcp_file_client;
 mod mobile_download;
 mod web_app;
 mod web_app_file_transfer;
+#[allow(non_snake_case)]
+mod Tools;
 
 use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
 use std::error::Error;
-use std::io;
-use std::io::ErrorKind;
-use std::net::UdpSocket;
+use std::{io, io::{BufRead, BufReader}};
+use std::io::{ErrorKind, Write};
+use std::net::{TcpStream, UdpSocket};
 use std::rc::Rc;
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex };
 use std::thread::{self, sleep};
@@ -30,6 +32,9 @@ use crate::classes::{BroadcastState, Config};
 use crate::phone_protocol::build_MANCH;
 use crate::file_transfer_protocol::{ RemoteWindowsOfferRegistry, RemoteMobileOfferRegistry};
 use crate::udp_receiver::start_udp_receiver;
+use crate::Tools::tools_handshake::HandshakeResult;
+use crate::Tools::tools_handshake::perform_handshake;
+use crate::Tools::tools_action_translator::ToolsActionTranslator;
 use crate::main_helpers::{
     bind_single_port_socket, clear_chatbox, cleanup_file_offers, collect_interfaces,
     force_switch_to_public, get_broadcast_address, get_broadcast_for_name, get_gateway_for_adapter,
@@ -1257,7 +1262,148 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         });
     }
+    // on selecting a tool to connect to
+    {
+        let tool_devices_model = tool_devices_model.clone();
+        let weak = app.as_weak();
 
+        // Shared stream for disconnect — lives outside the thread
+        let active_stream: Arc<Mutex<Option<TcpStream>>> = Arc::new(Mutex::new(None));
+        let active_stream_for_disconnect = active_stream.clone();
+        let weak_for_disconnect = app.as_weak();
+
+        // Wire disconnect button
+        app.on_disconnect_clicked(move || {
+            if let Ok(mut guard) = active_stream_for_disconnect.lock() {
+                if let Some(ref mut stream) = *guard {
+                    let _ = stream.write_all(b"DISCONNECT\n");
+                    // Shutdown the stream — this causes Ok(0) in the reader loop
+                    // which triggers release_all() and breaks the loop cleanly
+                    let _ = stream.shutdown(std::net::Shutdown::Both);
+                    println!("[TOOLS] Sent DISCONNECT and shut down stream");
+                }
+                *guard = None;
+            }
+
+            if let Some(app) = weak_for_disconnect.upgrade() {
+                app.set_connected_device_id("".into());
+            }
+        });
+
+        app.on_tool_device_selected(move |selected_id| {
+            let mut selected_device = None;
+
+            for i in 0..tool_devices_model.row_count() {
+                if let Some(row) = tool_devices_model.row_data(i) {
+                    if row.id == selected_id {
+                        selected_device = Some(row);
+                        break;
+                    }
+                }
+            }
+
+            let Some(device) = selected_device else {
+                println!("[TOOLS] Device not found: {}", selected_id);
+                return;
+            };
+
+            let addr = device.ip.to_string();
+            let device_id_for_ui = device.id.to_string();
+            let weak_thread = weak.clone();
+            let active_stream_thread = active_stream.clone();
+            let weak_done = weak.clone();
+
+            println!(
+                "[TOOLS] Connecting TCP to {} ({}, tool: {})",
+                addr, device.name, device.tool
+            );
+
+            std::thread::spawn(move || {
+                match TcpStream::connect(&addr) {
+                    Ok(mut stream) => {
+                        let _ = stream.set_nodelay(true);
+                        println!("[TOOLS] TCP connected to {}", addr);
+
+                        // ── Handshake before anything else ─────────────────
+                        match perform_handshake(&mut stream) {
+                            HandshakeResult::Ok { device_id, secret: _ } => {
+                                println!("[TOOLS] Session established for {}", device_id);
+                            }
+                            HandshakeResult::Rejected => {
+                                println!("[TOOLS] Handshake rejected — dropping connection");
+                                return;
+                            }
+                        }
+
+                        // ── Store stream clone for disconnect ───────────────
+                        if let Ok(clone) = stream.try_clone() {
+                            let mut guard = active_stream_thread.lock().unwrap();
+                            *guard = Some(clone);
+                        }
+
+                        // ── Update UI: show as connected ────────────────────
+                        let id_clone = device_id_for_ui.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(app) = weak_thread.upgrade() {
+                                app.set_connected_device_id(id_clone.into());
+                            }
+                        });
+
+                        // ── Now accept packets ──────────────────────────────
+                        let reader_stream = match stream.try_clone() {
+                            Ok(s) => s,
+                            Err(e) => {
+                                println!("[TOOLS] Failed to clone stream: {}", e);
+                                return;
+                            }
+                        };
+
+                        let mut reader = BufReader::new(reader_stream);
+                        let mut translator = ToolsActionTranslator::new();
+
+                        loop {
+                            let mut line = String::new();
+
+                            match reader.read_line(&mut line) {
+                                Ok(0) => {
+                                    println!("[TOOLS] Remote input disconnected");
+                                    translator.release_all();
+                                    break;
+                                }
+                                Ok(_) => {
+                                    let line = line.trim();
+                                    if line.is_empty() { continue; }
+                                    println!("[TOOLS] Packet from phone: {}", line);
+                                    translator.handle_packet(line);
+                                }
+                                Err(e) => {
+                                    println!("[TOOLS] TCP read error: {}", e);
+                                    translator.release_all();
+                                    break;
+                                }
+                            }
+                        }
+
+                        // ── Clean up on disconnect ──────────────────────────
+                        {
+                            let mut guard = active_stream_thread.lock().unwrap();
+                            *guard = None;
+                        }
+
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(app) = weak_done.upgrade() {
+                                app.set_connected_device_id("".into());
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        println!("[TOOLS] TCP failed to connect to {}: {}", addr, e);
+                    }
+                }
+            });
+        });
+    }
+    
     // run
     app.run()?;
     running.store(false, Ordering::Relaxed);

@@ -8,7 +8,7 @@ import { Toolbar } from "components/Toolbar.slint";
 import { FileTransferPanel } from "components/FileTransferPanel.slint";
 import { FileOfferItem } from "components/types.slint";
 import { EscCloseHandler } from "components/HelpFunctions.slint";
-import { DevicesList, ToolDevice } from "components/Tools UI/DevicesList.slint";
+import { DevicesList, ToolDevice } from "components/Tools/DevicesList.slint";
 
 export component AppWindow inherits Window {
     width: 1000px * root.global_scale;
@@ -146,6 +146,8 @@ export component AppWindow inherits Window {
     callback tool_device_selected(string);
     callback refresh_tool_devices();
     callback clear_tool_devices();
+    in-out property <string> connected_device_id: "";
+    callback disconnect_clicked();
 
     open_tools_devices_list(title, icon, tool_id) => {
         root.tools_device_list_title = title;
@@ -366,10 +368,10 @@ export component AppWindow inherits Window {
                             tool_icon: root.tools_device_list_icon;
                             devices <=> root.tool_devices;
                             active_tool: root.active_tool;
-
+                            connected_device_id <=> root.connected_device_id;
+                            disconnect_clicked() => { root.disconnect_clicked(); }
                             close_clicked() => { root.tools_device_list_open = false; }
                             clear_tool_devices() => { root.clear_tool_devices(); }
-
                             device_selected(id) => {
                                 root.tool_device_selected(id);
                                 root.tools_device_list_open = false;
