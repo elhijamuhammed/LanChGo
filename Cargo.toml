@@ -48,6 +48,7 @@ semver = "1.0.28"
 fs2 = "0.4.3"
 enigo = "0.6.1"
 hex = "0.4.3"
+tray-icon = "0.24.1"
 
 [build-dependencies]
 slint-build = "1.14.1"

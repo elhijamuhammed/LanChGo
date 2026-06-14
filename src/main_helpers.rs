@@ -527,6 +527,7 @@ pub fn recieve_tools_packet( payload: &[u8], sender_ip: std::net::IpAddr, ui_wea
                 packet.tcp_port as i32,
                 packet.version as i32,
                 packet.tool.into(),
+                packet.direction.unwrap_or_default().into(),
             );
         }
     });

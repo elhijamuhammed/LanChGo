@@ -115,41 +115,73 @@ fn main() -> Result<(), Box<dyn Error>> {
     // for pushing discovered tool devices
     {
         let tool_devices_model = tool_devices_model.clone();
-        app.on_add_tool_device(move |device_id, name, ip, platform, tcp_port, version, tool| {
-            // Remove old entry for same device + tool, add fresh one
-            for i in 0..tool_devices_model.row_count() {
-                if let Some(row) = tool_devices_model.row_data(i) {
-                    if row.id == device_id && row.tool == tool {
-                        tool_devices_model.remove(i);
-                        break;
+        let weak = app.as_weak();
+
+        app.on_add_tool_device(
+            move |device_id, name, ip, platform, tcp_port, version, tool, direction| {
+                // Remove old entry for same device + tool + direction
+                for i in (0..tool_devices_model.row_count()).rev() {
+                    if let Some(row) = tool_devices_model.row_data(i) {
+                        if row.id == device_id && row.tool == tool {
+                            tool_devices_model.remove(i);
+                        }
                     }
                 }
-            }
-            let icon: slint::SharedString =
-                if platform.to_lowercase() == "android" {
-                    "📱".into()
-                } else {
-                    "🖥".into()
-                };
 
-            tool_devices_model.push(ToolDevice {
-                id: device_id,
-                name,
-                ip: format!("{}:{}", ip, tcp_port).into(),
-                status: format!("{} v{}", platform, version).into(),
-                icon,
-                tool,
-            });
-        });
+                let icon: slint::SharedString =
+                    if platform.to_lowercase() == "android" {
+                        "📱".into()
+                    } else {
+                        "🖥".into()
+                    };
+
+                let status: slint::SharedString =
+                    if tool == "screen_share" {
+                        match direction.as_str() {
+                            "android_to_pc" => "Phone → PC".into(),
+                            "pc_to_android" => "PC → Phone".into(),
+                            _ => "Screen Share".into(),
+                        }
+                    } else {
+                        format!("{} v{}", platform, version).into()
+                    };
+
+                tool_devices_model.push(ToolDevice {
+                    id: device_id,
+                    name,
+                    ip: format!("{}:{}", ip, tcp_port).into(),
+                    status,
+                    icon,
+                    tool: tool.clone(),
+                    direction,
+                });
+
+                let mut active_count = 0;
+
+                for i in 0..tool_devices_model.row_count() {
+                    if let Some(row) = tool_devices_model.row_data(i) {
+                        if row.tool == tool {
+                            active_count += 1;
+                        }
+                    }
+                }
+
+                if let Some(app) = weak.upgrade() {
+                    app.set_active_tool_count(active_count);
+                }
+            },
+        );
     }
-
+        
     // for clearing discovered tool devices
     {
         let tool_devices_model = tool_devices_model.clone();
-
+        let weak = app.as_weak();
         app.on_clear_tool_devices(move || {
             tool_devices_model.set_vec(Vec::new());
-
+            if let Some(app) = weak.upgrade() {
+                app.set_active_tool_count(0);
+            }
             println!("[TOOLS] device list cleared");
         });
     }
@@ -1313,11 +1345,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             let active_stream_thread = active_stream.clone();
             let weak_done = weak.clone();
 
-            println!(
-                "[TOOLS] Connecting TCP to {} ({}, tool: {})",
-                addr, device.name, device.tool
-            );
-
+            println!( "[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction );
+            let tool = device.tool.to_string();
+            let direction = device.direction.to_string();
             std::thread::spawn(move || {
                 match TcpStream::connect(&addr) {
                     Ok(mut stream) => {
@@ -1334,7 +1364,37 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 return;
                             }
                         }
+                        if tool == "screen_share" {
+                            match direction.as_str() {
+                                "android_to_pc" => {
+                                    println!("[TOOLS] Screen Share Android → PC selected");
 
+                                    // TODO next:
+                                    // open screen-share viewer window
+                                    // read frame stream instead of ToolsActionTranslator packets
+
+                                    return;
+                                }
+
+                                "pc_to_android" => {
+                                    println!("[TOOLS] Screen Share PC → Android selected");
+
+                                    // TODO next:
+                                    // start PC capture sender
+                                    // send frames to Android
+
+                                    return;
+                                }
+
+                                _ => {
+                                    println!(
+                                        "[TOOLS] Screen Share selected but direction is missing/unknown: {}",
+                                        direction
+                                    );
+                                    return;
+                                }
+                            }
+                        }
                         // ── Store stream clone for disconnect ───────────────
                         if let Ok(clone) = stream.try_clone() {
                             let mut guard = active_stream_thread.lock().unwrap();

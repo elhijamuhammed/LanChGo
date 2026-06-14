@@ -7,12 +7,14 @@ export struct ToolDevice {
     status: string,
     icon: string,
     tool: string,
+    direction: string,
 }
 
 component CustomLineEdit {
     in-out property <string> text <=> input.text;
     in property <string> placeholder-text: "";
     in property <float> global_scale: 1.0;
+
     callback accepted(string);
 
     forward-focus: input;
@@ -117,6 +119,7 @@ export component DevicesList inherits Rectangle {
     in-out property <string> display_name: "LanChGo PC";
     in-out property <string> active_tool: "";
     in-out property <string> connected_device_id: "";
+    in-out property <int> active_tool_count: 0;
     in-out property <[ToolDevice]> devices: [];
 
     callback refresh_clicked();
@@ -196,7 +199,7 @@ export component DevicesList inherits Rectangle {
         }
 
         // ── Empty state ────────────────────────────────────────────────────
-        if root.devices.length == 0: Rectangle {
+        if root.active_tool_count == 0: Rectangle {
             min-height: 190px * root.global_scale;
             border-radius: 8px * root.global_scale;
             background: #202327;
@@ -234,7 +237,7 @@ export component DevicesList inherits Rectangle {
         }
 
         // ── Devices list ───────────────────────────────────────────────────
-        if root.devices.length > 0: Rectangle {
+        if root.active_tool_count > 0: Rectangle {
             height: 190px * root.global_scale;
             border-radius: 8px * root.global_scale;
             background: #202327;

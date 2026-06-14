@@ -74,15 +74,21 @@ export component Toolbar inherits Rectangle {
 
         // -------- Web Button --------
         Rectangle {
-            width: 120px * root.global_scale;
+            width: 128px * root.global_scale;
             height: 42px * root.global_scale;
             border-radius: 10px * root.global_scale;
             border-width: 1px * root.global_scale;
+
             border-color: root.channel_mode == "public"
-                ? (root.web_session_active ? #166534 : #0e7490)
+                ? (root.web_session_active ? #16a34a : #0e7490)
                 : #39424c;
+
             background: root.channel_mode == "public"
-                ? (web_btn_area.has-hover ? #0ea5e9 : #0284c7)
+                ? (
+                    root.web_session_active
+                        ? (web_btn_area.has-hover ? #22c55e : #16a34a)
+                        : (web_btn_area.has-hover ? #0ea5e9 : #0284c7)
+                )
                 : #202831;
 
             HorizontalLayout {
@@ -90,7 +96,7 @@ export component Toolbar inherits Rectangle {
                 spacing: 7px * root.global_scale;
 
                 Text {
-                    text: root.web_session_active ? "🌐 Web ●" : "🌐 Web";
+                    text: root.web_session_active ? "🌐 Web On" : "🌐 Web Off";
                     color: root.channel_mode == "public" ? white : #8d98a3;
                     font-size: 13px * root.global_scale;
                     font-weight: 700;
@@ -120,7 +126,7 @@ export component Toolbar inherits Rectangle {
             if root.web_popup_open: Rectangle {
                 x: 0px;
                 y: -(132px * root.global_scale);
-                width: 180px * root.global_scale;
+                width: 190px * root.global_scale;
                 height: 118px * root.global_scale;
                 background: #11161c;
                 border-radius: 12px * root.global_scale;
@@ -137,10 +143,10 @@ export component Toolbar inherits Rectangle {
                     Rectangle {
                         height: 32px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: #182028;
+                        background: root.web_session_active ? #10251a : #182028;
 
                         Text {
-                            text: root.web_session_active ? "Web session active" : "Web session off";
+                            text: root.web_session_active ? "● Web companion running" : "● Web companion stopped";
                             color: root.web_session_active ? #22c55e : #8d98a3;
                             font-size: 12px * root.global_scale;
                             font-weight: 700;
@@ -161,7 +167,7 @@ export component Toolbar inherits Rectangle {
                             : (show_web_btn.has-hover ? #06b6d4 : #0891b2);
 
                         Text {
-                            text: root.web_session_active ? "🌐 Show Session" : "🌐 Start Session";
+                            text: root.web_session_active ? "🌐 Show Web" : "🌐 Start Web";
                             color: white;
                             font-size: 12px * root.global_scale;
                             font-weight: 700;
@@ -195,7 +201,7 @@ export component Toolbar inherits Rectangle {
                             : #202831;
 
                         Text {
-                            text: "⛔ End Session";
+                            text: "⛔ Stop Web";
                             color: root.web_session_active ? white : #8d98a3;
                             font-size: 12px * root.global_scale;
                             font-weight: 700;
@@ -455,7 +461,6 @@ export component Toolbar inherits Rectangle {
                     vertical-alignment: center;
                 }
             }
-
             tools_area := TouchArea {
                 width: parent.width;
                 height: parent.height;
@@ -466,12 +471,11 @@ export component Toolbar inherits Rectangle {
                     root.tools_popup_open = !root.tools_popup_open;
                 }
             }
-
             if root.tools_popup_open: Rectangle {
                 x: 0px;
-                y: -(198px * root.global_scale);
-                width: 205px * root.global_scale;
-                height: 180px * root.global_scale;
+                y: -(180px * root.global_scale);
+                width: 220px * root.global_scale;
+                height: 162px * root.global_scale;
                 background: #11161c;
                 border-radius: 12px * root.global_scale;
                 border-width: 1px * root.global_scale;
@@ -508,15 +512,35 @@ export component Toolbar inherits Rectangle {
                         border-width: 1px * root.global_scale;
                         border-color: mouse_area.has-hover ? #3b82f6 : #39424c;
 
-                        Text {
-                            text: "🖱 Phone Mouse";
-                            color: white;
-                            font-size: 12px * root.global_scale;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                            width: parent.width;
-                            height: parent.height;
+                        HorizontalLayout {
+                            padding-left: 12px * root.global_scale;
+                            padding-right: 10px * root.global_scale;
+                            spacing: 8px * root.global_scale;
+                            alignment: center;
+
+                            Text {
+                                text: "🖱";
+                                font-size: 13px * root.global_scale;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                text: "Phone Mouse";
+                                color: white;
+                                font-size: 12px * root.global_scale;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+
+                            Rectangle { width: 1px; }
+
+                            Text {
+                                text: "›";
+                                color: mouse_area.has-hover ? white : #6b7280;
+                                font-size: 18px * root.global_scale;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
                         }
 
                         mouse_area := TouchArea {
@@ -533,19 +557,39 @@ export component Toolbar inherits Rectangle {
                     Rectangle {
                         height: 32px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: keyboard_area.has-hover ? #2563eb : #202831;
+                        background: keyboard_area.has-hover ? #4338ca : #202831;
                         border-width: 1px * root.global_scale;
-                        border-color: keyboard_area.has-hover ? #3b82f6 : #39424c;
+                        border-color: keyboard_area.has-hover ? #6366f1 : #39424c;
 
-                        Text {
-                            text: "⌨ Phone Keyboard";
-                            color: white;
-                            font-size: 12px * root.global_scale;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                            width: parent.width;
-                            height: parent.height;
+                        HorizontalLayout {
+                            padding-left: 12px * root.global_scale;
+                            padding-right: 10px * root.global_scale;
+                            spacing: 8px * root.global_scale;
+                            alignment: center;
+
+                            Text {
+                                text: "⌨";
+                                font-size: 13px * root.global_scale;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                text: "Phone Keyboard";
+                                color: white;
+                                font-size: 12px * root.global_scale;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+
+                            Rectangle { width: 1px; }
+
+                            Text {
+                                text: "›";
+                                color: keyboard_area.has-hover ? white : #6b7280;
+                                font-size: 18px * root.global_scale;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
                         }
 
                         keyboard_area := TouchArea {
@@ -559,24 +603,54 @@ export component Toolbar inherits Rectangle {
                         }
                     }
 
-                    Rectangle {
-                        height: 32px * root.global_scale;
-                        border-radius: 8px * root.global_scale;
-                        background: #202831;
-                        border-width: 1px * root.global_scale;
-                        border-color: #39424c;
+                    // Rectangle {
+                    //     height: 32px * root.global_scale;
+                    //     border-radius: 8px * root.global_scale;
+                    //     background: share_area.has-hover ? #0f766e : #202831;
+                    //     border-width: 1px * root.global_scale;
+                    //     border-color: share_area.has-hover ? #14b8a6 : #39424c;
 
-                        Text {
-                            text: "📷 Camera / 🎤 Mic";
-                            color: #8d98a3;
-                            font-size: 12px * root.global_scale;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                            width: parent.width;
-                            height: parent.height;
-                        }
-                    }
+                    //     // HorizontalLayout {
+                    //     //     padding-left: 12px * root.global_scale;
+                    //     //     padding-right: 10px * root.global_scale;
+                    //     //     spacing: 8px * root.global_scale;
+                    //     //     alignment: center;
+
+                    //     //     Text {
+                    //     //         text: "📱";
+                    //     //         font-size: 13px * root.global_scale;
+                    //     //         vertical-alignment: center;
+                    //     //     }
+
+                    //     //     Text {
+                    //     //         text: "Screen Mirror";
+                    //     //         color: white;
+                    //     //         font-size: 12px * root.global_scale;
+                    //     //         font-weight: 700;
+                    //     //         vertical-alignment: center;
+                    //     //     }
+
+                    //     //     Rectangle { width: 1px; }
+
+                    //     //     Text {
+                    //     //         text: "›";
+                    //     //         color: share_area.has-hover ? white : #6b7280;
+                    //     //         font-size: 18px * root.global_scale;
+                    //     //         font-weight: 700;
+                    //     //         vertical-alignment: center;
+                    //     //     }
+                    //     // }
+
+                    //     share_area := TouchArea {
+                    //         width: parent.width;
+                    //         height: parent.height;
+
+                    //         clicked => {
+                    //             root.tools_popup_open = false;
+                    //             root.open_tools_devices_list("Screen Share", "🖥", "screen_share");
+                    //         }
+                    //     }
+                    // }
                 }
             }
         }

@@ -52,6 +52,10 @@ pub struct InterfacesInfo {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MToolPacket {
     pub tool: String,
+
+    #[serde(default)]
+    pub direction: Option<String>,
+
     pub device_name: String,
     pub platform: String,
     pub tcp_port: u16,
