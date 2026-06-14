@@ -196,7 +196,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             if let Some(app) = weak.upgrade() {
                 app.set_active_tool_count(0);
             }
-            println!("[TOOLS] device list cleared");
+            //println!("[TOOLS] device list cleared");
         });
     }
 
@@ -1324,7 +1324,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 if let Some(ref mut stream) = *guard {
                     let _ = stream.write_all(b"DISCONNECT\n");
                     let _ = stream.shutdown(std::net::Shutdown::Both);
-                    println!("[TOOLS] Sent DISCONNECT and shut down stream");
+                    //println!("[TOOLS] Sent DISCONNECT and shut down stream");
                 }
                 *guard = None;
             }
@@ -1347,7 +1347,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
 
             let Some(device) = selected_device else {
-                println!("[TOOLS] Device not found: {}", selected_id);
+                //println!("[TOOLS] Device not found: {}", selected_id);
                 return;
             };
 
@@ -1357,7 +1357,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             let active_stream_thread = active_stream.clone();
             let weak_done = weak.clone();
 
-            println!("[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction);
+            //println!("[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction);
             let _tool = device.tool.to_string();
             let _direction = device.direction.to_string();
 
@@ -1365,12 +1365,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 match TcpStream::connect(&addr) {
                     Ok(mut stream) => {
                         let _ = stream.set_nodelay(true);
-                        println!("[TOOLS] TCP connected to {}", addr);
+                        //println!("[TOOLS] TCP connected to {}", addr);
 
                         // ── Handshake before anything else ─────────────────────
                         match perform_handshake(&mut stream) {
                             HandshakeResult::Ok { device_id, secret: _ } => {
-                                println!("[TOOLS] Session established for {}", device_id);
+                                //println!("[TOOLS] Session established for {}", device_id);
                                 // ── Hide window to tray on successful connection ─
                                 let weak_hide = weak_thread.clone();
                                 let _ = slint::invoke_from_event_loop(move || {
@@ -1380,7 +1380,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 });
                             }
                             HandshakeResult::Rejected => {
-                                println!("[TOOLS] Handshake rejected — dropping connection");
+                                //println!("[TOOLS] Handshake rejected — dropping connection");
                                 return;
                             }
                         }
@@ -1403,7 +1403,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         let reader_stream = match stream.try_clone() {
                             Ok(s) => s,
                             Err(e) => {
-                                println!("[TOOLS] Failed to clone stream: {}", e);
+                                //println!("[TOOLS] Failed to clone stream: {}", e);
                                 return;
                             }
                         };
@@ -1416,14 +1416,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                             match reader.read_line(&mut line) {
                                 Ok(0) => {
-                                    println!("[TOOLS] Remote input disconnected");
+                                    //println!("[TOOLS] Remote input disconnected");
                                     translator.release_all();
                                     break;
                                 }
                                 Ok(_) => {
                                     let line = line.trim();
                                     if line.is_empty() { continue; }
-                                    println!("[TOOLS] Packet from phone: {}", line);
+                                    //println!("[TOOLS] Packet from phone: {}", line);
                                     translator.handle_packet(line);
                                 }
                                 Err(e) => {
@@ -1450,7 +1450,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         });
                     }
                     Err(e) => {
-                        println!("[TOOLS] TCP failed to connect to {}: {}", addr, e);
+                        //println!("[TOOLS] TCP failed to connect to {}: {}", addr, e);
                     }
                 }
             });

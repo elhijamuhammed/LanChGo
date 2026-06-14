@@ -511,11 +511,11 @@ pub fn recieve_tools_packet( payload: &[u8], sender_ip: std::net::IpAddr, ui_wea
         match serde_json::from_slice(payload) {
             Ok(packet) => packet,
             Err(e) => {
-                println!("[TOOLS] Failed to decode MTOOL packet: {}", e);
+                //println!("[TOOLS] Failed to decode MTOOL packet: {}", e);
                 return;
             }
         };
-    println!("[TOOLS] Received packet: {:?}", packet);
+    //println!("[TOOLS] Received packet: {:?}", packet);
     let _ = slint::invoke_from_event_loop(move || {
         if let Some(app) = ui_weak.upgrade() {
             app.invoke_add_tool_device(
