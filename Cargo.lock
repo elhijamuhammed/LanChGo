@@ -6146,6 +6146,7 @@ dependencies = [
  "tray-icon",
  "uuid",
  "walkdir",
+ "winapi 0.3.9",
  "zeroize",
  "zip",
 ]

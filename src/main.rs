@@ -13,6 +13,7 @@ mod tcp_file_client;
 mod mobile_download;
 mod web_app;
 mod web_app_file_transfer;
+mod tray;
 #[allow(non_snake_case)]
 mod Tools;
 
@@ -68,6 +69,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     get_broadcast_address(&state);
 
     let app = AppWindow::new()?;
+    let weak_open = app.as_weak();
+    let _tray = tray::setup_tray(
+        move || {
+            let w = weak_open.clone();
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(app) = w.upgrade() {
+                    app.window().set_minimized(false);
+                    app.window().show().unwrap();
+                }
+            });
+        },
+        || std::process::exit(0),
+    );
     let w = app.window();
     w.set_fullscreen(false);
     w.set_maximized(false);
@@ -1309,8 +1323,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             if let Ok(mut guard) = active_stream_for_disconnect.lock() {
                 if let Some(ref mut stream) = *guard {
                     let _ = stream.write_all(b"DISCONNECT\n");
-                    // Shutdown the stream — this causes Ok(0) in the reader loop
-                    // which triggers release_all() and breaks the loop cleanly
                     let _ = stream.shutdown(std::net::Shutdown::Both);
                     println!("[TOOLS] Sent DISCONNECT and shut down stream");
                 }
@@ -1345,63 +1357,41 @@ fn main() -> Result<(), Box<dyn Error>> {
             let active_stream_thread = active_stream.clone();
             let weak_done = weak.clone();
 
-            println!( "[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction );
-            let tool = device.tool.to_string();
-            let direction = device.direction.to_string();
+            println!("[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction);
+            let _tool = device.tool.to_string();
+            let _direction = device.direction.to_string();
+
             std::thread::spawn(move || {
                 match TcpStream::connect(&addr) {
                     Ok(mut stream) => {
                         let _ = stream.set_nodelay(true);
                         println!("[TOOLS] TCP connected to {}", addr);
 
-                        // ── Handshake before anything else ─────────────────
+                        // ── Handshake before anything else ─────────────────────
                         match perform_handshake(&mut stream) {
                             HandshakeResult::Ok { device_id, secret: _ } => {
                                 println!("[TOOLS] Session established for {}", device_id);
+                                // ── Hide window to tray on successful connection ─
+                                let weak_hide = weak_thread.clone();
+                                let _ = slint::invoke_from_event_loop(move || {
+                                    if let Some(app) = weak_hide.upgrade() {
+                                        app.window().set_minimized(true);
+                                    }
+                                });
                             }
                             HandshakeResult::Rejected => {
                                 println!("[TOOLS] Handshake rejected — dropping connection");
                                 return;
                             }
                         }
-                        if tool == "screen_share" {
-                            match direction.as_str() {
-                                "android_to_pc" => {
-                                    println!("[TOOLS] Screen Share Android → PC selected");
 
-                                    // TODO next:
-                                    // open screen-share viewer window
-                                    // read frame stream instead of ToolsActionTranslator packets
-
-                                    return;
-                                }
-
-                                "pc_to_android" => {
-                                    println!("[TOOLS] Screen Share PC → Android selected");
-
-                                    // TODO next:
-                                    // start PC capture sender
-                                    // send frames to Android
-
-                                    return;
-                                }
-
-                                _ => {
-                                    println!(
-                                        "[TOOLS] Screen Share selected but direction is missing/unknown: {}",
-                                        direction
-                                    );
-                                    return;
-                                }
-                            }
-                        }
-                        // ── Store stream clone for disconnect ───────────────
+                        // ── Store stream clone for disconnect ───────────────────
                         if let Ok(clone) = stream.try_clone() {
                             let mut guard = active_stream_thread.lock().unwrap();
                             *guard = Some(clone);
                         }
 
-                        // ── Update UI: show as connected ────────────────────
+                        // ── Update UI: show as connected ────────────────────────
                         let id_clone = device_id_for_ui.clone();
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(app) = weak_thread.upgrade() {
@@ -1409,7 +1399,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             }
                         });
 
-                        // ── Now accept packets ──────────────────────────────
+                        // ── Now accept packets ──────────────────────────────────
                         let reader_stream = match stream.try_clone() {
                             Ok(s) => s,
                             Err(e) => {
@@ -1444,14 +1434,17 @@ fn main() -> Result<(), Box<dyn Error>> {
                             }
                         }
 
-                        // ── Clean up on disconnect ──────────────────────────
+                        // ── Clean up on disconnect ──────────────────────────────
                         {
                             let mut guard = active_stream_thread.lock().unwrap();
                             *guard = None;
                         }
 
+                        // ── Show window again after disconnect ──────────────────
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(app) = weak_done.upgrade() {
+                                app.window().set_minimized(false);
+                                app.window().show().unwrap();
                                 app.set_connected_device_id("".into());
                             }
                         });
@@ -1463,7 +1456,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             });
         });
     }
-    
+
     // run
     app.run()?;
     running.store(false, Ordering::Relaxed);

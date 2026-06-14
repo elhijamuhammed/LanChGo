@@ -49,6 +49,7 @@ fs2 = "0.4.3"
 enigo = "0.6.1"
 hex = "0.4.3"
 tray-icon = "0.24.1"
+winapi = { version = "0.3.9", features = ["winuser"] }
 
 [build-dependencies]
 slint-build = "1.14.1"
