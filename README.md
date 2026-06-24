@@ -18,6 +18,8 @@ This repository contains the **Windows implementation** of LanChGo.
 - Built with Rust and Slint UI
 - File transfer between devices
 - Web Companion for browser-based access
+- Remote control your PC or laptop using your phone
+- Web companion file transfer feature
 
 ---
 
