@@ -485,3 +485,52 @@ pub fn open_download_folder_from_config( config: &Arc<Mutex<Config>>, ) -> Resul
     open::that(&folder).map_err(|e| format!("Failed to open folder: {}", e))?;
     Ok(())
 }
+<<<<<<< Updated upstream
+=======
+
+pub fn notify_web_upload_received(name: String, offer_id_hex: String, size: u64) {
+    if let Some(app_weak) = APP_HANDLE.get() {
+        let app_weak = app_weak.clone();
+        let _ = slint::invoke_from_event_loop(move || {
+            if let Some(app) = app_weak.upgrade() {
+                app.invoke_add_file_offer(crate::FileOfferItem {
+                    offer_id: offer_id_hex.into(),
+                    name: crate::file_transfer_protocol::truncate_name(&name, 16).into(),
+                    size_text: crate::file_transfer_protocol::human_size(size).into(),
+                    is_downloading: false,
+                    progress_text: "".into(),
+                    is_mobile: false,
+                    is_web: true,
+                });
+            }
+        });
+    }
+}
+
+pub fn recieve_tools_packet( payload: &[u8], sender_ip: std::net::IpAddr, ui_weak: slint::Weak<AppWindow>, ) {
+    let packet: crate::classes::MToolPacket =
+        match serde_json::from_slice(payload) {
+            Ok(packet) => packet,
+            Err(_e) => {
+                //println!("[TOOLS] Failed to decode MTOOL packet: {}", e);
+                return;
+            }
+        };
+    //println!("[TOOLS] Received packet: {:?}", packet);
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(app) = ui_weak.upgrade() {
+            app.invoke_add_tool_device(
+                packet.device_id.into(),
+                //packet.session_id.into(), // no need, but kept it for future use maybe
+                packet.device_name.into(),
+                sender_ip.to_string().into(),
+                packet.platform.into(),
+                packet.tcp_port as i32,
+                packet.version as i32,
+                packet.tool.into(),
+                packet.direction.unwrap_or_default().into(),
+            );
+        }
+    });
+}
+>>>>>>> Stashed changes
