@@ -78,7 +78,7 @@ pub fn start_udp_receiver(
                                         }
                                         if !decrypted.eq_ignore_ascii_case("/exit")
                                             || !decrypted.eq_ignore_ascii_case("/clear")
-                                            || !decrypted.eq_ignore_ascii_case( "/disconnect")
+                                            || !decrypted.eq_ignore_ascii_case( "   ")
                                             || !decrypted.eq_ignore_ascii_case( "/clearfiles")
                                             || !decrypted.eq_ignore_ascii_case( "/clearall")
                                             || !decrypted.eq_ignore_ascii_case( "/webjoin")                
@@ -188,6 +188,8 @@ pub fn start_udp_receiver(
                             continue;
                         } else if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MFOFT" {
                             continue;
+                        } else if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MTOOL" {
+                            continue;
                         }
                     }
 
@@ -223,6 +225,7 @@ pub fn start_udp_receiver(
                                             is_downloading: false,
                                             progress_text: "".into(),
                                             is_mobile: false,
+                                            is_web: false,
                                         };
 
                                         app.invoke_add_file_offer(item);
@@ -235,11 +238,7 @@ pub fn start_udp_receiver(
                         }
 
                         if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MFOFT" {
-                            if let Some(ip) = my_ip {
-                                if _from.ip() == ip {
-                                    continue;
-                                }
-                            }
+                            if let Some(ip) = my_ip { if _from.ip() == ip { continue; } }
                             let payload = &msg_bytes[5..];
                             if let Some((offer, id_hex)) = crate::file_transfer_protocol::decode_mfoft(payload) {
                                 if remote_windows_offers.lock().unwrap().contains_key(&id_hex) {
@@ -271,12 +270,24 @@ pub fn start_udp_receiver(
                                             is_downloading: false,
                                             progress_text: "".into(),
                                             is_mobile: true,
+                                            is_web: false,
                                         });
                                     }
                                 })
                                 .ok();
                             }
 
+                            continue;
+                        }
+
+                        if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MTOOL" {
+                            if let Some(ip) = my_ip {
+                                if _from.ip() == ip {
+                                    continue;
+                                }
+                            }
+                            let payload = &msg_bytes[5..];
+                            main_helpers::recieve_tools_packet( payload, _from.ip(), ui_weak.clone(), );
                             continue;
                         }
 

@@ -1,0 +1,145 @@
+export component SSSWindow inherits Window {
+    title: "📱 Phone Screen — LanChGo";
+    icon: @image-url("assets/LanChGo_icon.png");
+
+    in property <image> frame;
+    in property <string> device_name: "Phone";
+    in property <bool> streaming: false;
+
+    callback close_stream();
+    callback toggle_fullscreen();
+
+    // Pure black background — the frame fills everything
+    background: #000000;
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: #000000;
+
+        // ── Frame display ──────────────────────────────────────────────────
+        if root.streaming: Image {
+            source: root.frame;
+            width: parent.width;
+            height: parent.height;
+            image-fit: contain;
+        }
+
+        // ── Waiting state — no stream yet ──────────────────────────────────
+        if !root.streaming: Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #0a0a0a;
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 16px;
+
+                // Pulsing phone icon area
+                Rectangle {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 20px;
+                    background: #00c7b522;
+                    border-width: 1px;
+                    border-color: #00c7b544;
+
+                    Text {
+                        text: "📱";
+                        font-size: 36px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Text {
+                    text: "Waiting for stream...";
+                    color: #ffffff55;
+                    font-size: 15px;
+                    font-weight: 500;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Start screen share on " + root.device_name;
+                    color: #ffffff33;
+                    font-size: 12px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // ── Hover overlay — controls ───────────────────────────────────────
+        if hover_area.has-hover: Rectangle {
+            width: parent.width;
+            height: 48px;
+            y: 0px;
+            background: @linear-gradient(180deg, #000000cc 0%, #00000000 100%);
+
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 10px;
+                padding-top: 8px;
+                padding-bottom: 8px;
+                spacing: 8px;
+
+                // Device name
+                Text {
+                    text: "📱  " + root.device_name;
+                    color: #ffffffcc;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                // Fullscreen button
+                Rectangle {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 6px;
+                    background: fs_hover.has-hover ? #ffffff22 : transparent;
+
+                    Text {
+                        text: "⛶";
+                        color: #ffffffcc;
+                        font-size: 15px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    fs_hover := TouchArea {
+                        clicked => { root.toggle_fullscreen(); }
+                    }
+                }
+
+                // Close button
+                Rectangle {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 6px;
+                    background: close_hover.has-hover ? #cc0000aa : transparent;
+
+                    Text {
+                        text: "✕";
+                        color: #ffffffcc;
+                        font-size: 14px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    close_hover := TouchArea {
+                        clicked => { root.close_stream(); }
+                    }
+                }
+            }
+        }
+
+        // Full-area hover detector
+        hover_area := TouchArea {
+            width: parent.width;
+            height: parent.height;
+        }
+    }
+}

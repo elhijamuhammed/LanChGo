@@ -13,13 +13,16 @@ mod tcp_file_client;
 mod mobile_download;
 mod web_app;
 mod web_app_file_transfer;
+mod tray;
+#[allow(non_snake_case)]
+mod Tools;
 
 use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
 use std::error::Error;
-use std::io;
-use std::io::ErrorKind;
-use std::net::UdpSocket;
+use std::{io, io::{BufRead, BufReader}};
+use std::io::{ErrorKind, Write};
+use std::net::{TcpStream, UdpSocket};
 use std::rc::Rc;
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex };
 use std::thread::{self, sleep};
@@ -30,6 +33,9 @@ use crate::classes::{BroadcastState, Config};
 use crate::phone_protocol::build_MANCH;
 use crate::file_transfer_protocol::{ RemoteWindowsOfferRegistry, RemoteMobileOfferRegistry};
 use crate::udp_receiver::start_udp_receiver;
+use crate::Tools::tools_handshake::HandshakeResult;
+use crate::Tools::tools_handshake::perform_handshake;
+use crate::Tools::tools_action_translator::ToolsActionTranslator;
 use crate::main_helpers::{
     bind_single_port_socket, clear_chatbox, cleanup_file_offers, collect_interfaces,
     force_switch_to_public, get_broadcast_address, get_broadcast_for_name, get_gateway_for_adapter,
@@ -63,6 +69,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     get_broadcast_address(&state);
 
     let app = AppWindow::new()?;
+    let weak_open = app.as_weak();
+    let _tray = tray::setup_tray(
+        move || {
+            let w = weak_open.clone();
+            let _ = slint::invoke_from_event_loop(move || {
+                if let Some(app) = w.upgrade() {
+                    app.window().set_minimized(false);
+                    app.window().show().unwrap();
+                }
+            });
+        },
+        || std::process::exit(0),
+    );
     let w = app.window();
     w.set_fullscreen(false);
     w.set_maximized(false);
@@ -87,6 +106,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let file_offer_model = Rc::new(VecModel::<FileOfferItem>::from(Vec::new()));
     app.set_file_offer(ModelRc::new(file_offer_model.clone()));
 
+    // -------- tools devices model
+    let tool_devices_model = Rc::new(VecModel::<ToolDevice>::from(Vec::new()));
+    app.set_tool_devices(ModelRc::new(tool_devices_model.clone()));
+
     let offer_registry = Arc::new(Mutex::new(file_transfer_protocol::OfferRegistry::new()));
     web_app_file_transfer::register_offer_registry(Arc::clone(&offer_registry));
     // start tcp listner and put it in idle here
@@ -100,6 +123,80 @@ fn main() -> Result<(), Box<dyn Error>> {
         let file_offer_model = file_offer_model.clone();
         app.on_add_file_offer(move |item: FileOfferItem| {
             file_offer_model.push(item);
+        });
+    }
+
+    // for pushing discovered tool devices
+    {
+        let tool_devices_model = tool_devices_model.clone();
+        let weak = app.as_weak();
+
+        app.on_add_tool_device(
+            move |device_id, name, ip, platform, tcp_port, version, tool, direction| {
+                // Remove old entry for same device + tool + direction
+                for i in (0..tool_devices_model.row_count()).rev() {
+                    if let Some(row) = tool_devices_model.row_data(i) {
+                        if row.id == device_id && row.tool == tool {
+                            tool_devices_model.remove(i);
+                        }
+                    }
+                }
+
+                let icon: slint::SharedString =
+                    if platform.to_lowercase() == "android" {
+                        "📱".into()
+                    } else {
+                        "🖥".into()
+                    };
+
+                let status: slint::SharedString =
+                    if tool == "screen_share" {
+                        match direction.as_str() {
+                            "android_to_pc" => "Phone → PC".into(),
+                            "pc_to_android" => "PC → Phone".into(),
+                            _ => "Screen Share".into(),
+                        }
+                    } else {
+                        format!("{} v{}", platform, version).into()
+                    };
+
+                tool_devices_model.push(ToolDevice {
+                    id: device_id,
+                    name,
+                    ip: format!("{}:{}", ip, tcp_port).into(),
+                    status,
+                    icon,
+                    tool: tool.clone(),
+                    direction,
+                });
+
+                let mut active_count = 0;
+
+                for i in 0..tool_devices_model.row_count() {
+                    if let Some(row) = tool_devices_model.row_data(i) {
+                        if row.tool == tool {
+                            active_count += 1;
+                        }
+                    }
+                }
+
+                if let Some(app) = weak.upgrade() {
+                    app.set_active_tool_count(active_count);
+                }
+            },
+        );
+    }
+        
+    // for clearing discovered tool devices
+    {
+        let tool_devices_model = tool_devices_model.clone();
+        let weak = app.as_weak();
+        app.on_clear_tool_devices(move || {
+            tool_devices_model.set_vec(Vec::new());
+            if let Some(app) = weak.upgrade() {
+                app.set_active_tool_count(0);
+            }
+            //println!("[TOOLS] device list cleared");
         });
     }
 
@@ -296,7 +393,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     file_transfer_protocol::cleanup_temp_offers(&mut reg);
                     reg.clear();
                 }
-
+                file_transfer_protocol::cleanup_temp_uploads();
                 file_offer_model2.set_vec(Vec::new());
 
                 thread::spawn(|| {
@@ -310,6 +407,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             if msg.eq_ignore_ascii_case("/clear") {
                 model2.set_vec(Vec::new());
+                app.set_input_text("".into());
+                return;
+            }
+
+            if msg.eq_ignore_ascii_case("/secure") {
+                app.set_public_secure_helper(true);
+                app.set_channel_mode("host".into());
+                app.invoke_change_channel_mode("host".into());
+                app.invoke_request_open_create_or_join();
                 app.set_input_text("".into());
                 return;
             }
@@ -680,6 +786,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Exit app
     {
         app.on_exit_app(move || {
+            crate::file_transfer_protocol::cleanup_temp_uploads();
             let _ = crate::web_app::stop_web_server();
             std::process::exit(0);
         });
@@ -943,6 +1050,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         let sem = Arc::clone(&download_semaphore);
 
         app.on_download_offer(move |offer_id_hex| {
+            // check if it is a web upload
+            if web_app_file_transfer::save_web_upload_to_folder(
+                offer_id_hex.as_str(),
+                &config.lock().unwrap().save_to_folder
+            ) {
+                let weak_ui = weak.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(app) = weak_ui.upgrade() {
+                        secure_channel_code::play_ping_sound();
+                        app.invoke_show_temp_message("✅ File saved to download folder".into());
+                    }
+                });
+                return;
+            }
         // Try to take a slot (non-blocking)
             let permit = match sem.try_access() {
                 Ok(guard) => guard, // SemaphoreGuard<()> held while download runs :contentReference[oaicite:3]{index=3}
@@ -1185,6 +1306,154 @@ fn main() -> Result<(), Box<dyn Error>> {
                     main_helpers::restart_app_after_delay(900);
                 }
             }
+        });
+    }
+    // on selecting a tool to connect to
+    {
+        let tool_devices_model = tool_devices_model.clone();
+        let weak = app.as_weak();
+
+        // Shared stream for disconnect — lives outside the thread
+        let active_stream: Arc<Mutex<Option<TcpStream>>> = Arc::new(Mutex::new(None));
+        let active_stream_for_disconnect = active_stream.clone();
+        let weak_for_disconnect = app.as_weak();
+
+        // Wire disconnect button
+        app.on_disconnect_clicked(move || {
+            if let Ok(mut guard) = active_stream_for_disconnect.lock() {
+                if let Some(ref mut stream) = *guard {
+                    let _ = stream.write_all(b"DISCONNECT\n");
+                    let _ = stream.shutdown(std::net::Shutdown::Both);
+                    //println!("[TOOLS] Sent DISCONNECT and shut down stream");
+                }
+                *guard = None;
+            }
+
+            if let Some(app) = weak_for_disconnect.upgrade() {
+                app.set_connected_device_id("".into());
+            }
+        });
+
+        app.on_tool_device_selected(move |selected_id| {
+            let mut selected_device = None;
+
+            for i in 0..tool_devices_model.row_count() {
+                if let Some(row) = tool_devices_model.row_data(i) {
+                    if row.id == selected_id {
+                        selected_device = Some(row);
+                        break;
+                    }
+                }
+            }
+
+            let Some(device) = selected_device else {
+                //println!("[TOOLS] Device not found: {}", selected_id);
+                return;
+            };
+
+            let addr = device.ip.to_string();
+            let device_id_for_ui = device.id.to_string();
+            let weak_thread = weak.clone();
+            let active_stream_thread = active_stream.clone();
+            let weak_done = weak.clone();
+
+            //println!("[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction);
+            let _tool = device.tool.to_string();
+            let _direction = device.direction.to_string();
+
+            std::thread::spawn(move || {
+                match TcpStream::connect(&addr) {
+                    Ok(mut stream) => {
+                        let _ = stream.set_nodelay(true);
+                        //println!("[TOOLS] TCP connected to {}", addr);
+
+                        // ── Handshake before anything else ─────────────────────
+                        match perform_handshake(&mut stream) {
+                            HandshakeResult::Ok { device_id, secret: _ } => {
+                                //println!("[TOOLS] Session established for {}", device_id);
+                                // ── Hide window to tray on successful connection ─
+                                let weak_hide = weak_thread.clone();
+                                let _ = slint::invoke_from_event_loop(move || {
+                                    if let Some(app) = weak_hide.upgrade() {
+                                        app.window().set_minimized(true);
+                                    }
+                                });
+                            }
+                            HandshakeResult::Rejected => {
+                                //println!("[TOOLS] Handshake rejected — dropping connection");
+                                return;
+                            }
+                        }
+
+                        // ── Store stream clone for disconnect ───────────────────
+                        if let Ok(clone) = stream.try_clone() {
+                            let mut guard = active_stream_thread.lock().unwrap();
+                            *guard = Some(clone);
+                        }
+
+                        // ── Update UI: show as connected ────────────────────────
+                        let id_clone = device_id_for_ui.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(app) = weak_thread.upgrade() {
+                                app.set_connected_device_id(id_clone.into());
+                            }
+                        });
+
+                        // ── Now accept packets ──────────────────────────────────
+                        let reader_stream = match stream.try_clone() {
+                            Ok(s) => s,
+                            Err(e) => {
+                                //println!("[TOOLS] Failed to clone stream: {}", e);
+                                return;
+                            }
+                        };
+
+                        let mut reader = BufReader::new(reader_stream);
+                        let mut translator = ToolsActionTranslator::new();
+
+                        loop {
+                            let mut line = String::new();
+
+                            match reader.read_line(&mut line) {
+                                Ok(0) => {
+                                    //println!("[TOOLS] Remote input disconnected");
+                                    translator.release_all();
+                                    break;
+                                }
+                                Ok(_) => {
+                                    let line = line.trim();
+                                    if line.is_empty() { continue; }
+                                    //println!("[TOOLS] Packet from phone: {}", line);
+                                    translator.handle_packet(line);
+                                }
+                                Err(e) => {
+                                    println!("[TOOLS] TCP read error: {}", e);
+                                    translator.release_all();
+                                    break;
+                                }
+                            }
+                        }
+
+                        // ── Clean up on disconnect ──────────────────────────────
+                        {
+                            let mut guard = active_stream_thread.lock().unwrap();
+                            *guard = None;
+                        }
+
+                        // ── Show window again after disconnect ──────────────────
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(app) = weak_done.upgrade() {
+                                app.window().set_minimized(false);
+                                app.window().show().unwrap();
+                                app.set_connected_device_id("".into());
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        //println!("[TOOLS] TCP failed to connect to {}: {}", addr, e);
+                    }
+                }
+            });
         });
     }
 

@@ -1,109 +1,38 @@
-==============================================================================
-           LanChGo v1.7.0 — Local Network Communication Made Simple
-==============================================================================
+LanChGo v1.8.0
 
-Thank you for installing LanChGo!
+Fast. Private. Local.
 
-LanChGo is a simple, fast, and privacy-focused communication app that works
-entirely over your local network (LAN). It allows devices on the same Wi-Fi
-or Ethernet network to communicate and transfer files without any internet
-connection.
+LanChGo is a local network communication and productivity tool that allows
+devices on the same Wi-Fi or Ethernet network to communicate without
+internet access, accounts, subscriptions, or cloud services.
 
-LanChGo uses UDP broadcast for instant local discovery and messaging,
-combined with TCP for reliable file transfers. No external servers,
-no accounts, and no cloud involvement.
-The Web Companion uses a WebSocket server hosted by the app.
+Features
 
-------------------------------------
- How to Use
-------------------------------------
-1. Start the LanChGo app.
-2. Select your active network interface (Wi-Fi or Ethernet).
-3. Type a message and press Enter or click "Send" to broadcast it.
-4. All devices on the same subnet running LanChGo will receive it instantly.
+• Instant LAN messaging
+• Secure encrypted channels
+• File transfers
+• Web Companion
+• Mobile touchpad
+• Remote keyboard input
+• Background service support
+• Local network device discovery
 
-Secure Private Channel:
-- Switch to "Secure" mode.
-- Create or join a channel using the generated PIN.
-- Messages are end-to-end encrypted within the channel.
+Privacy
 
-File Transfer:
-- Click the **Files** button.
-- Select one or multiple files to send.
-- The receiving device can download them directly.
-- Multiple files are bundled automatically into a ZIP for convenience.
+• No accounts
+• No tracking
+• No analytics
+• No cloud services
+• No external servers
 
-Web companion
-- Press "Web Join".
-- Reveals a QR code.
-- Scan it using the browser scanner.
-- Start chatting.
+Support
 
-Note: All devices must be connected to the same local network.
+Website:
+https://lanchgo.com
 
-------------------------------------
- Features
-------------------------------------
-- No internet required — local network only.
-- Automatic LAN device discovery.
-- Instant message broadcasting via UDP.
-- Reliable file transfer using TCP.
-- Custom protocol designed specifically for LAN communication.
-- Send single or multiple files at once.
-- Background file bundling (ZIP) with progress feedback.
-- Up to two concurrent bundling operations for performance stability.
-- Automatically created download directory (user-configurable).
-- Temporary transfer files are deleted when the session ends.
-- No transfer history or file logs are saved for privacy.
-- Detects network changes and notifies the user.
-- End-to-end encrypted **Secure Channels** using PIN-based pairing.
-- Ability to regenerate secure PINs without restarting the app.
-- Automatic cleanup of outdated or incompatible config files.
-- Clean and responsive UI with focus optimization.
-- Developer/debug commands (hidden).
-- File transfer feature.
-- Web app companion to chat using the browser.
-- Web Companion now can receive files.
+Email:
+support@lanchgo.com
 
-------------------------------------
- Privacy & Security
-------------------------------------
-- No internet usage.
-- No accounts or user tracking.
-- No file or message history stored.
-- Temporary files are removed automatically.
-- Secure channels use encryption to protect messages.
+Developed by Muhammed Abu El-Hija
 
-------------------------------------
- Support & Troubleshooting
-------------------------------------
-If you encounter issues:
-- Ensure all devices are on the same LAN.
-- Make sure the firewall allows:
-  - UDP traffic on port 3000 (default)
-  - TCP traffic on port 3001 (file transfer)
-  - Web companion on port 38421 (default)
-- Restart the app if a configuration warning appears.
-- Report bugs or feedback to help improve the project.
-
-------------------------------------
- Open Source
-------------------------------------
-LanChGo (Windows version) is open source.
-You are free to explore, modify, and build the project.
-
-------------------------------------
- Credits
-------------------------------------
-Developed by Muhammed Abu El-Hija  
-© 2025 — All rights reserved.
-
-User Interface powered by Slint  
-https://slint.dev  
-Used under the Slint Royalty-Free License.
-
-------------------------------------
- License
-------------------------------------
-This software is provided “as is”, without warranty of any kind.
-Use at your own risk.
+© 2025–2026 LanChGo

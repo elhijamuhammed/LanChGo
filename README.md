@@ -1,85 +1,142 @@
 # LanChGo (Windows)
 
-LanChGo is an open-source, privacy-focused LAN messaging application for Windows.  
-It enables devices on the same local network to communicate instantly — **without internet access, servers, or accounts**.
+**Fast. Private. Local.**
 
-This repository contains the **Windows implementation** of LanChGo.
+LanChGo is an open-source LAN communication and productivity application for Windows.
 
----
+It allows devices connected to the same local network to communicate, transfer files, and collaborate without requiring internet access, accounts, subscriptions, or cloud services.
 
-## ✨ Features
-
-- Local network (LAN) messaging
-- No internet connection required
-- Automatic device discovery via local network
-- Secure channel mode using a PIN
-- End-to-end encrypted secure communication
-- Lightweight and fast
-- Built with Rust and Slint UI
-- File transfer between devices
-- Web Companion for browser-based access
-- Remote control your PC or laptop using your phone
-- Web companion file transfer feature
+This repository contains the Windows implementation of LanChGo.
 
 ---
 
-## 🖥️ Platform Scope
+## Why LanChGo?
 
-- ✅ **Windows** — open-source (this repository)
-- ❌ Android — **not included in this repository**
-- ✅ Web Companion — **the web page source**
+Most communication tools depend on internet connectivity, cloud infrastructure, and user accounts.
 
-The Android app exists as a separate project and is not part of this repository.
+LanChGo takes a different approach.
 
----
+It is designed for environments where devices simply need to communicate directly with each other on the same network—quickly, privately, and without unnecessary complexity.
 
-## 🔐 Security & Privacy
+Perfect for:
 
-- Communication is limited to the local network
-- No cloud services or external servers
-- Secure channels use PIN-based encryption
-- No user accounts, tracking, or analytics
-
-This makes LanChGo suitable for private environments such as:
-- Home networks
-- Offices
-- Labs
-- Local events or classrooms
+* Home networks
+* Offices
+* Classrooms
+* Laboratories
+* LAN events
+* Environments with limited or no internet access
 
 ---
 
-## 🚀 Building the Windows App
+## Features
+
+### Communication
+
+* Instant LAN messaging
+* Automatic device discovery
+* Secure channel creation using PIN pairing
+* End-to-end encrypted secure communication
+* No internet connection required
+
+### File Sharing
+
+* Direct device-to-device file transfers
+* Reliable TCP-based transfers
+* Multi-device compatibility
+* No cloud storage involved
+
+### Productivity
+
+* Web Companion for browser-based access
+* Lightweight and responsive user interface
+* Fast local communication
+* Designed for low-latency local networking
+
+### Privacy
+
+* No accounts
+* No tracking
+* No analytics
+* No external servers
+* No cloud dependency
+
+---
+
+## Platform Scope
+
+| Platform      | Status                        |
+| ------------- | ----------------------------- |
+| Windows       | Open Source (this repository) |
+| Android       | Separate project              |
+| Web Companion | Included                      |
+
+The Android application is maintained separately and is not included in this repository.
+
+---
+
+## Security & Privacy
+
+LanChGo is built with privacy as a core principle.
+
+* Communication remains within the local network
+* No external server communication
+* Secure channels use encrypted communication
+* No personal information is collected
+* No analytics or tracking services are used
+
+---
+
+## Building the Windows Application
 
 ### Prerequisites
-- Rust (stable)
-- Cargo
-- Windows OS
+
+* Rust (stable)
+* Cargo
+* Windows
 
 ### Build
+
 ```bash
 cargo build --release
 ```
 
 ### Run
+
 ```bash
 cargo run
 ```
 
-The compiled binary will be located in:
+Compiled binaries will be available in:
+
 ```bash
 target/release/
 ```
 
-## 📄 License
-This project is licensed under the MIT License.
+---
 
-## 👤 Author
-Developed by Muhammed Abu El-Hija
+## Project Website
 
-## 🌐 Website
-Official project website:  
 https://lanchgo.com
 
+---
+
 ## Contributing
-Feel free to open issues or PRs.  
-LanChGo is MIT-licensed and open to community contributions.
+
+Contributions, bug reports, feature suggestions, and pull requests are welcome.
+
+If you encounter a bug or have an idea for improving LanChGo, feel free to open an issue.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+## Author
+
+Developed by Muhammed Abu El-Hija
+
+© 2025–2026 LanChGo

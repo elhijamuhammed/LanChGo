@@ -343,6 +343,7 @@ pub fn help_message() -> String {
         /clear       Clear chat messages
         /clearfiles  Clear file transfer panel
         /clearall    Clear chat and files
+        /secure      Switches from public to secure mode
         /disconnect  Disconnect from secure channel
         /webjoin     Starts a web companion session
         /webstop     Stops a web companion session
@@ -485,8 +486,6 @@ pub fn open_download_folder_from_config( config: &Arc<Mutex<Config>>, ) -> Resul
     open::that(&folder).map_err(|e| format!("Failed to open folder: {}", e))?;
     Ok(())
 }
-<<<<<<< Updated upstream
-=======
 
 pub fn notify_web_upload_received(name: String, offer_id_hex: String, size: u64) {
     if let Some(app_weak) = APP_HANDLE.get() {
@@ -533,4 +532,3 @@ pub fn recieve_tools_packet( payload: &[u8], sender_ip: std::net::IpAddr, ui_wea
         }
     });
 }
->>>>>>> Stashed changes
