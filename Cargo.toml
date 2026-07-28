@@ -1,5 +1,5 @@
 [package]
-name = "slint-rust-template"
+name = "lanchgo"
 version = "1.8.0"
 edition = "2021"
 
