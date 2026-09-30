@@ -70,7 +70,7 @@ Perfect for:
 | Windows       | Open Source (this repository) |
 | Android       | Separate project              |
 | Web Companion | Included                      |
-| Linux         | Open Source (this repository) |
+| Linux         | Soon to come                  |
 
 The Android application is maintained separately and is not included in this repository.
 
