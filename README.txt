@@ -1,4 +1,4 @@
-LanChGo v1.8.0
+LanChGo v1.9.0
 
 Fast. Private. Local.
 
