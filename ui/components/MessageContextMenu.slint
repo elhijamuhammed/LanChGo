@@ -1,0 +1,106 @@
+import { VerticalBox } from "std-widgets.slint";
+import { MessageItem } from "types.slint"; // adjust to wherever MessageItem lives
+import { Translations } from "translations.slint";
+
+export component MessageContextMenu inherits Rectangle {
+    in property <float> global_scale;
+    in property <MessageItem> message;
+
+    callback copy_requested();
+    callback reply_requested();
+    callback delete_requested();
+    callback open_link_requested();
+
+    background: #25282d;
+    border-radius: 8px * root.global_scale;
+    border-width: 1px;
+    border-color: #444850;
+
+    width: 180px * root.global_scale;
+    height: (root.message.link != "" ? 194px : 160px) * root.global_scale;
+
+    VerticalBox {
+        padding: 6px * root.global_scale;
+        spacing: 2px * root.global_scale;
+
+        Rectangle {
+            height: 34px * root.global_scale;
+            border-radius: 6px * root.global_scale;
+            background: copy_area.has-hover ? #33373e : transparent;
+
+            Text {
+                text: "Copy";
+                color: white;
+                font-size: 14px * root.global_scale * Translations.font_global_scale;
+                vertical-alignment: center;
+                x: 8px * root.global_scale;
+            }
+
+            copy_area := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.copy_requested(); }
+            }
+        }
+
+        if root.message.link != "": Rectangle {
+            height: 34px * root.global_scale;
+            border-radius: 6px * root.global_scale;
+            background: link_area.has-hover ? #33373e : transparent;
+
+            Text {
+                text: "🔗 Open Link";
+                color: #6cb6ff;
+                font-size: 14px * root.global_scale * Translations.font_global_scale;
+                vertical-alignment: center;
+                x: 8px * root.global_scale;
+            }
+
+            link_area := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.open_link_requested(); }
+            }
+        }
+
+        Rectangle {
+            height: 34px * root.global_scale;
+            border-radius: 6px * root.global_scale;
+            background: reply_area.has-hover ? #33373e : transparent;
+
+            Text {
+                text: "Reply";
+                color: white;
+                font-size: 14px * root.global_scale * Translations.font_global_scale;
+                vertical-alignment: center;
+                x: 8px * root.global_scale;
+            }
+
+            reply_area := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.reply_requested(); }
+            }
+        }
+
+        Rectangle {
+            height: 34px * root.global_scale;
+            border-radius: 6px * root.global_scale;
+            background: delete_area.has-hover ? #3a2222 : transparent;
+
+            Text {
+                text: "Delete";
+                color: #ff7777;
+                font-size: 14px * root.global_scale * Translations.font_global_scale;
+                vertical-alignment: center;
+                x: 8px * root.global_scale;
+            }
+
+            delete_area := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.delete_requested(); }
+            }
+        }
+    }
+}

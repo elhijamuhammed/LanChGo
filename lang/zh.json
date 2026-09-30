@@ -1,0 +1,106 @@
+{
+  "direction": "LTR",
+
+  "send_button": "发送",
+  "clear_button": "清除",
+  "input_placeholder": "在这里输入...",
+
+  "copyright_text": "© 保留所有权利",
+  "network_description": "向连接到同一 Wi-Fi / 网络的设备发送消息和文件",
+
+  "update_available": "LanChGo v",
+  "update_suffix": "可用",
+  "download_github": "从 GitHub Releases 下载",
+
+  "title_file_transfer": "文件传输",
+  "files_button": "文件",
+  "save_button": "保存到…",
+  "open_button": "打开",
+  "no_offers": "暂无文件传输请求",
+
+  "title_header": "使用 LanChGo 自由、快速地交流",
+  "subtitle_prefix": "为解决一个问题而打造！LanChGo ",
+
+  "online": "在线",
+  "offline": "离线",
+  "secure_host": "安全主机",
+  "joined": "已加入",
+  "public": "公共",
+
+  "web_on": "网页已开启",
+  "web_off": "网页已关闭",
+  "web_companion_running": "网页助手正在运行",
+  "web_companion_stopped": "网页助手已停止",
+  "show_web": "显示网页",
+  "start_web": "启动网页",
+  "stop_web": "停止网页",
+
+  "secure_mode": "安全",
+  "pin": "PIN：",
+  "show_pin": "显示 PIN",
+  "new_pin": "新 PIN",
+  "disconnect": "断开连接",
+
+  "tools": "🧰 工具",
+  "lan_tools": "🧰 LAN 工具",
+  "phone_mouse": "手机鼠标",
+  "phone_keyboard": "手机键盘",
+  "settings": "设置",
+
+  "title_welcome": "欢迎使用 LanChGo",
+  "network_changed": "您的网络已更改 — 请选择网络接口以继续。",
+  "pick_network": "选择您的网络接口以开始使用。",
+
+  "udp_port": "UDP 端口",
+  "auto": "自动",
+  "auto_prefix": "（自动：",
+  "manual": "手动",
+  "apply": "应用",
+  "reset": "重置",
+  "continue_button": "继续",
+  "port_available": "端口可用",
+
+  "message_too_long": "消息太长，无法发送！\n点击关闭。",
+
+  "create_or_join_title": "创建或加入频道",
+  "create_channel": "创建频道",
+  "join_with_pin": "使用 PIN 加入：",
+  "enter_pin": "输入 8 位 PIN…",
+  "join": "加入",
+  "close": "关闭",
+
+  "web_join_qr": "网页加入二维码",
+  "open_web_companion": "在 LanChGo 网页中打开网页助手",
+  "scan_qr": "使用手机扫描此二维码以打开网页加入。",
+  "cannot_scan": "无法扫描？",
+  "copied": "已复制",
+  "copy_link": "复制链接",
+  "channel_pin": "您的频道 PIN：",
+
+  "clear_chat_confirmation": "确定要清除聊天框吗？",
+  "confirm": "确认",
+  "cancel": "取消",
+
+  "old_config_detected": "检测到旧版本的配置文件！",
+  "restart_for_fresh_config": "请重新启动 LanChGo，以使用新的配置继续。",
+
+  "exit": "退出",
+  "connecting_secure": "正在连接到安全频道...",
+  "please_wait": "请稍候",
+
+  "commands": "命令",
+  "enter": "回车",
+  "command_navigation": "↑ ↓ 导航    Enter 执行    Esc 关闭",
+
+  "change_app_language": "更改应用语言：",
+
+  "copy": "复制",
+  "tooltip_copy_all": "全部复制",
+  "tooltip_resend": "重新发送",
+  "tooltip_send_file": "发送文件",
+  "tooltip_save_to": "更改文件保存位置",
+  "tooltip_open_download": "打开文件保存位置",
+  "tooltip_clear_files_panel": "清除文件列表",
+  "tooltip_resend_file": "重新发送文件",
+  "tooltip_download_file": "下载文件"
+}

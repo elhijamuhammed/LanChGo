@@ -9,6 +9,12 @@ import { FileTransferPanel } from "components/FileTransferPanel.slint";
 import { FileOfferItem } from "components/types.slint";
 import { EscCloseHandler } from "components/HelpFunctions.slint";
 import { DevicesList, ToolDevice } from "components/Tools/DevicesList.slint";
+import { Translations } from "components/translations.slint";
+// import { LanguageDropdown } from "components/langDropDown.slint";
+import "assets/fonts/NotoSansSC-Bold.otf";
+import { MessageItem } from "components/types.slint";
+
+export { Translations } from "components/translations.slint";
 
 export component AppWindow inherits Window {
     width: 1000px * root.global_scale;
@@ -16,9 +22,10 @@ export component AppWindow inherits Window {
     title: "LanChGo";
     icon: @image-url("assets/LanChGo_icon.png");
     forward-focus: main_key_handler;
+    //default-font-family: "Noto Sans SC";
 
     // Reactive list provided by Rust (ModelRc)
-    in-out property <[string]> messages;
+    in-out property <[MessageItem]> messages;
     in-out property <string> input_text;
     callback clear_chatbox();
 
@@ -95,6 +102,7 @@ export component AppWindow inherits Window {
     callback add_file_offer(FileOfferItem);
     callback clear_file_transfer_panel();
     callback download_offer(string);
+    callback resend_file_offer(string);
     in-out property <string> download_folder;
     callback debug_add_fake_offer_msg();
 
@@ -157,6 +165,14 @@ export component AppWindow inherits Window {
         root.tools_device_list_open = true;
     }
 
+    // Languages
+    callback language-changed(string);
+    in-out property <string> selected_language;
+    selected_language <=> Translations.selected_language;
+    default-font-family: root.selected_language == "zh" ? "Noto Sans SC" : "";
+    // in-out property <[string]> lang_items: [];
+    // in-out property <[string]> lang_values: [];
+
     Rectangle {
         background: blue;
         border-width: 3px * root.global_scale;
@@ -187,7 +203,7 @@ export component AppWindow inherits Window {
                             return accept;
                         }
 
-                        toolbar-inst.close_all_popups();
+                        // toolbar-inst.close_all_popups();
                         return accept;
                     }
 
@@ -213,6 +229,8 @@ export component AppWindow inherits Window {
                     show_welcome <=> root.show_welcome;
                     ui_port <=> root.ui_port;
                     manual_port_mode <=> root.manual_port_mode;
+                    selected_language <=> root.selected_language;
+                    language-changed(code) => { root.language_changed(code); }
                     interface_selected() => { root.interface_selected(root.selected_interface); }
                     apply_manual_port (port) => { root.apply_manual_port(port); }
                     reset_port_to_auto () => { root.reset_port_to_auto(); }
@@ -237,6 +255,10 @@ export component AppWindow inherits Window {
                             update_available <=> root.update_available;
                             latest_version <=> root.latest_version;
                             global_scale: root.global_scale;
+                            resend(text) => {
+                                root.input_text = text;
+                                root.send_clicked();
+                            }
                         }
 
                         VerticalBox {
@@ -260,6 +282,7 @@ export component AppWindow inherits Window {
                                 open_download_folder() => { root.open_download_folder(); }
                                 clear_offers() => { root.clear_file_transfer_panel(); }
                                 download_offer(id) => { root.download_offer(id); }
+                                resend_file_offer(id) => { root.resend_file_offer(id); }
                             }
                         }
                     }
@@ -268,9 +291,9 @@ export component AppWindow inherits Window {
                     if toolbar-inst.web_popup_open || toolbar-inst.secure_popup_open || toolbar-inst.tools_popup_open: TouchArea {
                         width: parent.width;
                         height: parent.height;
-                        clicked => {
-                            toolbar-inst.close_all_popups();
-                        }
+                        // clicked => {
+                        //     toolbar-inst.close_all_popups();
+                        // }
                     }
                 }
 
@@ -293,12 +316,12 @@ export component AppWindow inherits Window {
                     web_join_clicked() => { root.web_join_clicked(); }
                     show_web_join_popup() => { webjoinpopup.show(); }
 
-                    open_tools_devices_list(title, icon, tool_id) => {
-                        root.tools_device_list_title = title;
-                        root.tools_device_list_icon = icon;
-                        root.active_tool = tool_id;
-                        root.tools_device_list_open = true;
-                    }
+                    // open_tools_devices_list(title, icon, tool_id) => {
+                    //     root.tools_device_list_title = title;
+                    //     root.tools_device_list_icon = icon;
+                    //     root.active_tool = tool_id;
+                    //     root.tools_device_list_open = true;
+                    // }
                 }
 
                 //--- Input row ---
@@ -404,7 +427,7 @@ export component AppWindow inherits Window {
                 width: parent.width - 32px * root.global_scale;
                 x: 16px * root.global_scale; y: 16px * root.global_scale;
                 text: root.popup_msg;
-                font-size: 24px * root.global_scale;
+                font-size: 24px * root.global_scale * Translations.font_global_scale;
                 color: white;
                 horizontal-alignment: center;
                 wrap: word-wrap;
@@ -456,15 +479,15 @@ export component AppWindow inherits Window {
                 padding: 20px * root.global_scale;
 
                 Text {
-                    text: "Create or Join a Channel";
-                    font-size: 22px * root.global_scale;
+                    text: Translations.create_or_join_title;
+                    font-size: 22px * root.global_scale * Translations.font_global_scale;
                     color: white;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
 
                 Button {
-                    text: "🛡 Create Channel";
+                    text: "🛡 " + Translations.create_channel;
                     horizontal-stretch: 1;
                     height: 40px * root.global_scale;
                     clicked => {
@@ -485,8 +508,8 @@ export component AppWindow inherits Window {
                     spacing: 6px * root.global_scale;
 
                     Text {
-                        text: "Join with PIN:";
-                        font-size: 16px * root.global_scale;
+                        text: Translations.join_with_pin;
+                        font-size: 16px * root.global_scale * Translations.font_global_scale;
                         color: #dddddd;
                     }
 
@@ -495,7 +518,7 @@ export component AppWindow inherits Window {
 
                         line-edit := LineEdit {
                             text <=> joining_PIN;
-                            placeholder-text: "Enter 8-digit PIN…";
+                            placeholder-text: Translations.enter_pin;
                             horizontal-stretch: 1;
                             height: 36px * root.global_scale;
                             input-type: number;
@@ -531,7 +554,7 @@ export component AppWindow inherits Window {
                         }
 
                         Button {
-                            text: "🔑 Join";
+                            text: "🔑 " + Translations.join;
                             height: 36px * root.global_scale;
                             clicked => {
                                 root.join_channel(joining_PIN);
@@ -541,7 +564,7 @@ export component AppWindow inherits Window {
                     }
 
                     Button {
-                        text: "❌ Close";
+                        text: "❌ " + Translations.close;
                         horizontal-stretch: 1;
                         height: 36px * root.global_scale;
                         clicked => {
@@ -590,24 +613,24 @@ export component AppWindow inherits Window {
                 spacing: 14px * root.global_scale;
 
                 Text {
-                    text: "Web Join QR Code";
-                    font-size: 22px * root.global_scale;
+                    text: Translations.web_join_qr;
+                    font-size: 22px * root.global_scale * Translations.font_global_scale;
                     font-weight: 700;
                     color: white;
                     horizontal-alignment: center;
                 }
 
                 Text {
-                    text: "Open the Web Companion in LanChGo's web page";
-                    font-size: 14px * root.global_scale;
+                    text: Translations.open_web_companion;
+                    font-size: 14px * root.global_scale * Translations.font_global_scale;
                     color: #c9ced6;
                     wrap: word-wrap;
                     horizontal-alignment: center;
                 }
 
                 Text {
-                    text: "Scan this QR code with your phone to open Web Join.";
-                    font-size: 14px * root.global_scale;
+                    text: Translations.scan_qr;
+                    font-size: 14px * root.global_scale * Translations.font_global_scale;
                     color: #c9ced6;
                     wrap: word-wrap;
                     horizontal-alignment: center;
@@ -635,15 +658,15 @@ export component AppWindow inherits Window {
                     alignment: center;
 
                     Text {
-                        text: "Can't scan? " + root.url_link;
-                        font-size: 12px * root.global_scale;
+                        text: Translations.cannot_scan + root.url_link;
+                        font-size: 12px * root.global_scale * Translations.font_global_scale;
                         color: #c9ced6;
                         vertical-alignment: center;
                     }
 
                     Text {
-                        text: root.link_copied ? "✅ Copied" : "📋 Copy link";
-                        font-size: 12px * root.global_scale;
+                        text: root.link_copied ? "✅ " + Translations.copied : "📋 " + Translations.copy_link;
+                        font-size: 12px * root.global_scale * Translations.font_global_scale;
                         font-weight: 600;
                         color: copy_area.has-hover ? #81d4fa : #4fc3f7;
                         vertical-alignment: center;
@@ -666,7 +689,7 @@ export component AppWindow inherits Window {
                 }
 
                 Button {
-                    text: "Close";
+                    text: Translations.close;
                     horizontal-stretch: 1;
                     height: 38px * root.global_scale;
                     clicked => { webjoinpopup.close(); }
@@ -704,8 +727,8 @@ export component AppWindow inherits Window {
                 padding: 20px * root.global_scale;
 
                 Text {
-                    text: "Your Channel PIN:";
-                    font-size: 18px * root.global_scale;
+                    text: Translations.channel_pin;
+                    font-size: 18px * root.global_scale * Translations.font_global_scale;
                     color: white;
                     horizontal-alignment: center;
                 }
@@ -715,7 +738,7 @@ export component AppWindow inherits Window {
                     read-only: true;
                     horizontal-stretch: 1;
                     height: 38px * root.global_scale;
-                    font-size: 22px * root.global_scale;
+                    font-size: 22px * root.global_scale * Translations.font_global_scale;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     color: #00e0ff;
@@ -734,7 +757,7 @@ export component AppWindow inherits Window {
                 }
 
                 Button {
-                    text: "Close";
+                    text: Translations.close;
                     horizontal-stretch: 1;
                     clicked => { showpin.close(); }
                 }
@@ -766,8 +789,8 @@ export component AppWindow inherits Window {
                 padding: 20px * root.global_scale;
 
                 Text {
-                    text: "Are you sure you want to clear the chat box?";
-                    font-size: 20px * root.global_scale;
+                    text: Translations.clear_chat_confirmation;
+                    font-size: 20px * root.global_scale * Translations.font_global_scale;
                     font-weight: 500;
                     color: #e4e4e4;
                     horizontal-alignment: center;
@@ -777,7 +800,7 @@ export component AppWindow inherits Window {
                     spacing: 12px * root.global_scale;
 
                     Button {
-                        text: "✅ Confirm";
+                        text: "✅ " + Translations.confirm;
                         horizontal-stretch: 1;
                         height: 40px * root.global_scale;
                         clicked => {
@@ -786,7 +809,7 @@ export component AppWindow inherits Window {
                         }
                     }
                     Button {
-                        text: "❌ Cancel";
+                        text: "❌ " + Translations.cancel;
                         horizontal-stretch: 1;
                         height: 40px * root.global_scale;
                         clicked => { clearchatbox.close(); }
@@ -822,8 +845,8 @@ export component AppWindow inherits Window {
                     padding: 20px * root.global_scale;
 
                     Text {
-                        text: "⚠️ Config file for an older version detected!";
-                        font-size: 20px * root.global_scale;
+                        text: "⚠️ " + Translations.old_config_detected;
+                        font-size: 20px * root.global_scale * Translations.font_global_scale;
                         font-weight: 600;
                         color: white;
                         horizontal-alignment: center;
@@ -831,8 +854,8 @@ export component AppWindow inherits Window {
                     }
 
                     Text {
-                        text: "Please restart LanChGo to continue with a fresh configuration.";
-                        font-size: 16px * root.global_scale;
+                        text: Translations.restart_for_fresh_config;
+                        font-size: 16px * root.global_scale * Translations.font_global_scale;
                         color: #dddddd;
                         horizontal-alignment: center;
                         wrap: word-wrap;
@@ -841,7 +864,7 @@ export component AppWindow inherits Window {
                     HorizontalBox {
                         Rectangle { horizontal-stretch: 1; }
                         Button {
-                            text: "🚪 EXIT";
+                            text: "🚪 " + Translations.exit;
                             horizontal-stretch: 0;
                             width: 120px * root.global_scale;
                             height: 42px * root.global_scale;
@@ -870,8 +893,8 @@ export component AppWindow inherits Window {
 
             VerticalBox {
                 spacing: 12px * root.global_scale;
-                Text { text: "Connecting to secure channel..."; color: white; horizontal-alignment: center; }
-                Text { text: "🔄 Please wait"; color: #aaaaaa; horizontal-alignment: center; }
+                Text { text: Translations.connecting_secure; color: white; horizontal-alignment: center; }
+                Text { text: "🔄 " + Translations.please_wait; color: #aaaaaa; horizontal-alignment: center; }
             }
         }
     }
@@ -919,8 +942,8 @@ export component AppWindow inherits Window {
                 spacing: 10px * root.global_scale;
 
                 Text {
-                    text: "Commands";
-                    font-size: 20px * root.global_scale;
+                    text: Translations.commands;
+                    font-size: 20px * root.global_scale * Translations.font_global_scale;
                     font-weight: 600;
                     color: white;
                     horizontal-alignment: center;
@@ -950,22 +973,22 @@ export component AppWindow inherits Window {
                                 text: index == root.selected_command_idx ? "▶" : "";
                                 width: 20px * root.global_scale;
                                 color: #ffffff;
-                                font-size: 15px * root.global_scale;
+                                font-size: 15px * root.global_scale * Translations.font_global_scale;
                                 vertical-alignment: center;
                             }
 
                             Text {
                                 text: cmd;
                                 color: white;
-                                font-size: 15px * root.global_scale;
+                                font-size: 15px * root.global_scale * Translations.font_global_scale;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                             }
 
                             Text {
-                                text: index == root.selected_command_idx ? "Enter" : "";
+                                text: index == root.selected_command_idx ? Translations.enter : "";
                                 color: #d7e8ff;
-                                font-size: 11px * root.global_scale;
+                                font-size: 11px * root.global_scale * Translations.font_global_scale;
                                 vertical-alignment: center;
                             }
                         }
@@ -984,8 +1007,8 @@ export component AppWindow inherits Window {
                 }
 
                 Text {
-                    text: "↑ ↓ navigate    Enter execute    Esc close";
-                    font-size: 11px * root.global_scale;
+                    text: Translations.command_navigation;
+                    font-size: 11px * root.global_scale * Translations.font_global_scale;
                     color: #9aa3b2;
                     horizontal-alignment: center;
                 }

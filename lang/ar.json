@@ -1,0 +1,106 @@
+{
+  "direction": "RTL",
+  "send_button": "إرسال",
+  "clear_button": "مسح",
+  "input_placeholder": "اكتب هنا...",
+
+  "copyright_text": "© جميع الحقوق محفوظة",
+  "network_description": "أرسل الرسائل والملفات إلى الأجهزة المتصلة بنفس شبكة Wi-Fi / الشبكة",
+  "update_available": "LanChGo v",
+  "update_suffix": "متاح",
+  "download_github": "تنزيل من إصدارات GitHub",
+
+  "title_file_transfer": "نقل الملفات",
+  "files_button": "الملفات",
+  "save_button": "حفظ إلى…",
+  "open_button": "فتح",
+  "no_offers": "لا توجد عروض حتى الآن",
+
+  "title_header": "تحدث بحرية وبسرعة مع تطبيق LanChGo",
+  "subtitle_prefix": "صُمم لحل مشكلة! تطبيق LanChGo ",
+
+  "online": "متصل",
+  "offline": "غير متصل",
+  "secure_host": "مضيف آمن",
+  "joined": "منضم",
+  "public": "عام",
+
+  "web_on": "الويب مفعّل",
+  "web_off": "الويب متوقف",
+  "web_companion_running": "مرافق الويب قيد التشغيل",
+  "web_companion_stopped": "مرافق الويب متوقف",
+  "show_web": "عرض الويب",
+  "start_web": "تشغيل الويب",
+  "stop_web": "إيقاف الويب",
+
+  "secure_mode": "آمن",
+  "pin": "رمز PIN: ",
+  "show_pin": "عرض رمز PIN",
+  "new_pin": "رمز PIN جديد",
+  "disconnect": "قطع الاتصال",
+
+  "tools": "🧰 الأدوات",
+  "lan_tools": "🧰 أدوات LAN",
+  "phone_mouse": "فأرة الهاتف",
+  "phone_keyboard": "لوحة مفاتيح الهاتف",
+  "settings": "الإعدادات",
+
+  "title_welcome": "مرحبًا بك في LanChGo",
+  "network_changed": "لقد تغيرت شبكتك — اختر واجهة شبكة للمتابعة.",
+  "pick_network": "اختر واجهة الشبكة للبدء.",
+
+  "udp_port": "منفذ UDP",
+  "auto": "تلقائي",
+  "auto_prefix": "(تلقائي: ",
+  "manual": "يدوي",
+  "apply": "تطبيق",
+  "reset": "إعادة تعيين",
+  "continue_button": "متابعة",
+  "port_available": "المنفذ متاح",
+
+  "message_too_long": "الرسالة طويلة جدًا، ولن يتم إرسالها!\nانقر للإغلاق.",
+
+  "create_or_join_title": "إنشاء قناة أو الانضمام إليها",
+  "create_channel": "إنشاء قناة",
+  "join_with_pin": "الانضمام باستخدام PIN:",
+  "enter_pin": "أدخل رمز PIN المكون من 8 أرقام…",
+  "join": "انضمام",
+  "close": "إغلاق",
+
+  "web_join_qr": "رمز QR للانضمام عبر الويب",
+  "open_web_companion": "افتح مرافق الويب في صفحة LanChGo على الويب",
+  "scan_qr": "امسح رمز QR هذا باستخدام هاتفك لفتح الانضمام عبر الويب.",
+  "cannot_scan": "لا تستطيع المسح؟ ",
+  "copied": "تم النسخ",
+  "copy_link": "نسخ الرابط",
+
+  "channel_pin": "رمز PIN الخاص بقناتك:",
+
+  "clear_chat_confirmation": "هل أنت متأكد من أنك تريد مسح مربع الدردشة؟",
+  "confirm": "تأكيد",
+  "cancel": "إلغاء",
+
+  "old_config_detected": "تم اكتشاف ملف إعدادات لإصدار أقدم!",
+  "restart_for_fresh_config": "يرجى إعادة تشغيل LanChGo للمتابعة بإعدادات جديدة.",
+  "exit": "خروج",
+
+  "connecting_secure": "جارٍ الاتصال بالقناة الآمنة...",
+  "please_wait": "يرجى الانتظار",
+
+  "commands": "الأوامر",
+  "enter": "إدخال",
+  "command_navigation": "↑ ↓ للتنقل    إدخال للتنفيذ    Esc للإغلاق",
+
+  "change_app_language": "تغيير لغة التطبيق:",
+
+  "copy": "نسخ",
+
+  "tooltip_copy_all": "نسخ الكل",
+  "tooltip_resend": "إعادة الإرسال",
+  "tooltip_send_file": "إرسال ملف",
+  "tooltip_save_to": "تغيير مكان حفظ الملفات",
+  "tooltip_open_download": "فتح مكان حفظ الملفات",
+  "tooltip_clear_files_panel": "مسح قائمة الملفات",
+  "tooltip_resend_file": "إعادة إرسال ملف",
+  "tooltip_download_file": "تحميل الملف"
+}

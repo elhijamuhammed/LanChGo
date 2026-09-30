@@ -1,4 +1,5 @@
 import { HorizontalBox, VerticalBox } from "std-widgets.slint";
+import { Translations } from "translations.slint";
 
 export component Toolbar inherits Rectangle {
     in-out property <string> channel_mode: "public";
@@ -24,17 +25,26 @@ export component Toolbar inherits Rectangle {
     callback set_secure_mode();
 
     // Tools
-    callback close_all_popups();
-    close_all_popups => {
-        root.web_popup_open = false;
-        root.secure_popup_open = false;
-        root.tools_popup_open = false; 
-    }
-    callback open_tools_devices_list(string, string, string);
+    // callback close_all_popups();
+    // close_all_popups => {
+    //     root.web_popup_open = false;
+    //     root.secure_popup_open = false;
+    //     root.tools_popup_open = false; 
+    // }
+    // callback open_tools_devices_list(string, string, string);
 
     in-out property <bool> secure_popup_open: false;
     in-out property <bool> web_popup_open: false;
     in-out property <bool> tools_popup_open: false;
+
+    // Language direction
+    property <bool> rtl: Translations.direction == "rtl";
+
+    // LTR: icon + label
+    // RTL: label + icon
+    pure function with_icon(icon: string, label: string) -> string {
+        return root.rtl ? label + " " + icon : icon + " " + label;
+    }
 
     set_public_mode => {
         root.public_secure_helper = false;
@@ -45,7 +55,7 @@ export component Toolbar inherits Rectangle {
         root.request_close_create_or_join();
         root.secure_popup_open = false;
         root.web_popup_open = false;
-        root.tools_popup_open = false;
+        // root.tools_popup_open = false;
     }
 
     set_secure_mode => {
@@ -55,7 +65,7 @@ export component Toolbar inherits Rectangle {
         root.request_open_create_or_join();
         root.secure_popup_open = false;
         root.web_popup_open = false;
-        root.tools_popup_open = false;
+        // root.tools_popup_open = false;
     }
 
     background: #11161c;
@@ -96,9 +106,11 @@ export component Toolbar inherits Rectangle {
                 spacing: 7px * root.global_scale;
 
                 Text {
-                    text: root.web_session_active ? "🌐 Web On" : "🌐 Web Off";
+                    text: root.web_session_active
+                        ? root.with_icon("🌐", Translations.web_on)
+                        : root.with_icon("🌐", Translations.web_off);
                     color: root.channel_mode == "public" ? white : #8d98a3;
-                    font-size: 13px * root.global_scale;
+                    font-size: 13px * root.global_scale * Translations.font_global_scale;
                     font-weight: 700;
                     vertical-alignment: center;
                 }
@@ -106,7 +118,7 @@ export component Toolbar inherits Rectangle {
                 Text {
                     text: root.web_popup_open ? "▲" : "▼";
                     color: root.channel_mode == "public" ? white : #8d98a3;
-                    font-size: 13px * root.global_scale;
+                    font-size: 13px * root.global_scale * Translations.font_global_scale;
                     font-weight: 700;
                     vertical-alignment: center;
                 }
@@ -118,7 +130,7 @@ export component Toolbar inherits Rectangle {
                 enabled: root.channel_mode == "public";
                 clicked => {
                     root.secure_popup_open = false;
-                    root.tools_popup_open = false;
+                    // root.tools_popup_open = false;
                     root.web_popup_open = !root.web_popup_open;
                 }
             }
@@ -146,9 +158,11 @@ export component Toolbar inherits Rectangle {
                         background: root.web_session_active ? #10251a : #182028;
 
                         Text {
-                            text: root.web_session_active ? "● Web companion running" : "● Web companion stopped";
+                            text: root.web_session_active
+                                ? root.with_icon("●", Translations.web_companion_running)
+                                : root.with_icon("●", Translations.web_companion_stopped);
                             color: root.web_session_active ? #22c55e : #8d98a3;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             font-weight: 700;
                             horizontal-alignment: center;
                             vertical-alignment: center;
@@ -167,9 +181,11 @@ export component Toolbar inherits Rectangle {
                             : (show_web_btn.has-hover ? #06b6d4 : #0891b2);
 
                         Text {
-                            text: root.web_session_active ? "🌐 Show Web" : "🌐 Start Web";
+                            text: root.web_session_active
+                                ? root.with_icon("🌐", Translations.show_web)
+                                : root.with_icon("🌐", Translations.start_web);
                             color: white;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             font-weight: 700;
                             horizontal-alignment: center;
                             vertical-alignment: center;
@@ -201,9 +217,9 @@ export component Toolbar inherits Rectangle {
                             : #202831;
 
                         Text {
-                            text: "⛔ Stop Web";
+                            text: root.with_icon("⛔", Translations.stop_web);
                             color: root.web_session_active ? white : #8d98a3;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             font-weight: 700;
                             horizontal-alignment: center;
                             vertical-alignment: center;
@@ -245,9 +261,9 @@ export component Toolbar inherits Rectangle {
                         : (pub_area.has-hover ? #1e2d3d : #1a222b);
 
                     Text {
-                        text: "🌍 Public";
+                        text: root.with_icon("🌍", Translations.public);
                         color: root.channel_mode == "public" ? #0a0f14 : #a7b1bb;
-                        font-size: 13px * root.global_scale;
+                        font-size: 13px * root.global_scale * Translations.font_global_scale;
                         font-weight: 700;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -273,9 +289,11 @@ export component Toolbar inherits Rectangle {
                         spacing: 7px * root.global_scale;
 
                         Text {
-                            text: "🔒 Secure";
-                            color: (root.channel_mode == "host" || root.channel_mode == "joined") ? #0a0f14 : #a7b1bb;
-                            font-size: 13px * root.global_scale;
+                            text: root.with_icon("🔒", Translations.secure_mode);
+                            color: (root.channel_mode == "host" || root.channel_mode == "joined")
+                                ? #0a0f14
+                                : #a7b1bb;
+                            font-size: 13px * root.global_scale * Translations.font_global_scale;
                             font-weight: 700;
                             vertical-alignment: center;
                         }
@@ -283,7 +301,7 @@ export component Toolbar inherits Rectangle {
                         if (root.channel_mode == "host" || root.channel_mode == "joined"): Text {
                             text: root.secure_popup_open ? "▲" : "▼";
                             color: #0a0f14;
-                            font-size: 13px * root.global_scale;
+                            font-size: 13px * root.global_scale * Translations.font_global_scale;
                             font-weight: 700;
                             vertical-alignment: center;
                         }
@@ -294,13 +312,11 @@ export component Toolbar inherits Rectangle {
                         height: parent.height;
                         clicked => {
                             root.web_popup_open = false;
-                            root.tools_popup_open = false;
-
+                            // root.tools_popup_open = false;
                             if (root.channel_mode == "host" || root.channel_mode == "joined") {
                                 root.secure_popup_open = !root.secure_popup_open;
                             } else {
-                                root.set_secure_mode();
-                            }
+                                root.set_secure_mode();}
                         }
                     }
 
@@ -327,9 +343,9 @@ export component Toolbar inherits Rectangle {
                                 background: #182028;
 
                                 Text {
-                                    text: "🔒 PIN: " + root.host_PIN_masked;
+                                    text: root.with_icon("🔒", Translations.pin) + root.host_PIN_masked;
                                     color: #08d3f7;
-                                    font-size: 13px * root.global_scale;
+                                    font-size: 13px * root.global_scale * Translations.font_global_scale;
                                     font-weight: 700;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
@@ -348,9 +364,9 @@ export component Toolbar inherits Rectangle {
                                     : #202831;
 
                                 Text {
-                                    text: "👁 Show PIN";
+                                    text: root.with_icon("👁", Translations.show_pin);
                                     color: root.channel_mode == "host" ? white : #8d98a3;
-                                    font-size: 12px * root.global_scale;
+                                    font-size: 12px * root.global_scale * Translations.font_global_scale;
                                     font-weight: 700;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
@@ -379,9 +395,9 @@ export component Toolbar inherits Rectangle {
                                     : #202831;
 
                                 Text {
-                                    text: "🔄 New PIN";
+                                    text: root.with_icon("🔄", Translations.new_pin);
                                     color: root.channel_mode == "host" ? white : #8d98a3;
-                                    font-size: 12px * root.global_scale;
+                                    font-size: 12px * root.global_scale * Translations.font_global_scale;
                                     font-weight: 700;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
@@ -408,9 +424,9 @@ export component Toolbar inherits Rectangle {
                                 background: disconnect_btn.has-hover ? #ef4444 : #dc2626;
 
                                 Text {
-                                    text: "⏏ Disconnect";
+                                    text: root.with_icon("⏏", Translations.disconnect);
                                     color: white;
-                                    font-size: 12px * root.global_scale;
+                                    font-size: 12px * root.global_scale * Translations.font_global_scale;
                                     font-weight: 700;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
@@ -434,226 +450,226 @@ export component Toolbar inherits Rectangle {
         }
 
         // -------- Tools Button --------
-        Rectangle {
-            width: 120px * root.global_scale;
-            height: 42px * root.global_scale;
-            border-radius: 10px * root.global_scale;
-            border-width: 1px * root.global_scale;
-            border-color: root.channel_mode == "public" ? #7c3aed : #39424c;
-            background: root.channel_mode == "public" ? (tools_area.has-hover ? #8b5cf6 : #6d28d9) : #202831;
-            HorizontalLayout {
-                alignment: center;
-                spacing: 7px * root.global_scale;
+        // Rectangle {
+        //     width: 120px * root.global_scale;
+        //     height: 42px * root.global_scale;
+        //     border-radius: 10px * root.global_scale;
+        //     border-width: 1px * root.global_scale;
+        //     border-color: root.channel_mode == "public" ? #7c3aed : #39424c;
+        //     background: root.channel_mode == "public" ? (tools_area.has-hover ? #8b5cf6 : #6d28d9) : #202831;
+        //     HorizontalLayout {
+        //         alignment: center;
+        //         spacing: 7px * root.global_scale;
 
-                Text {
-                    text: "🧰 Tools";
-                    color: root.channel_mode == "public" ? white : #8d98a3;
-                    font-size: 13px * root.global_scale;
-                    font-weight: 700;
-                    vertical-alignment: center;
-                }
+        //         Text {
+        //             text: "🧰 Tools";
+        //             color: root.channel_mode == "public" ? white : #8d98a3;
+        //             font-size: 13px * root.global_scale;
+        //             font-weight: 700;
+        //             vertical-alignment: center;
+        //         }
 
-                Text {
-                    text: root.tools_popup_open ? "▲" : "▼";
-                    color: root.channel_mode == "public" ? white : #8d98a3;
-                    font-size: 13px * root.global_scale;
-                    font-weight: 700;
-                    vertical-alignment: center;
-                }
-            }
-            tools_area := TouchArea {
-                width: parent.width;
-                height: parent.height;
-                enabled: root.channel_mode == "public";
-                clicked => {
-                    root.web_popup_open = false;
-                    root.secure_popup_open = false;
-                    root.tools_popup_open = !root.tools_popup_open;
-                }
-            }
-            if root.tools_popup_open: Rectangle {
-                x: 0px;
-                y: -(180px * root.global_scale);
-                width: 220px * root.global_scale;
-                height: 162px * root.global_scale;
-                background: #11161c;
-                border-radius: 12px * root.global_scale;
-                border-width: 1px * root.global_scale;
-                border-color: #2a3540;
-                drop-shadow-blur: 16px * root.global_scale;
-                drop-shadow-color: #000000aa;
-                drop-shadow-offset-y: 4px * root.global_scale;
+        //         Text {
+        //             text: root.tools_popup_open ? "▲" : "▼";
+        //             color: root.channel_mode == "public" ? white : #8d98a3;
+        //             font-size: 13px * root.global_scale;
+        //             font-weight: 700;
+        //             vertical-alignment: center;
+        //         }
+        //     }
+        //     tools_area := TouchArea {
+        //         width: parent.width;
+        //         height: parent.height;
+        //         enabled: root.channel_mode == "public";
+        //         clicked => {
+        //             root.web_popup_open = false;
+        //             root.secure_popup_open = false;
+        //             root.tools_popup_open = !root.tools_popup_open;
+        //         }
+        //     }
+        //     if root.tools_popup_open: Rectangle {
+        //         x: 0px;
+        //         y: -(180px * root.global_scale);
+        //         width: 220px * root.global_scale;
+        //         height: 162px * root.global_scale;
+        //         background: #11161c;
+        //         border-radius: 12px * root.global_scale;
+        //         border-width: 1px * root.global_scale;
+        //         border-color: #2a3540;
+        //         drop-shadow-blur: 16px * root.global_scale;
+        //         drop-shadow-color: #000000aa;
+        //         drop-shadow-offset-y: 4px * root.global_scale;
 
-                VerticalLayout {
-                    padding: 8px * root.global_scale;
-                    spacing: 6px * root.global_scale;
+        //         VerticalLayout {
+        //             padding: 8px * root.global_scale;
+        //             spacing: 6px * root.global_scale;
 
-                    Rectangle {
-                        height: 32px * root.global_scale;
-                        border-radius: 8px * root.global_scale;
-                        background: #182028;
+        //             Rectangle {
+        //                 height: 32px * root.global_scale;
+        //                 border-radius: 8px * root.global_scale;
+        //                 background: #182028;
 
-                        Text {
-                            text: "🧰 LAN Tools";
-                            color: #c4b5fd;
-                            font-size: 13px * root.global_scale;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                            width: parent.width;
-                            height: parent.height;
-                        }
-                    }
+        //                 Text {
+        //                     text: "🧰 LAN Tools";
+        //                     color: #c4b5fd;
+        //                     font-size: 13px * root.global_scale;
+        //                     font-weight: 700;
+        //                     horizontal-alignment: center;
+        //                     vertical-alignment: center;
+        //                     width: parent.width;
+        //                     height: parent.height;
+        //                 }
+        //             }
 
-                    Rectangle {
-                        height: 32px * root.global_scale;
-                        border-radius: 8px * root.global_scale;
-                        background: mouse_area.has-hover ? #2563eb : #202831;
-                        border-width: 1px * root.global_scale;
-                        border-color: mouse_area.has-hover ? #3b82f6 : #39424c;
+        //             Rectangle {
+        //                 height: 32px * root.global_scale;
+        //                 border-radius: 8px * root.global_scale;
+        //                 background: mouse_area.has-hover ? #2563eb : #202831;
+        //                 border-width: 1px * root.global_scale;
+        //                 border-color: mouse_area.has-hover ? #3b82f6 : #39424c;
 
-                        HorizontalLayout {
-                            padding-left: 12px * root.global_scale;
-                            padding-right: 10px * root.global_scale;
-                            spacing: 8px * root.global_scale;
-                            alignment: center;
+        //                 HorizontalLayout {
+        //                     padding-left: 12px * root.global_scale;
+        //                     padding-right: 10px * root.global_scale;
+        //                     spacing: 8px * root.global_scale;
+        //                     alignment: center;
 
-                            Text {
-                                text: "🖱";
-                                font-size: 13px * root.global_scale;
-                                vertical-alignment: center;
-                            }
+        //                     Text {
+        //                         text: "🖱";
+        //                         font-size: 13px * root.global_scale;
+        //                         vertical-alignment: center;
+        //                     }
 
-                            Text {
-                                text: "Phone Mouse";
-                                color: white;
-                                font-size: 12px * root.global_scale;
-                                font-weight: 700;
-                                vertical-alignment: center;
-                            }
+        //                     Text {
+        //                         text: "Phone Mouse";
+        //                         color: white;
+        //                         font-size: 12px * root.global_scale;
+        //                         font-weight: 700;
+        //                         vertical-alignment: center;
+        //                     }
 
-                            Rectangle { width: 1px; }
+        //                     Rectangle { width: 1px; }
 
-                            Text {
-                                text: "›";
-                                color: mouse_area.has-hover ? white : #6b7280;
-                                font-size: 18px * root.global_scale;
-                                font-weight: 700;
-                                vertical-alignment: center;
-                            }
-                        }
+        //                     Text {
+        //                         text: "›";
+        //                         color: mouse_area.has-hover ? white : #6b7280;
+        //                         font-size: 18px * root.global_scale;
+        //                         font-weight: 700;
+        //                         vertical-alignment: center;
+        //                     }
+        //                 }
 
-                        mouse_area := TouchArea {
-                            width: parent.width;
-                            height: parent.height;
+        //                 mouse_area := TouchArea {
+        //                     width: parent.width;
+        //                     height: parent.height;
 
-                            clicked => {
-                                root.tools_popup_open = false;
-                                root.open_tools_devices_list("Phone Mouse", "🖱", "remote_input");
-                            }
-                        }
-                    }
+        //                     clicked => {
+        //                         // root.tools_popup_open = false;
+        //                         // root.open_tools_devices_list("Phone Mouse", "🖱", "remote_input");
+        //                     }
+        //                 }
+        //             }
 
-                    Rectangle {
-                        height: 32px * root.global_scale;
-                        border-radius: 8px * root.global_scale;
-                        background: keyboard_area.has-hover ? #4338ca : #202831;
-                        border-width: 1px * root.global_scale;
-                        border-color: keyboard_area.has-hover ? #6366f1 : #39424c;
+        //             Rectangle {
+        //                 height: 32px * root.global_scale;
+        //                 border-radius: 8px * root.global_scale;
+        //                 background: keyboard_area.has-hover ? #4338ca : #202831;
+        //                 border-width: 1px * root.global_scale;
+        //                 border-color: keyboard_area.has-hover ? #6366f1 : #39424c;
 
-                        HorizontalLayout {
-                            padding-left: 12px * root.global_scale;
-                            padding-right: 10px * root.global_scale;
-                            spacing: 8px * root.global_scale;
-                            alignment: center;
+        //                 HorizontalLayout {
+        //                     padding-left: 12px * root.global_scale;
+        //                     padding-right: 10px * root.global_scale;
+        //                     spacing: 8px * root.global_scale;
+        //                     alignment: center;
 
-                            Text {
-                                text: "⌨";
-                                font-size: 13px * root.global_scale;
-                                vertical-alignment: center;
-                            }
+        //                     Text {
+        //                         text: "⌨";
+        //                         font-size: 13px * root.global_scale;
+        //                         vertical-alignment: center;
+        //                     }
 
-                            Text {
-                                text: "Phone Keyboard";
-                                color: white;
-                                font-size: 12px * root.global_scale;
-                                font-weight: 700;
-                                vertical-alignment: center;
-                            }
+        //                     Text {
+        //                         text: "Phone Keyboard";
+        //                         color: white;
+        //                         font-size: 12px * root.global_scale;
+        //                         font-weight: 700;
+        //                         vertical-alignment: center;
+        //                     }
 
-                            Rectangle { width: 1px; }
+        //                     Rectangle { width: 1px; }
 
-                            Text {
-                                text: "›";
-                                color: keyboard_area.has-hover ? white : #6b7280;
-                                font-size: 18px * root.global_scale;
-                                font-weight: 700;
-                                vertical-alignment: center;
-                            }
-                        }
+        //                     Text {
+        //                         text: "›";
+        //                         color: keyboard_area.has-hover ? white : #6b7280;
+        //                         font-size: 18px * root.global_scale;
+        //                         font-weight: 700;
+        //                         vertical-alignment: center;
+        //                     }
+        //                 }
 
-                        keyboard_area := TouchArea {
-                            width: parent.width;
-                            height: parent.height;
+        //                 keyboard_area := TouchArea {
+        //                     width: parent.width;
+        //                     height: parent.height;
 
-                            clicked => {
-                                root.tools_popup_open = false;
-                                root.open_tools_devices_list("Phone Keyboard", "⌨", "remote_input");
-                            }
-                        }
-                    }
+        //                     clicked => {
+        //                         // root.tools_popup_open = false;
+        //                         // root.open_tools_devices_list("Phone Keyboard", "⌨", "remote_input");
+        //                     }
+        //                 }
+        //             }
 
-                    // Rectangle {
-                    //     height: 32px * root.global_scale;
-                    //     border-radius: 8px * root.global_scale;
-                    //     background: share_area.has-hover ? #0f766e : #202831;
-                    //     border-width: 1px * root.global_scale;
-                    //     border-color: share_area.has-hover ? #14b8a6 : #39424c;
+        //             // Rectangle {
+        //             //     height: 32px * root.global_scale;
+        //             //     border-radius: 8px * root.global_scale;
+        //             //     background: share_area.has-hover ? #0f766e : #202831;
+        //             //     border-width: 1px * root.global_scale;
+        //             //     border-color: share_area.has-hover ? #14b8a6 : #39424c;
 
-                    //     // HorizontalLayout {
-                    //     //     padding-left: 12px * root.global_scale;
-                    //     //     padding-right: 10px * root.global_scale;
-                    //     //     spacing: 8px * root.global_scale;
-                    //     //     alignment: center;
+        //             //     // HorizontalLayout {
+        //             //     //     padding-left: 12px * root.global_scale;
+        //             //     //     padding-right: 10px * root.global_scale;
+        //             //     //     spacing: 8px * root.global_scale;
+        //             //     //     alignment: center;
 
-                    //     //     Text {
-                    //     //         text: "📱";
-                    //     //         font-size: 13px * root.global_scale;
-                    //     //         vertical-alignment: center;
-                    //     //     }
+        //             //     //     Text {
+        //             //     //         text: "📱";
+        //             //     //         font-size: 13px * root.global_scale;
+        //             //     //         vertical-alignment: center;
+        //             //     //     }
 
-                    //     //     Text {
-                    //     //         text: "Screen Mirror";
-                    //     //         color: white;
-                    //     //         font-size: 12px * root.global_scale;
-                    //     //         font-weight: 700;
-                    //     //         vertical-alignment: center;
-                    //     //     }
+        //             //     //     Text {
+        //             //     //         text: "Screen Mirror";
+        //             //         color: white;
+        //             //         font-size: 12px * root.global_scale;
+        //             //         font-weight: 700;
+        //             //         vertical-alignment: center;
+        //             //     }
 
-                    //     //     Rectangle { width: 1px; }
+        //             //     Rectangle { width: 1px; }
 
-                    //     //     Text {
-                    //     //         text: "›";
-                    //     //         color: share_area.has-hover ? white : #6b7280;
-                    //     //         font-size: 18px * root.global_scale;
-                    //     //         font-weight: 700;
-                    //     //         vertical-alignment: center;
-                    //     //     }
-                    //     // }
+        //             //     Text {
+        //             //         text: "›";
+        //             //         color: share_area.has-hover ? white : #6b7280;
+        //             //         font-size: 18px * root.global_scale;
+        //             //         font-weight: 700;
+        //             //         vertical-alignment: center;
+        //             //     }
+        //             //     }
+        //             // }
 
-                    //     share_area := TouchArea {
-                    //         width: parent.width;
-                    //         height: parent.height;
+        //             // share_area := TouchArea {
+        //             //     width: parent.width;
+        //             //     height: parent.height;
 
-                    //         clicked => {
-                    //             root.tools_popup_open = false;
-                    //             root.open_tools_devices_list("Screen Share", "🖥", "screen_share");
-                    //         }
-                    //     }
-                    // }
-                }
-            }
-        }
+        //             //     clicked => {
+        //             //         root.tools_popup_open = false;
+        //             //         root.open_tools_devices_list("Screen Share", "🖥", "screen_share");
+        //             //     }
+        //             // }
+        //         }
+        //     }
+        // }
 
         // -------- Settings --------
         Rectangle {
@@ -665,9 +681,9 @@ export component Toolbar inherits Rectangle {
             background: settings_area.has-hover ? #9370db : #6a5acd;
 
             Text {
-                text: "⚙ Settings";
+                text: root.with_icon("⚙", Translations.settings);
                 color: white;
-                font-size: 13px * root.global_scale;
+                font-size: 13px * root.global_scale * Translations.font_global_scale;
                 font-weight: 700;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -681,7 +697,7 @@ export component Toolbar inherits Rectangle {
                 clicked => {
                     root.secure_popup_open = false;
                     root.web_popup_open = false;
-                    root.tools_popup_open = false;
+                    // root.tools_popup_open = false;
                     root.show_welcome = true;
                 }
             }

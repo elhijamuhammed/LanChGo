@@ -1,4 +1,5 @@
 import { VerticalBox } from "std-widgets.slint";
+import { Translations } from "translations.slint";
 
 export component HeaderBar {
     in property <string> show_version;
@@ -8,15 +9,15 @@ export component HeaderBar {
         spacing: 6px * root.global_scale;
 
         Text {
-            text: "Talk freely fast with LanChGo App";
-            font-size: 24px * root.global_scale;
+            text: Translations.title_header;
+            font-size: 24px * root.global_scale * Translations.font_global_scale;
             color: white;
             horizontal-alignment: center;
         }
 
         Text {
-            text: "Made to solve a problem! LanChGo App " + show_version;
-            font-size: 14px * root.global_scale;
+            text: Translations.subtitle_prefix + show_version;
+            font-size: 14px * root.global_scale * Translations.font_global_scale;
             color: white;
             horizontal-alignment: center;
         }

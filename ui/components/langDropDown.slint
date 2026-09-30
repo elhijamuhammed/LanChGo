@@ -1,0 +1,53 @@
+import { ComboBox } from "std-widgets.slint";
+import { Translations } from "translations.slint";
+
+export component LanguageDropdown inherits HorizontalLayout {
+    in property <float> global_scale;
+
+    in-out property <string> selected_language;
+
+    callback selected(string);
+
+    property <[string]> items: [ "العربية", "English", "中文" ];
+
+    spacing: 10px * root.global_scale;
+    height: 34px * root.global_scale;
+
+    Text {
+        text: Translations.change_app_language;
+        color: white;
+        font-size: 13px * root.global_scale * Translations.font_global_scale;
+        vertical-alignment: center;
+        horizontal-stretch: 0;
+    }
+
+    Rectangle {
+        horizontal-stretch: 1;
+    }
+
+    ComboBox {
+        width: 140px * root.global_scale;
+        height: 34px * root.global_scale;
+
+        model: root.items;
+
+        // Convert language code -> displayed language
+        current-value: root.selected_language == "ar"
+            ? "العربية"
+            : root.selected_language == "zh"
+                ? "中文"
+                : "English";
+
+        selected(value) => {
+            if value == "العربية" {
+                root.selected_language = "ar";
+            } else if value == "English" {
+                root.selected_language = "en";
+            } else if value == "中文" {
+                root.selected_language = "zh";
+            }
+
+            root.selected(root.selected_language);
+        }
+    }
+}

@@ -1,0 +1,105 @@
+{
+  "direction": "LTR",
+
+  "send_button": "Send",
+  "clear_button": "Clear",
+  "input_placeholder": "Type here...",
+  "copyright_text": "© All rights reserved",
+  "network_description": "Send messages and files to devices on the same Wi-Fi / network",
+
+  "update_available": "LanChGo v",
+  "update_suffix": "is available",
+  "download_github": "Download from GitHub Releases",
+
+  "title_file_transfer": "File Transfers",
+  "files_button": "Files",
+  "save_button": "Save to…",
+  "open_button": "Open",
+  "no_offers": "No offers yet",
+
+  "title_header": "Talk freely and fast with LanChGo App",
+  "subtitle_prefix": "Made to solve a problem! LanChGo App ",
+
+  "online": "Online",
+  "offline": "Offline",
+  "secure_host": "Secure Host",
+  "joined": "Joined",
+  "public": "Public",
+
+  "web_on": "Web On",
+  "web_off": "Web Off",
+  "web_companion_running": "Web companion running",
+  "web_companion_stopped": "Web companion stopped",
+  "show_web": "Show Web",
+  "start_web": "Start Web",
+  "stop_web": "Stop Web",
+
+  "secure_mode": "Secure",
+  "pin": "PIN: ",
+  "show_pin": "Show PIN",
+  "new_pin": "New PIN",
+  "disconnect": "Disconnect",
+
+  "tools": "🧰 Tools",
+  "lan_tools": "🧰 LAN Tools",
+  "phone_mouse": "Phone Mouse",
+  "phone_keyboard": "Phone Keyboard",
+  "settings": "Settings",
+
+  "title_welcome": "Welcome to LanChGo",
+  "network_changed": "Your network changed — pick an interface to continue.",
+  "pick_network": "Pick your network interface to get started.",
+
+  "udp_port": "UDP Port",
+  "auto": "Auto",
+  "auto_prefix": "(Auto: ",
+  "manual": "Manual",
+  "apply": "Apply",
+  "reset": "Reset",
+  "continue_button": "Continue",
+  "port_available": "Port available",
+
+  "message_too_long": "Message too long, it will not be sent!\nClick to dismiss.",
+
+  "create_or_join_title": "Create or Join a Channel",
+  "create_channel": "Create Channel",
+  "join_with_pin": "Join with PIN:",
+  "enter_pin": "Enter 8-digit PIN…",
+  "join": "Join",
+  "close": "Close",
+
+  "web_join_qr": "Web Join QR Code",
+  "open_web_companion": "Open the Web Companion in LanChGo's web page",
+  "scan_qr": "Scan this QR code with your phone to open Web Join.",
+  "cannot_scan": "Can't scan? ",
+  "copied": "Copied",
+  "copy_link": "Copy link",
+  "channel_pin": "Your Channel PIN:",
+
+  "clear_chat_confirmation": "Are you sure you want to clear the chat box?",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+
+  "old_config_detected": "Config file for an older version detected!",
+  "restart_for_fresh_config": "Please restart LanChGo to continue with a fresh configuration.",
+
+  "exit": "Exit",
+  "connecting_secure": "Connecting to secure channel...",
+  "please_wait": "Please wait",
+
+  "commands": "Commands",
+  "enter": "Enter",
+  "command_navigation": "↑ ↓ navigate    Enter execute    Esc close",
+
+  "change_app_language": "Change app's language:",
+
+  "copy": "Copy",
+  "tooltip_copy_all": "Copy all",
+  "tooltip_resend": "Resend",
+  "tooltip_send_file": "Send file",
+  "tooltip_save_to": "Change file save location",
+  "tooltip_open_download": "Open file save location",
+  "tooltip_clear_files_panel": "Clear file list",
+  "tooltip_resend_file": "Resend file",
+  "tooltip_download_file": "Download file"
+}

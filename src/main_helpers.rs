@@ -18,9 +18,11 @@ use slint::{ComponentHandle, SharedString, Model};
 use rodio::{Decoder, OutputStreamBuilder, Sink};
 use std::env;
 use std::process::Command;
+use crate::MessageItem;
 
 const NUTELLA_BYTES: &[u8] = include_bytes!("../nutella.ogg");
 static APP_HANDLE: OnceLock<Weak<AppWindow>> = OnceLock::new();
+const SUPPORTED_LANGS: [&str; 3] = ["ar", "en", "zh"];
 
 /// To fix a bug that is not fixable
 pub fn force_switch_to_public(app: &AppWindow, channel_mode: &Arc<Mutex<String>>) {
@@ -33,7 +35,7 @@ pub fn force_switch_to_public(app: &AppWindow, channel_mode: &Arc<Mutex<String>>
 }
 
 /// To clear the chatbox by a button
-pub fn clear_chatbox(model: &Rc<VecModel<slint::SharedString>>) {
+pub fn clear_chatbox(model: &Rc<VecModel<MessageItem>>) {
     model.set_vec(Vec::new());
 }
 
@@ -149,10 +151,7 @@ pub fn get_gateway_for_adapter(name: &str) -> String {
 }
 
 pub fn get_broadcast_for_name(interfaces: &Vec<InterfacesInfo>, name: &str) -> Option<String> {
-    interfaces
-        .iter()
-        .find(|it| it.name == name)
-        .map(|it| it.address_to_broadcast.clone())
+    interfaces.iter().find(|it| it.name == name).map(|it| it.address_to_broadcast.clone())
 }
 
 pub fn save_config(config: &Config) {
@@ -205,6 +204,10 @@ pub fn load_or_create_config(default: &Config, app: &AppWindow) -> (Config, bool
 
         let current_version = env!("CARGO_PKG_VERSION").to_string();
         if config.version != current_version {
+            // keep the user's language across the reset
+            if let Some(dir) = config_path.parent() {
+                std::fs::write(dir.join("first_run_language.txt"), &config.language).ok();
+            }
             std::fs::remove_file(&config_path).ok();
             let weak = app.as_weak();
             if let Some(app) = weak.upgrade() {
@@ -214,12 +217,21 @@ pub fn load_or_create_config(default: &Config, app: &AppWindow) -> (Config, bool
 
         (config, false)
     } else {
-        if let Some(parent) = config_path.parent() {
+        let dir = config_path.parent().map(|p| p.to_path_buf());
+        if let Some(parent) = &dir {
             std::fs::create_dir_all(parent).expect("Failed to create config directory");
         }
+
+        let mut config = default.clone();
+        if let Some(dir) = &dir {
+            if let Some(lang) = take_seed_language(dir) {
+                config.language = lang;
+            }
+        }
+
         let file = File::create(&config_path).expect("Failed to create config file");
-        serde_json::to_writer_pretty(file, &default).expect("Failed to write config file");
-        (default.clone(), true)
+        serde_json::to_writer_pretty(file, &config).expect("Failed to write config file");
+        (config, true)
     }
 }
 
@@ -258,7 +270,7 @@ pub fn cleanup_file_offers( offer_registry: &Arc<Mutex<file_transfer_protocol::O
         model.set_vec(Vec::new());
     }
 
-    println!("[FOFT][CLEANUP] temp offers deleted + registry cleared");
+    // println!("[FOFT][CLEANUP] temp offers deleted + registry cleared");
 }
 // to show download progress 
 pub fn progress_bucket_3(done: u64, total: u64) -> u32 {
@@ -531,4 +543,43 @@ pub fn recieve_tools_packet( payload: &[u8], sender_ip: std::net::IpAddr, ui_wea
             );
         }
     });
+}
+
+pub fn build_message_item(text: &str) -> MessageItem {
+    let id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos()
+        .to_string();
+
+    let link = text
+        .split_whitespace()
+        .find(|w| w.starts_with("http://") || w.starts_with("https://"))
+        .unwrap_or("")
+        .to_string();
+
+    // Simple UTC HH:MM, no extra crate. Swap for `chrono` if you already
+    // depend on it elsewhere and want local time instead.
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let hh = (secs / 3600) % 24;
+    let mm = (secs / 60) % 60;
+    let timestamp = format!("{:02}:{:02}", hh, mm);
+
+    MessageItem {
+        id: id.into(),
+        text: text.into(),
+        timestamp: timestamp.into(),
+        link: link.into(),
+    }
+}
+
+/// Reads first_run_language.txt if present, deletes it, and returns the language only if it's one the app support.
+fn take_seed_language(dir: &Path) -> Option<String> {
+    let seed = dir.join("first_run_language.txt");
+    let lang = std::fs::read_to_string(&seed).ok()?.trim().to_lowercase();
+    std::fs::remove_file(&seed).ok();
+    SUPPORTED_LANGS.contains(&lang.as_str()).then_some(lang)
 }

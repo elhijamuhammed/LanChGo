@@ -38,8 +38,14 @@ pub struct Config {
     pub last_gateway: String,
     #[serde(default)]
     pub save_to_folder: String,
-    pub port: Option<u16>, // if none then it is automatically sat, if some x then user sat it manually
+    pub port: Option<u16>,
     pub ui_scale: Option<f32>,
+    #[serde(default = "default_language")]
+    pub language: String,
+}
+
+fn default_language() -> String {
+    "ar".to_string()
 }
 
 #[derive(Debug, Clone)]

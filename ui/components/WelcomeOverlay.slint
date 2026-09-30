@@ -1,7 +1,8 @@
 import { ListView } from "std-widgets.slint";
+import { LanguageDropdown } from "langDropDown.slint";
+import { Translations } from "translations.slint";
 
 export component WelcomeOverlay inherits Rectangle {
-    
     in-out property <bool> changed_networks;
     in-out property <string> selected_interface;
     in-out property <[string]> interfaces;
@@ -10,10 +11,15 @@ export component WelcomeOverlay inherits Rectangle {
     in-out property <bool> manual_port_mode: false;
     in-out property <string> port_status: "";
     in-out property <float> global_scale;
+
     callback interface_selected(string);
     property <int> typed_port: root.ui_port;
     callback apply_manual_port(int);
     callback reset_port_to_auto();
+
+    callback language-changed(string);
+    in-out property <string> selected_language;
+    property <bool> rtl: Translations.direction == "rtl";
 
     background: #00000080;
 
@@ -25,7 +31,7 @@ export component WelcomeOverlay inherits Rectangle {
 
             Rectangle {
                 width: 720px * root.global_scale;
-                height: 390px * root.global_scale;
+                height: 430px * root.global_scale;
                 border-radius: 20px * root.global_scale;
                 background: #1e2128;
                 border-width: 1px * root.global_scale;
@@ -34,19 +40,22 @@ export component WelcomeOverlay inherits Rectangle {
                 drop-shadow-color: #00000088;
 
                 forward-focus: overlay_keys;
+
                 overlay_keys := FocusScope {
                     width: parent.width;
                     height: parent.height;
+
                     key-pressed(event) => {
                         if event.text == Key.Return || event.text == Key.Escape {
                             root.interface_selected(root.selected_interface);
                             root.show_welcome = false;
                             return accept;
                         }
+
                         reject
                     }
                 }
-                
+
                 VerticalLayout {
                     padding: 20px * root.global_scale;
                     spacing: 12px * root.global_scale;
@@ -54,19 +63,21 @@ export component WelcomeOverlay inherits Rectangle {
                     // --- Title ---
                     VerticalLayout {
                         spacing: 2px * root.global_scale;
+
                         Text {
-                            text: "Welcome to LanChGo";
+                            text: Translations.title_welcome;
                             color: white;
-                            font-size: 19px * root.global_scale;
+                            font-size: 19px * root.global_scale * Translations.font_global_scale;
                             font-weight: 700;
                             horizontal-alignment: center;
                         }
+
                         Text {
                             text: root.changed_networks
-                                ? "Your network changed — pick an interface to continue."
-                                : "Pick your network interface to get started.";
+                                ? Translations.network_changed
+                                : Translations.pick_network;
                             color: #666666;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             horizontal-alignment: center;
                         }
                     }
@@ -92,6 +103,7 @@ export component WelcomeOverlay inherits Rectangle {
 
                                 HorizontalLayout {
                                     alignment: center;
+
                                     Rectangle {
                                         width: 26px * root.global_scale;
                                         height: 26px * root.global_scale;
@@ -102,7 +114,7 @@ export component WelcomeOverlay inherits Rectangle {
                                         Text {
                                             text: "⬡";
                                             color: white;
-                                            font-size: 13px * root.global_scale;
+                                            font-size: 13px * root.global_scale * Translations.font_global_scale;
                                             horizontal-alignment: center;
                                             vertical-alignment: center;
                                             width: parent.width;
@@ -114,7 +126,7 @@ export component WelcomeOverlay inherits Rectangle {
                                 Text {
                                     text: iface;
                                     color: white;
-                                    font-size: 11px * root.global_scale;
+                                    font-size: 11px * root.global_scale * Translations.font_global_scale;
                                     horizontal-alignment: center;
                                     wrap: word-wrap;
                                 }
@@ -123,8 +135,27 @@ export component WelcomeOverlay inherits Rectangle {
                             TouchArea {
                                 width: parent.width;
                                 height: parent.height;
-                                clicked => { root.selected_interface = iface; }
+
+                                clicked => {
+                                    root.selected_interface = iface;
+                                }
                             }
+                        }
+                    }
+
+                    // --- Divider ---
+                    Rectangle {
+                        width: parent.width - 10px;
+                        height: 1px * root.global_scale;
+                        background: #2c2f35;
+                    }
+
+                    // --- Language Pick ---
+                    LanguageDropdown {
+                        global_scale: root.global_scale;
+                        selected_language <=> root.selected_language;
+                        selected(code) => {
+                            root.language-changed(code);
                         }
                     }
 
@@ -140,26 +171,28 @@ export component WelcomeOverlay inherits Rectangle {
                         spacing: 10px * root.global_scale;
 
                         Text {
-                            text: "UDP Port";
+                            text: Translations.udp_port;
                             color: root.manual_port_mode ? #cccccc : #444444;
-                            font-size: 13px * root.global_scale;
+                            font-size: 13px * root.global_scale * Translations.font_global_scale;
                             vertical-alignment: center;
                             animate color { duration: 150ms; }
                         }
 
                         Text {
-                            text: root.manual_port_mode ? "" : "(Auto: " + root.ui_port + ")";
+                            text: root.manual_port_mode
+                                ? ""
+                                : Translations.auto_prefix + root.ui_port + ")";
                             color: #444444;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             vertical-alignment: center;
                         }
 
                         Rectangle { horizontal-stretch: 1; }
 
                         Text {
-                            text: "Auto";
+                            text: Translations.auto;
                             color: root.manual_port_mode ? #444444 : white;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             vertical-alignment: center;
                             animate color { duration: 150ms; }
                         }
@@ -176,7 +209,9 @@ export component WelcomeOverlay inherits Rectangle {
                                 height: 18px * root.global_scale;
                                 border-radius: 9px * root.global_scale;
                                 background: white;
-                                x: root.manual_port_mode ? 23px * root.global_scale : 3px * root.global_scale;
+                                x: root.manual_port_mode
+                                    ? 23px * root.global_scale
+                                    : 3px * root.global_scale;
                                 y: 3px * root.global_scale;
                                 animate x { duration: 150ms; }
                             }
@@ -184,20 +219,21 @@ export component WelcomeOverlay inherits Rectangle {
                             TouchArea {
                                 clicked => {
                                     if root.manual_port_mode {
-                                        root.reset_port_to_auto(); // Rust handles setting manual_port_mode = false
+                                        root.reset_port_to_auto();
                                         root.show_welcome = false;
                                     } else {
-                                        root.manual_port_mode = true; // only flip when switching TO manual
+                                        root.manual_port_mode = true;
                                     }
+
                                     root.port_status = "";
                                 }
                             }
                         }
 
                         Text {
-                            text: "Manual";
+                            text: Translations.manual;
                             color: root.manual_port_mode ? white : #444444;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             vertical-alignment: center;
                             animate color { duration: 150ms; }
                         }
@@ -222,11 +258,12 @@ export component WelcomeOverlay inherits Rectangle {
                                 height: parent.height;
                                 x: 8px * root.global_scale;
                                 color: white;
-                                font-size: 13px * root.global_scale;
+                                font-size: 13px * root.global_scale * Translations.font_global_scale;
                                 input-type: number;
                                 vertical-alignment: center;
                                 text: root.typed_port;
                                 enabled: root.manual_port_mode;
+
                                 edited => {
                                     root.typed_port = self.text.to-float();
                                 }
@@ -246,9 +283,9 @@ export component WelcomeOverlay inherits Rectangle {
                             animate background { duration: 150ms; }
 
                             Text {
-                                text: "Apply";
+                                text: Translations.apply;
                                 color: white;
-                                font-size: 12px * root.global_scale;
+                                font-size: 12px * root.global_scale * Translations.font_global_scale;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                                 width: parent.width;
@@ -257,7 +294,10 @@ export component WelcomeOverlay inherits Rectangle {
 
                             apply_area := TouchArea {
                                 enabled: root.manual_port_mode;
-                                clicked => { root.apply_manual_port(root.typed_port); }
+
+                                clicked => {
+                                    root.apply_manual_port(root.typed_port);
+                                }
                             }
                         }
 
@@ -274,9 +314,9 @@ export component WelcomeOverlay inherits Rectangle {
                             animate background { duration: 150ms; }
 
                             Text {
-                                text: "Reset";
+                                text: Translations.reset;
                                 color: white;
-                                font-size: 12px * root.global_scale;
+                                font-size: 12px * root.global_scale * Translations.font_global_scale;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                                 width: parent.width;
@@ -285,17 +325,20 @@ export component WelcomeOverlay inherits Rectangle {
 
                             reset_area := TouchArea {
                                 enabled: root.manual_port_mode;
-                                clicked => { 
+
+                                clicked => {
                                     root.reset_port_to_auto();
                                     root.show_welcome = false;
-                                 }
+                                }
                             }
                         }
 
                         Text {
                             text: root.port_status;
-                            color: root.port_status == "✅ Port available" ? #44cc77 : #ff5555;
-                            font-size: 12px * root.global_scale;
+                            color: root.port_status == "✅ Port available"
+                                ? #44cc77
+                                : #ff5555;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             vertical-alignment: center;
                         }
                     }
@@ -312,9 +355,9 @@ export component WelcomeOverlay inherits Rectangle {
                             animate background { duration: 120ms; }
 
                             Text {
-                                text: "Continue";
+                                text: Translations.continue_button;
                                 color: white;
-                                font-size: 13px * root.global_scale;
+                                font-size: 13px * root.global_scale * Translations.font_global_scale;
                                 font-weight: 600;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
@@ -325,6 +368,7 @@ export component WelcomeOverlay inherits Rectangle {
                             continue_area := TouchArea {
                                 width: parent.width;
                                 height: parent.height;
+
                                 clicked => {
                                     root.interface_selected(root.selected_interface);
                                     root.show_welcome = false;

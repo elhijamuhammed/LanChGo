@@ -1,5 +1,17 @@
 use serde::{Deserialize, Serialize};
-use std::{ collections::HashMap, fs::File, io::{self, BufReader, Read, Write}, net::IpAddr, path::{Path, PathBuf}, sync::{atomic::{AtomicUsize, Ordering}, mpsc}, thread, time::{SystemTime, UNIX_EPOCH}, };
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{self, BufReader, Read, Write},
+    net::IpAddr,
+    path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        mpsc,
+    },
+    thread,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use uuid::Uuid;
 use zip::{write::FileOptions, ZipWriter};
 
@@ -64,8 +76,13 @@ pub enum BuildResult {
 }
 
 pub type OfferRegistry = HashMap<[u8; 16], LocalFileOffer>;
-pub type RemoteWindowsOfferRegistry = HashMap<String, (IpAddr, crate::file_transfer_protocol::FileOffer)>; // for the FOFT
-pub type RemoteMobileOfferRegistry = HashMap<String, (IpAddr, FileOffer)>; // for MFOFT
+
+pub type RemoteWindowsOfferRegistry =
+    HashMap<String, (IpAddr, crate::file_transfer_protocol::FileOffer)>; // for the FOFT
+
+pub type RemoteMobileOfferRegistry =
+    HashMap<String, (IpAddr, FileOffer)>; // for MFOFT
+
 static ACTIVE_BUNDLES: AtomicUsize = AtomicUsize::new(0);
 const MAX_BUNDLES: usize = 2;
 
@@ -78,12 +95,17 @@ pub fn pick_files() -> Option<Vec<PathBuf>> {
 /// Build bytes ready to broadcast: "FOFT" + bincode(FileOffer)
 /// - 1 file  -> returns Ready(packet) immediately
 /// - >1 file -> returns Bundling{rx,...} and the zip happens in a background thread
-pub fn pick_and_build_foft_packet_async(registry: &mut OfferRegistry) -> io::Result<BuildResult> {
+pub fn pick_and_build_foft_packet_async(
+    registry: &mut OfferRegistry,
+) -> io::Result<BuildResult> {
     let paths = pick_files()
         .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "File selection cancelled"))?;
 
     if paths.is_empty() {
-        return Err(io::Error::new(io::ErrorKind::Other, "No file selected"));
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "No file selected",
+        ));
     }
 
     let offer_id: [u8; 16] = *Uuid::new_v4().as_bytes();
@@ -98,6 +120,7 @@ pub fn pick_and_build_foft_packet_async(registry: &mut OfferRegistry) -> io::Res
         if prev >= MAX_BUNDLES {
             // undo reservation
             ACTIVE_BUNDLES.fetch_sub(1, Ordering::SeqCst);
+
             return Err(io::Error::new(
                 io::ErrorKind::Other,
                 format!("Too many bundles running (max {})", MAX_BUNDLES),
@@ -105,7 +128,12 @@ pub fn pick_and_build_foft_packet_async(registry: &mut OfferRegistry) -> io::Res
         }
 
         let (rx, handle) = spawn_zip_bundle_thread(paths, offer_id);
-        Ok(BuildResult::Bundling { offer_id, rx, handle })
+
+        Ok(BuildResult::Bundling {
+            offer_id,
+            rx,
+            handle,
+        })
     }
 }
 
@@ -129,15 +157,7 @@ fn build_foft_packet_single( path: &Path, offer_id: [u8; 16], registry: &mut Off
     let size = meta.len();
 
     // store locally for later TCP transfer
-    registry.insert(
-        offer_id,
-        LocalFileOffer {
-            path: path.to_path_buf(),
-            kind: OfferKind::SingleFile,
-            size,
-            name: name.clone(),
-        },
-    );
+    registry.insert( offer_id, LocalFileOffer { path: path.to_path_buf(), kind: OfferKind::SingleFile, size, name: name.clone(),}, );
 
     let offer = FileOffer {
         offer_id,
@@ -154,19 +174,30 @@ fn build_foft_packet_single( path: &Path, offer_id: [u8; 16], registry: &mut Off
 // NOTE: You can keep this blocking builder if you want,
 // but the async flow does NOT call it.
 #[allow(dead_code)]
-fn build_foft_packet_zip_bundle_with_progress<F: FnMut(u64, u64, &Path)>( paths: &[PathBuf], offer_id: [u8; 16], registry: &mut OfferRegistry, mut on_progress: F, ) -> io::Result<Vec<u8>> {
-    let (packet, local) = build_zip_bundle_packet_no_registry(paths, offer_id, &mut on_progress)?;
+fn build_foft_packet_zip_bundle_with_progress<F: FnMut(u64, u64, &Path)>(
+    paths: &[PathBuf],
+    offer_id: [u8; 16],
+    registry: &mut OfferRegistry,
+    mut on_progress: F,
+) -> io::Result<Vec<u8>> {
+    let (packet, local) =
+        build_zip_bundle_packet_no_registry(paths, offer_id, &mut on_progress)?;
+
     registry.insert(offer_id, local);
+
     Ok(packet)
 }
 
 fn encode_offer_packet(offer: &FileOffer) -> io::Result<Vec<u8>> {
-    let payload = bincode::serde::encode_to_vec(offer, bincode::config::standard())
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+    let payload =
+        bincode::serde::encode_to_vec(offer, bincode::config::standard())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
 
     let mut packet = Vec::with_capacity(4 + payload.len());
+
     packet.extend_from_slice(FOFT_MAGIC);
     packet.extend_from_slice(&payload);
+
     Ok(packet)
 }
 
@@ -178,14 +209,19 @@ pub fn decode_foft(bytes: &[u8]) -> Option<FileOffer> {
     }
 
     let payload = &bytes[4..];
+
     let (offer, _) =
-        bincode::serde::decode_from_slice::<FileOffer, _>(payload, bincode::config::standard())
-            .ok()?;
+        bincode::serde::decode_from_slice::<FileOffer, _>(
+            payload,
+            bincode::config::standard(),
+        )
+        .ok()?;
 
     // reject conflicting protocol versions
     if offer.protocol_version != FILE_PROTOCOL_VERSION {
         return None;
     }
+
     Some(offer)
 }
 
@@ -208,7 +244,7 @@ pub fn human_size(bytes: u64) -> String {
     } else if b < MB {
         format!("{:.1} KB", b / KB)
     } else if b < GB {
-        format!("{:.1} MB", b / MB)
+        format!("{:.1} MB", b / MB)  // ✅
     } else if b < TB {
         format!("{:.1} GB", b / GB)
     } else {
@@ -218,6 +254,7 @@ pub fn human_size(bytes: u64) -> String {
 
 fn make_temp_zip_path(offer_id: &[u8; 16]) -> PathBuf {
     let mut dir = std::env::temp_dir();
+
     dir.push("LanChGo");
     dir.push("offers");
 
@@ -225,7 +262,9 @@ fn make_temp_zip_path(offer_id: &[u8; 16]) -> PathBuf {
     std::fs::create_dir_all(&dir).ok();
 
     let hex: String = offer_id.iter().map(|b| format!("{:02x}", b)).collect();
+
     dir.push(format!("offer_{hex}.zip"));
+
     dir
 }
 
@@ -240,11 +279,11 @@ pub fn cleanup_temp_offers(registry: &mut OfferRegistry) {
                     //     "[FOFT][CLEANUP] failed to delete {}: {}",
                     //     local.path.display(),
                     //     e
-                    // );
                 }
             } else {
-                //println!("[FOFT][CLEANUP] deleted {}", local.path.display());
+                // println!("[FOFT][CLEANUP] deleted {}", local.path.display());
             }
+
             to_remove.push(*id);
         }
     }
@@ -254,22 +293,30 @@ pub fn cleanup_temp_offers(registry: &mut OfferRegistry) {
     }
 }
 
-pub fn make_temp_upload_path(offer_id: &[u8; 16], filename: &str) -> PathBuf {
+pub fn make_temp_upload_path(
+    offer_id: &[u8; 16],
+    filename: &str,
+) -> PathBuf {
     let mut dir = std::env::temp_dir();
+
     dir.push("LanChGo");
     dir.push("uploads");
+
     std::fs::create_dir_all(&dir).ok();
-    
+
     let hex: String = offer_id.iter().map(|b| format!("{:02x}", b)).collect();
+
     dir.push(format!("{hex}_{filename}"));
+
     dir
 }
 
 pub fn cleanup_temp_uploads() {
     let mut dir = std::env::temp_dir();
+
     dir.push("LanChGo");
     dir.push("uploads");
-    
+
     if let Ok(entries) = std::fs::read_dir(&dir) {
         for entry in entries.flatten() {
             let _ = std::fs::remove_file(entry.path());
@@ -277,35 +324,56 @@ pub fn cleanup_temp_uploads() {
     }
 }
 
-pub fn build_unique_download_path(dir: &Path, filename: &str, offer_id_hex: &str) -> PathBuf {
+pub fn build_unique_download_path(
+    dir: &Path,
+    filename: &str,
+    offer_id_hex: &str,
+) -> PathBuf {
     let mut ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
+
     ts += 1;
 
     let short_id: String = offer_id_hex.chars().take(6).collect();
 
     let out = match filename.rsplit_once('.') {
-        Some((stem, ext)) => format!("{stem}_{ts}_{short_id}.{ext}"),
-        None => format!("{filename}_{ts}_{short_id}"),
+        Some((stem, ext)) => {
+            format!("{stem}_{ts}_{short_id}.{ext}")
+        }
+        None => {
+            format!("{filename}_{ts}_{short_id}")
+        }
     };
+
     dir.join(out)
 }
 
 /// Spawns a background thread that does the zip bundling.
-pub fn spawn_zip_bundle_thread( paths: Vec<PathBuf>, offer_id: [u8; 16], ) -> (mpsc::Receiver<BundleEvent>, thread::JoinHandle<()>) {
+pub fn spawn_zip_bundle_thread(
+    paths: Vec<PathBuf>,
+    offer_id: [u8; 16],
+) -> (
+    mpsc::Receiver<BundleEvent>,
+    thread::JoinHandle<()>,
+) {
     let (tx, rx) = mpsc::channel::<BundleEvent>();
+
     let handle = thread::spawn(move || {
         let result: io::Result<(Vec<u8>, LocalFileOffer)> =
-            build_zip_bundle_packet_no_registry(&paths, offer_id, |done, total, path| {
-                let _ = tx.send(BundleEvent::Progress {
-                    offer_id,
-                    done,
-                    total,
-                    current: path.to_path_buf(),
-                });
-            });
+            build_zip_bundle_packet_no_registry(
+                &paths,
+                offer_id,
+                |done, total, path| {
+                    let _ = tx.send(BundleEvent::Progress {
+                        offer_id,
+                        done,
+                        total,
+                        current: path.to_path_buf(),
+                    });
+                },
+            );
 
         match result {
             Ok((packet, local)) => {
@@ -315,6 +383,7 @@ pub fn spawn_zip_bundle_thread( paths: Vec<PathBuf>, offer_id: [u8; 16], ) -> (m
                     local,
                 });
             }
+
             Err(e) => {
                 let _ = tx.send(BundleEvent::Error {
                     offer_id,
@@ -323,23 +392,36 @@ pub fn spawn_zip_bundle_thread( paths: Vec<PathBuf>, offer_id: [u8; 16], ) -> (m
             }
         }
     });
+
     (rx, handle)
 }
 
-fn build_zip_bundle_packet_no_registry<F: FnMut(u64, u64, &Path)>( paths: &[PathBuf], offer_id: [u8; 16], mut on_progress: F, ) -> io::Result<(Vec<u8>, LocalFileOffer)> {
+fn build_zip_bundle_packet_no_registry<
+    F: FnMut(u64, u64, &Path),
+>(
+    paths: &[PathBuf],
+    offer_id: [u8; 16],
+    mut on_progress: F,
+) -> io::Result<(Vec<u8>, LocalFileOffer)> {
     let mut total_bytes: u64 = 0;
-    let mut infos: Vec<(PathBuf, u64)> = Vec::with_capacity(paths.len());
+
+    let mut infos: Vec<(PathBuf, u64)> =
+        Vec::with_capacity(paths.len());
 
     for path in paths {
         let meta = std::fs::metadata(path)?;
+
         if meta.is_dir() {
             return Err(io::Error::new(
                 io::ErrorKind::Unsupported,
                 "Folder inside multi-select not supported yet",
             ));
         }
+
         let sz = meta.len();
+
         total_bytes = total_bytes.saturating_add(sz);
+
         infos.push((path.clone(), sz));
     }
 
@@ -347,33 +429,69 @@ fn build_zip_bundle_packet_no_registry<F: FnMut(u64, u64, &Path)>( paths: &[Path
     let zip_path = make_temp_zip_path(&offer_id);
 
     let file = File::create(&zip_path)?;
+
     let mut zip = ZipWriter::new(file);
-    let options: FileOptions<'_, ()> = FileOptions::default();
+
+    let options: FileOptions<'_, ()> =
+        FileOptions::default();
 
     let mut done_bytes: u64 = 0;
+
     let mut buf = vec![0u8; 256 * 1024];
 
     for (path, _file_total) in infos {
-        let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "unknown".to_string());
-        zip.start_file(name, options).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+
+        zip.start_file(name, options)
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    e.to_string(),
+                )
+            })?;
+
         let f = File::open(&path)?;
+
         let mut r = BufReader::new(f);
+
         loop {
             let n = r.read(&mut buf)?;
+
             if n == 0 {
                 break;
             }
+
             zip.write_all(&buf[..n])?;
+
             done_bytes += n as u64;
-            on_progress(done_bytes, total_bytes, &path);
+
+            on_progress(
+                done_bytes,
+                total_bytes,
+                &path,
+            );
         }
     }
 
     zip.finish()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                e.to_string(),
+            )
+        })?;
 
-    let zip_size = std::fs::metadata(&zip_path)?.len();
-    let name = format!("bundle_{}.zip", offer_id_to_hex(&offer_id));
+    let zip_size =
+        std::fs::metadata(&zip_path)?.len();
+
+    let name =
+        format!(
+            "bundle_{}.zip",
+            offer_id_to_hex(&offer_id)
+        );
 
     let local = LocalFileOffer {
         path: zip_path,
@@ -392,6 +510,7 @@ fn build_zip_bundle_packet_no_registry<F: FnMut(u64, u64, &Path)>( paths: &[Path
     };
 
     let packet = encode_offer_packet(&offer)?;
+
     Ok((packet, local))
 }
 
@@ -399,14 +518,23 @@ pub fn bundle_slot_release() {
     ACTIVE_BUNDLES.fetch_sub(1, Ordering::SeqCst);
 }
 
-pub fn hex_to_offer_id(hex: &str) -> Option<[u8; 16]> {
+pub fn hex_to_offer_id(
+    hex: &str,
+) -> Option<[u8; 16]> {
     if hex.len() != 32 {
         return None;
     }
+
     let mut out = [0u8; 16];
+
     for i in 0..16 {
-        out[i] = u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16).ok()?;
+        out[i] = u8::from_str_radix(
+            &hex[i * 2..i * 2 + 2],
+            16,
+        )
+        .ok()?;
     }
+
     Some(out)
 }
 
@@ -418,17 +546,25 @@ pub fn hex_to_offer_id(hex: &str) -> Option<[u8; 16]> {
 struct MobileFileOfferJson {
     #[serde(rename = "offer_id")]
     offer_id_hex: String,
+
     name: String,
+
     size: u64,
+
     kind: String,
+
     #[serde(rename = "protocol_version")]
     protocol_version: u8,
+
     #[serde(rename = "tcp_port")]
     tcp_port: u16,
 }
 
-pub fn decode_mfoft(payload: &[u8]) -> Option<(FileOffer, String)> {
-    let m: MobileFileOfferJson = serde_json::from_slice(payload).ok()?;
+pub fn decode_mfoft(
+    payload: &[u8],
+) -> Option<(FileOffer, String)> {
+    let m: MobileFileOfferJson =
+        serde_json::from_slice(payload).ok()?;
 
     // version guard
     if m.protocol_version != FILE_PROTOCOL_VERSION {
@@ -440,7 +576,8 @@ pub fn decode_mfoft(payload: &[u8]) -> Option<(FileOffer, String)> {
         return None;
     }
 
-    let offer_id = hex_to_offer_id(&m.offer_id_hex)?;
+    let offer_id =
+        hex_to_offer_id(&m.offer_id_hex)?;
 
     let offer = FileOffer {
         offer_id,
@@ -455,33 +592,56 @@ pub fn decode_mfoft(payload: &[u8]) -> Option<(FileOffer, String)> {
 }
 
 pub fn register_remote_offer(
-    remote_offers: &std::sync::Arc<std::sync::Mutex<RemoteMobileOfferRegistry>>,
+    remote_offers: &std::sync::Arc<
+        std::sync::Mutex<
+            RemoteMobileOfferRegistry,
+        >,
+    >,
     sender_ip: std::net::IpAddr,
     id_hex: String,
     offer: crate::file_transfer_protocol::FileOffer,
 ) -> bool {
-    let mut reg = remote_offers.lock().unwrap();
+    let mut reg =
+        remote_offers.lock().unwrap();
+
     if reg.contains_key(&id_hex) {
         false // duplicate
     } else {
-        reg.insert(id_hex, (sender_ip, offer));
+        reg.insert(
+            id_hex,
+            (sender_ip, offer),
+        );
+
         true // new
     }
 }
 
 // helper for both mobile and windows
-pub fn truncate_name(name: &str, max_chars: usize) -> String {
+pub fn truncate_name(
+    name: &str,
+    max_chars: usize,
+) -> String {
     if name.chars().count() <= max_chars {
         return name.to_string();
     }
-    let mut s: String = name.chars().take(max_chars.saturating_sub(1)).collect();
+
+    let mut s: String = name
+        .chars()
+        .take(max_chars.saturating_sub(1))
+        .collect();
+
     s.push('…');
+
     s
 }
 
-///build bytes ready to broadcast: "MFOFT" + utf8(json)
-pub fn encode_mfoft_packet(offer: &FileOffer) -> io::Result<Vec<u8>> {
-    let offer_id_hex = offer_id_to_hex(&offer.offer_id);
+/// build bytes ready to broadcast: "MFOFT" + utf8(json)
+pub fn encode_mfoft_packet(
+    offer: &FileOffer,
+) -> io::Result<Vec<u8>> {
+    let offer_id_hex =
+        offer_id_to_hex(&offer.offer_id);
+
     let mob = MobileFileOfferJson {
         offer_id_hex,
         name: offer.name.clone(),
@@ -490,9 +650,48 @@ pub fn encode_mfoft_packet(offer: &FileOffer) -> io::Result<Vec<u8>> {
         protocol_version: offer.protocol_version,
         tcp_port: offer.tcp_port,
     };
-    let payload = serde_json::to_vec(&mob).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
-    let mut packet = Vec::with_capacity(MFOFT_MAGIC.len() + payload.len());
+
+    let payload =
+        serde_json::to_vec(&mob)
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    e.to_string(),
+                )
+            })?;
+
+    let mut packet =
+        Vec::with_capacity(
+            MFOFT_MAGIC.len() + payload.len(),
+        );
+
     packet.extend_from_slice(MFOFT_MAGIC); // MFOFT
     packet.extend_from_slice(&payload);    // JSON
+
     Ok(packet)
 }
+
+// ─────────────────────────────────────────────────────────────
+// Resend helpers
+// ─────────────────────────────────────────────────────────────
+
+/// Recreates a network FileOffer from an existing locally-created offer.
+///
+/// The offer must already exist in the local OfferRegistry.
+/// This does NOT create a new offer ID and does NOT rebuild the file/ZIP.
+/// It simply uses the existing local offer information to create a
+/// FileOffer that can be broadcast again.
+pub fn repoint_file_offer(registry: &OfferRegistry, offer_id: [u8; 16],) -> Option<FileOffer> {
+    let local = registry.get(&offer_id)?;
+
+    Some(FileOffer {
+        offer_id,
+        name: local.name.clone(),
+        size: local.size,
+        kind: local.kind.clone(),
+        protocol_version: FILE_PROTOCOL_VERSION,
+        tcp_port: DEFAULT_TCP_PORT,
+    })
+}
+
+pub fn encode_foft_packet(offer: &FileOffer) -> std::io::Result<Vec<u8>> { encode_offer_packet(offer) }

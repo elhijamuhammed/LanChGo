@@ -16,13 +16,14 @@ mod web_app_file_transfer;
 mod tray;
 #[allow(non_snake_case)]
 mod Tools;
+mod translation_controller;
 
 use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
 use std::error::Error;
-use std::{io, io::{BufRead, BufReader}};
-use std::io::{ErrorKind, Write};
-use std::net::{TcpStream, UdpSocket};
+use std::{io, /*io::{BufRead, BufReader}*/};
+use std::io::{ErrorKind, /*Write*/};
+use std::net::{/*TcpStream,*/ UdpSocket};
 use std::rc::Rc;
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex };
 use std::thread::{self, sleep};
@@ -33,14 +34,13 @@ use crate::classes::{BroadcastState, Config};
 use crate::phone_protocol::build_MANCH;
 use crate::file_transfer_protocol::{ RemoteWindowsOfferRegistry, RemoteMobileOfferRegistry};
 use crate::udp_receiver::start_udp_receiver;
-use crate::Tools::tools_handshake::HandshakeResult;
-use crate::Tools::tools_handshake::perform_handshake;
-use crate::Tools::tools_action_translator::ToolsActionTranslator;
+// use crate::Tools::tools_handshake::HandshakeResult;
+// use crate::Tools::tools_handshake::perform_handshake;
+// use crate::Tools::tools_action_translator::ToolsActionTranslator;
 use crate::main_helpers::{
-    bind_single_port_socket, clear_chatbox, cleanup_file_offers, collect_interfaces,
+    bind_single_port_socket, clear_chatbox, cleanup_file_offers, collect_interfaces, build_message_item,
     force_switch_to_public, get_broadcast_address, get_broadcast_for_name, get_gateway_for_adapter,
-    load_or_create_config, match_getifadd_ipconfig, save_config, set_channel_mode_only,
-    update_ui_PIN, update_ui_qr_only };
+    load_or_create_config, match_getifadd_ipconfig, save_config, set_channel_mode_only, update_ui_PIN, update_ui_qr_only };
 slint::include_modules!();
 
 //static APP_HANDLE: OnceLock<slint::Weak<AppWindow>> = OnceLock::new();
@@ -61,7 +61,6 @@ fn broadcast_the_msg(sock: &UdpSocket, state: &BroadcastState, msg: &[u8]) -> io
 // ===================== main =====================
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     let state = Arc::new(BroadcastState {
         broadcast_address: Mutex::new(String::new()),
         port: Mutex::new(3000),
@@ -98,7 +97,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     app.set_interfaces(ModelRc::new(iface_model.clone()));
 
     // -------- chat model
-    let model = Rc::new(VecModel::from(Vec::<slint::SharedString>::new()));
+    let model = Rc::new(VecModel::from(Vec::<MessageItem>::new()));
     app.set_messages(ModelRc::new(model.clone()));
     let model_for_clear = model.clone();
 
@@ -229,11 +228,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     {
         let model = model.clone();
         app.on_append_message(move |msg: slint::SharedString| {
-            model.push(msg.clone());
+            let item = build_message_item(&msg);
+
+            model.push(item);
             if model.row_count() > 10 {
                 model.remove(0);
             }
-            // 🔥 send to web clients
+
+            // send to web clients (unchanged — still uses the raw string)
             let payload = serde_json::json!({ "type": "chat", "sender": "app", "text": msg.to_string()});
             web_app::broadcast_to_web_clients(payload.to_string());
         });
@@ -242,8 +244,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // ===================== config creation + download folder =====================
 
     let default_iface_name = match_getifadd_ipconfig(&state);
-    let default_broadcast = get_broadcast_for_name(&interfaces, &default_iface_name)
-        .unwrap_or_else(|| state.get_broadcast_address());
+    let default_broadcast = get_broadcast_for_name(&interfaces, &default_iface_name).unwrap_or_else(|| state.get_broadcast_address());
     let default_gateway = get_gateway_for_adapter(&default_iface_name);
 
     let default_download_folder = dirs::download_dir()
@@ -259,11 +260,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         last_gateway: default_gateway.clone(),
         save_to_folder: default_download_folder,
         port: None,
-        ui_scale: None
+        ui_scale: None,
+        language: "ar".to_string(),
     };
 
     let (config_loaded, first_run) = load_or_create_config(&default_config, &app);
     let config = Arc::new(Mutex::new(config_loaded));
+    
+    {
+        let lang = config.lock().unwrap().language.clone();
+        translation_controller::main_controller(&app, &lang);
+        app.set_selected_language(lang.into());
+    }
 
     // ensure folder exists + push to UI
     {
@@ -792,28 +800,28 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
     }
 
-    // files button (broadcast FOFT)
+    // files button (broadcast FOFT & MFOFT)
     {
         let st = Arc::clone(&state);
         let s = Arc::clone(&sock);
         let weak = app.as_weak();
         let offer_registry = Arc::clone(&offer_registry);
 
-        // ✅ guard lives next to the handler so it persists across clicks
+        // guard lives next to the handler so it persists across clicks
         let is_picking_files = Arc::new(AtomicBool::new(false));
 
         app.on_pick_files_send(move || {
             let Some(app) = weak.upgrade() else { return; };
-            // 🚫 block re-entry (prevents 2 dialogs / 2 bundle starts)
+            // block re-entry (prevents 2 dialogs / 2 bundle starts)
             if is_picking_files.swap(true, Ordering::SeqCst) {
                 return;
             }
-            // 🔁 call the async builder (opens dialog; returns Ready or Bundling)
+            // call the async builder (opens dialog; returns Ready or Bundling)
             let build = {
                 let mut reg = offer_registry.lock().unwrap();
                 file_transfer_protocol::pick_and_build_foft_packet_async(&mut reg)
             };
-            // ✅ IMPORTANT: dialog is closed now → allow clicking Files again
+            // IMPORTANT: dialog is closed now → allow clicking Files again
             is_picking_files.store(false, Ordering::SeqCst);
 
             let build = match build {
@@ -991,6 +999,74 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
     }
 
+    // resend files button (rebroadcast FOFT & MFOFT)
+    {
+        let st = Arc::clone(&state);
+        let s = Arc::clone(&sock);
+        let weak = app.as_weak();
+        let offer_registry = Arc::clone(&offer_registry);
+
+        app.on_resend_file_offer(move |offer_id| {
+            // Convert Slint string back to [u8; 16]
+            let Some(offer_id) =
+                file_transfer_protocol::hex_to_offer_id(offer_id.as_str())
+            else {
+                // println!("invalid offer id");
+                return; };
+
+            // Find the existing locally-created offer
+            let offer = {
+                let registry = offer_registry.lock().unwrap();
+                file_transfer_protocol::repoint_file_offer( &registry, offer_id,)
+            };
+            let Some(offer) = offer else {
+                // println!("offer not found in local registry");
+                return;
+            };
+            // println!("resending: {}", offer.name);
+
+            // ─────────────────────────────────────────────
+            // FOFT → Windows
+            // ─────────────────────────────────────────────
+
+            let foft_packet =
+                match file_transfer_protocol::encode_foft_packet(&offer) {
+                    Ok(packet) => packet,
+                    Err(e) => {
+                        // println!("failed to encode FOFT: {e}");
+                        return;
+                    }
+                };
+
+            if let Err(e) = broadcast_the_msg( &s, &st, &foft_packet, ) {
+                // println!("failed to broadcast FOFT: {e}");
+                return;
+            }
+            //println!("FOFT resent");
+            // ─────────────────────────────────────────────
+            // MFOFT → Android
+            // ─────────────────────────────────────────────
+
+            match file_transfer_protocol::encode_mfoft_packet(&offer) {
+                Ok(mfoft_packet) => {
+                    if let Err(e) = broadcast_the_msg( &s, &st, &mfoft_packet, ) {
+                        // println!("failed to broadcast MFOFT: {e}");
+                    } else { /* println!("MFOFT resent"); */  }
+                }
+                Err(e) => { /* println!("failed to encode MFOFT: {e}"); */ }
+            }
+
+            // ─────────────────────────────────────────────
+            // Web client
+            // ─────────────────────────────────────────────
+            crate::web_app_file_transfer::notify_web_file_offer( &offer.offer_id, &offer.name, offer.size, );
+            // ─────────────────────────────────────────────
+            // UI feedback
+            // ─────────────────────────────────────────────
+            if let Some(app) = weak.upgrade() { app.invoke_show_temp_message( "📤 File offer resent".into(),);}
+        });
+    }
+
     // Save to… button
     {
         let weak = app.as_weak();
@@ -1001,20 +1077,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             if let Some(folder) = rfd::FileDialog::new().pick_folder() {
                 if let Err(e) = std::fs::create_dir_all(&folder) {
-                    app.invoke_show_temp_message(
-                        format!("❌ Failed to create folder: {}", e).into(),
-                    );
+                    app.invoke_show_temp_message( format!("❌ Failed to create folder: {}", e).into(),);
                     return;
                 }
-
                 let folder_str = folder.display().to_string();
-
                 {
                     let mut cfg = config.lock().unwrap();
                     cfg.save_to_folder = folder_str.clone();
                     save_config(&cfg);
                 }
-
                 app.set_download_folder(folder_str.into());
                 app.invoke_show_temp_message("📁 Download folder updated".into());
             }
@@ -1309,151 +1380,166 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
     }
     // on selecting a tool to connect to
+    // {
+    //     let tool_devices_model = tool_devices_model.clone();
+    //     let weak = app.as_weak();
+
+    //     // Shared stream for disconnect — lives outside the thread
+    //     let active_stream: Arc<Mutex<Option<TcpStream>>> = Arc::new(Mutex::new(None));
+    //     let active_stream_for_disconnect = active_stream.clone();
+    //     let weak_for_disconnect = app.as_weak();
+
+    //     // Wire disconnect button
+    //     app.on_disconnect_clicked(move || {
+    //         if let Ok(mut guard) = active_stream_for_disconnect.lock() {
+    //             if let Some(ref mut stream) = *guard {
+    //                 let _ = stream.write_all(b"DISCONNECT\n");
+    //                 let _ = stream.shutdown(std::net::Shutdown::Both);
+    //                 //println!("[TOOLS] Sent DISCONNECT and shut down stream");
+    //             }
+    //             *guard = None;
+    //         }
+
+    //         if let Some(app) = weak_for_disconnect.upgrade() {
+    //             app.set_connected_device_id("".into());
+    //         }
+    //     });
+
+    //     app.on_tool_device_selected(move |selected_id| {
+    //         let mut selected_device = None;
+
+    //         for i in 0..tool_devices_model.row_count() {
+    //             if let Some(row) = tool_devices_model.row_data(i) {
+    //                 if row.id == selected_id {
+    //                     selected_device = Some(row);
+    //                     break;
+    //                 }
+    //             }
+    //         }
+
+    //         let Some(device) = selected_device else {
+    //             //println!("[TOOLS] Device not found: {}", selected_id);
+    //             return;
+    //         };
+
+    //         let addr = device.ip.to_string();
+    //         let device_id_for_ui = device.id.to_string();
+    //         let weak_thread = weak.clone();
+    //         let active_stream_thread = active_stream.clone();
+    //         let weak_done = weak.clone();
+
+    //         //println!("[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction);
+    //         let _tool = device.tool.to_string();
+    //         let _direction = device.direction.to_string();
+
+    //         std::thread::spawn(move || {
+    //             match TcpStream::connect(&addr) {
+    //                 Ok(mut stream) => {
+    //                     let _ = stream.set_nodelay(true);
+    //                     //println!("[TOOLS] TCP connected to {}", addr);
+
+    //                     // ── Handshake before anything else ─────────────────────
+    //                     // match perform_handshake(&mut stream) {
+    //                     //     HandshakeResult::Ok { device_id, secret: _ } => {
+    //                     //         //println!("[TOOLS] Session established for {}", device_id);
+    //                     //         // ── Hide window to tray on successful connection ─
+    //                     //         let weak_hide = weak_thread.clone();
+    //                     //         let _ = slint::invoke_from_event_loop(move || {
+    //                     //             if let Some(app) = weak_hide.upgrade() {
+    //                     //                 app.window().set_minimized(true);
+    //                     //             }
+    //                     //         });
+    //                     //     }
+    //                     //     HandshakeResult::Rejected => {
+    //                     //         //println!("[TOOLS] Handshake rejected — dropping connection");
+    //                     //         return;
+    //                     //     }
+    //                     // }
+
+    //                     // ── Store stream clone for disconnect ───────────────────
+    //                     if let Ok(clone) = stream.try_clone() {
+    //                         let mut guard = active_stream_thread.lock().unwrap();
+    //                         *guard = Some(clone);
+    //                     }
+
+    //                     // ── Update UI: show as connected ────────────────────────
+    //                     let id_clone = device_id_for_ui.clone();
+    //                     let _ = slint::invoke_from_event_loop(move || {
+    //                         if let Some(app) = weak_thread.upgrade() {
+    //                             app.set_connected_device_id(id_clone.into());
+    //                         }
+    //                     });
+
+    //                     // ── Now accept packets ──────────────────────────────────
+    //                     // let reader_stream = match stream.try_clone() {
+    //                     //     Ok(s) => s,
+    //                     //     Err(e) => {
+    //                     //         //println!("[TOOLS] Failed to clone stream: {}", e);
+    //                     //         return;
+    //                     //     }
+    //                     // };
+
+    //                     //let mut reader = BufReader::new(reader_stream);
+    //                     let mut translator = ToolsActionTranslator::new();
+
+    //                     // loop {
+    //                     //     let mut line = String::new();
+
+    //                     //     match reader.read_line(&mut line) {
+    //                     //         Ok(0) => {
+    //                     //             //println!("[TOOLS] Remote input disconnected");
+    //                     //             translator.release_all();
+    //                     //             break;
+    //                     //         }
+    //                     //         Ok(_) => {
+    //                     //             let line = line.trim();
+    //                     //             if line.is_empty() { continue; }
+    //                     //             //println!("[TOOLS] Packet from phone: {}", line);
+    //                     //             translator.handle_packet(line);
+    //                     //         }
+    //                     //         Err(e) => {
+    //                     //             println!("[TOOLS] TCP read error: {}", e);
+    //                     //             translator.release_all();
+    //                     //             break;
+    //                     //         }
+    //                     //     }
+    //                     // }
+
+    //                     // ── Clean up on disconnect ──────────────────────────────
+    //                     {
+    //                         let mut guard = active_stream_thread.lock().unwrap();
+    //                         *guard = None;
+    //                     }
+
+    //                     // ── Show window again after disconnect ──────────────────
+    //                     let _ = slint::invoke_from_event_loop(move || {
+    //                         if let Some(app) = weak_done.upgrade() {
+    //                             app.window().set_minimized(false);
+    //                             app.window().show().unwrap();
+    //                             app.set_connected_device_id("".into());
+    //                         }
+    //                     });
+    //                 }
+    //                 // Err(e) => {
+    //                 //     //println!("[TOOLS] TCP failed to connect to {}: {}", addr, e);
+    //                 // }
+    //             }
+    //         });
+    //     });
+    // }
+
     {
-        let tool_devices_model = tool_devices_model.clone();
         let weak = app.as_weak();
+        let config = Arc::clone(&config);
 
-        // Shared stream for disconnect — lives outside the thread
-        let active_stream: Arc<Mutex<Option<TcpStream>>> = Arc::new(Mutex::new(None));
-        let active_stream_for_disconnect = active_stream.clone();
-        let weak_for_disconnect = app.as_weak();
+        app.on_language_changed(move |language| {
+            if let Some(app) = weak.upgrade() {
+                translation_controller::main_controller(&app, &language);
 
-        // Wire disconnect button
-        app.on_disconnect_clicked(move || {
-            if let Ok(mut guard) = active_stream_for_disconnect.lock() {
-                if let Some(ref mut stream) = *guard {
-                    let _ = stream.write_all(b"DISCONNECT\n");
-                    let _ = stream.shutdown(std::net::Shutdown::Both);
-                    //println!("[TOOLS] Sent DISCONNECT and shut down stream");
-                }
-                *guard = None;
+                let mut cfg = config.lock().unwrap();
+                cfg.language = language.to_string();
+                save_config(&cfg);
             }
-
-            if let Some(app) = weak_for_disconnect.upgrade() {
-                app.set_connected_device_id("".into());
-            }
-        });
-
-        app.on_tool_device_selected(move |selected_id| {
-            let mut selected_device = None;
-
-            for i in 0..tool_devices_model.row_count() {
-                if let Some(row) = tool_devices_model.row_data(i) {
-                    if row.id == selected_id {
-                        selected_device = Some(row);
-                        break;
-                    }
-                }
-            }
-
-            let Some(device) = selected_device else {
-                //println!("[TOOLS] Device not found: {}", selected_id);
-                return;
-            };
-
-            let addr = device.ip.to_string();
-            let device_id_for_ui = device.id.to_string();
-            let weak_thread = weak.clone();
-            let active_stream_thread = active_stream.clone();
-            let weak_done = weak.clone();
-
-            //println!("[TOOLS] Connecting TCP to {} ({}, tool: {}, direction: {})", addr, device.name, device.tool, device.direction);
-            let _tool = device.tool.to_string();
-            let _direction = device.direction.to_string();
-
-            std::thread::spawn(move || {
-                match TcpStream::connect(&addr) {
-                    Ok(mut stream) => {
-                        let _ = stream.set_nodelay(true);
-                        //println!("[TOOLS] TCP connected to {}", addr);
-
-                        // ── Handshake before anything else ─────────────────────
-                        match perform_handshake(&mut stream) {
-                            HandshakeResult::Ok { device_id, secret: _ } => {
-                                //println!("[TOOLS] Session established for {}", device_id);
-                                // ── Hide window to tray on successful connection ─
-                                let weak_hide = weak_thread.clone();
-                                let _ = slint::invoke_from_event_loop(move || {
-                                    if let Some(app) = weak_hide.upgrade() {
-                                        app.window().set_minimized(true);
-                                    }
-                                });
-                            }
-                            HandshakeResult::Rejected => {
-                                //println!("[TOOLS] Handshake rejected — dropping connection");
-                                return;
-                            }
-                        }
-
-                        // ── Store stream clone for disconnect ───────────────────
-                        if let Ok(clone) = stream.try_clone() {
-                            let mut guard = active_stream_thread.lock().unwrap();
-                            *guard = Some(clone);
-                        }
-
-                        // ── Update UI: show as connected ────────────────────────
-                        let id_clone = device_id_for_ui.clone();
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(app) = weak_thread.upgrade() {
-                                app.set_connected_device_id(id_clone.into());
-                            }
-                        });
-
-                        // ── Now accept packets ──────────────────────────────────
-                        let reader_stream = match stream.try_clone() {
-                            Ok(s) => s,
-                            Err(e) => {
-                                //println!("[TOOLS] Failed to clone stream: {}", e);
-                                return;
-                            }
-                        };
-
-                        let mut reader = BufReader::new(reader_stream);
-                        let mut translator = ToolsActionTranslator::new();
-
-                        loop {
-                            let mut line = String::new();
-
-                            match reader.read_line(&mut line) {
-                                Ok(0) => {
-                                    //println!("[TOOLS] Remote input disconnected");
-                                    translator.release_all();
-                                    break;
-                                }
-                                Ok(_) => {
-                                    let line = line.trim();
-                                    if line.is_empty() { continue; }
-                                    //println!("[TOOLS] Packet from phone: {}", line);
-                                    translator.handle_packet(line);
-                                }
-                                Err(e) => {
-                                    println!("[TOOLS] TCP read error: {}", e);
-                                    translator.release_all();
-                                    break;
-                                }
-                            }
-                        }
-
-                        // ── Clean up on disconnect ──────────────────────────────
-                        {
-                            let mut guard = active_stream_thread.lock().unwrap();
-                            *guard = None;
-                        }
-
-                        // ── Show window again after disconnect ──────────────────
-                        let _ = slint::invoke_from_event_loop(move || {
-                            if let Some(app) = weak_done.upgrade() {
-                                app.window().set_minimized(false);
-                                app.window().show().unwrap();
-                                app.set_connected_device_id("".into());
-                            }
-                        });
-                    }
-                    Err(e) => {
-                        //println!("[TOOLS] TCP failed to connect to {}: {}", addr, e);
-                    }
-                }
-            });
         });
     }
 

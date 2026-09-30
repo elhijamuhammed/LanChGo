@@ -1,11 +1,18 @@
 // components/FileTransferPanel.slint
 import { VerticalBox, HorizontalBox, ListView } from "std-widgets.slint";
 import { FileOfferItem } from "types.slint";
+import { Translations } from "translations.slint";
+import { ActionButton } from "ActionButtonsFileTransferPanel.slint";
 
 export component FileTransferPanel inherits Rectangle {
+
     // -------- Data --------
     in-out property <[FileOfferItem]> file_offer;
     in-out property <string> download_folder;
+
+    // -------- RTL / LTR --------
+    property <bool> rtl: Translations.direction == "rtl";
+    pure function with_icon(icon: string, label: string) -> string {return root.rtl ? label + " " + icon : icon + " " + label;}
 
     // -------- Bundling Progress ----------
     // (bottom status bar)
@@ -24,13 +31,14 @@ export component FileTransferPanel inherits Rectangle {
     callback pick_download_folder();
     callback open_download_folder();
     callback download_offer(string);
+    callback resend_file_offer(string);
     callback clear_offers();
 
     // -------- Global scale --------
     in-out property <float> global_scale;
 
     // -------- Layout / styling --------
-    width: 260px * root.global_scale;
+    width: 280px * root.global_scale;
     vertical-stretch: 1;
     background: #1a1d23;
     border-width: 1px * root.global_scale;
@@ -48,36 +56,25 @@ export component FileTransferPanel inherits Rectangle {
             spacing: 8px * root.global_scale;
 
             Text {
-                text: "📦 File Transfers";
+                text: root.with_icon("📦", Translations.title_file_transfer);
                 color: white;
-                font-size: 16px * root.global_scale;
+                font-size: 16px * root.global_scale * Translations.font_global_scale;
                 horizontal-stretch: 1;
             }
 
-            Rectangle {
+            // ----- Clear -----
+            ActionButton {
                 width: 70px * root.global_scale;
-                height: 24px * root.global_scale;
-                border-radius: 7px * root.global_scale;
-                opacity: file_offer.length > 0 ? 1 : 0.45;
-                background: clear_area.has-hover ? #ff5a5a : #d64545;
-
-                Text {
-                    text: "🧹 Clear";
-                    color: white;
-                    font-size: 11px * root.global_scale;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    width: parent.width;
-                    height: parent.height;
-                }
-
-                clear_area := TouchArea {
-                    width: parent.width;
-                    height: parent.height;
-                    clicked => {
-                        if (file_offer.length > 0) { clear_offers(); }
-                    }
-                }
+                label: root.with_icon("🧹", Translations.clear_button);
+                tooltip: Translations.tooltip_clear_files_panel;
+                base_color: #d64545;
+                hover_color: #ff5a5a;
+                button_height: 24px;
+                button_radius: 7px;
+                label_size: 11px;
+                active: file_offer.length > 0;
+                global_scale: root.global_scale;
+                clicked => { clear_offers(); }
             }
         }
 
@@ -91,76 +88,40 @@ export component FileTransferPanel inherits Rectangle {
         HorizontalBox {
             spacing: 8px * root.global_scale;
 
-            Rectangle {
+            // ----- Send files -----
+            ActionButton {
                 horizontal-stretch: 1;
-                height: 32px * root.global_scale;
-                border-radius: 8px * root.global_scale;
-                background: files_area.has-hover ? #2b7bff : #1e5fd6;
-
-                Text {
-                    text: "📄 Files";
-                    color: white;
-                    font-size: 13px * root.global_scale;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    width: parent.width;
-                    height: parent.height;
-                }
-
-                files_area := TouchArea {
-                    width: parent.width;
-                    height: parent.height;
-                    clicked => pick_files();
-                }
+                label: root.with_icon("📄", Translations.files_button);
+                tooltip: Translations.tooltip_send_file;
+                base_color: #1e5fd6;
+                hover_color: #2b7bff;
+                global_scale: root.global_scale;
+                clicked => { pick_files(); }
             }
 
-            Rectangle {
+            // ----- Save location -----
+            ActionButton {
                 horizontal-stretch: 1;
-                height: 32px * root.global_scale;
-                border-radius: 6px * root.global_scale;
-                background: save_area.has-hover ? #ffb347 : #d9942f;
-
-                Text {
-                    text: "💾 Save to…";
-                    color: #1a1a1a;
-                    font-size: 13px * root.global_scale;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    width: parent.width;
-                    height: parent.height;
-                }
-
-                save_area := TouchArea {
-                    width: parent.width;
-                    height: parent.height;
-                    clicked => pick_download_folder();
-                }
+                label: root.with_icon("💾", Translations.save_button);
+                tooltip: Translations.tooltip_save_to;
+                base_color: #d9942f;
+                hover_color: #ffb347;
+                text_color: #1a1a1a;
+                button_radius: 6px;
+                global_scale: root.global_scale;
+                clicked => { pick_download_folder(); }
             }
 
-            Rectangle {
+            // ----- Open download folder -----
+            ActionButton {
                 horizontal-stretch: 1;
-                height: 32px * root.global_scale;
-                border-radius: 8px * root.global_scale;
-                opacity: download_folder != "" ? 1 : 0.45;
-                background: open_area.has-hover ? #2a2f38 : #20242c;
-
-                Text {
-                    text: "📂 Open";
-                    color: white;
-                    font-size: 13px * root.global_scale;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    width: parent.width;
-                    height: parent.height;
-                }
-
-                open_area := TouchArea {
-                    width: parent.width;
-                    height: parent.height;
-                    clicked => {
-                        if (download_folder != "") { open_download_folder(); }
-                    }
-                }
+                label: root.with_icon("📂", Translations.open_button);
+                tooltip: Translations.tooltip_open_download;
+                base_color: #20242c;
+                hover_color: #2a2f38;
+                active: download_folder != "";
+                global_scale: root.global_scale;
+                clicked => { open_download_folder(); }
             }
         }
 
@@ -185,9 +146,9 @@ export component FileTransferPanel inherits Rectangle {
 
                     Text {
                         visible: file_offer.length == 0;
-                        text: "No offers yet";
+                        text: Translations.no_offers;
                         color: #9aa3ad;
-                        font-size: 13px * root.global_scale;
+                        font-size: 13px * root.global_scale * Translations.font_global_scale;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                         width: parent.width;
@@ -210,100 +171,72 @@ export component FileTransferPanel inherits Rectangle {
                                 VerticalBox {
                                     spacing: 2px * root.global_scale;
                                     horizontal-stretch: 1;
-
                                     Text {
                                         text: offer.name;
                                         color: white;
-                                        font-size: 14px * root.global_scale;
+                                        font-size: 14px * root.global_scale * Translations.font_global_scale;
+                                        overflow: elide;
                                     }
-
                                     Text {
                                         text: offer.size_text;
                                         color: #9aa3ad;
-                                        font-size: 12px * root.global_scale;
+                                        font-size: 12px * root.global_scale * Translations.font_global_scale;
                                     }
                                 }
 
-                                // ✅ ONE fixed control = never moves
-                                Rectangle {
-                                    width: 44px * root.global_scale;
-                                    height: 34px * root.global_scale;
-                                    border-radius: 8px * root.global_scale;
+                                // File actions
+                                HorizontalBox {
+                                    spacing: 6px * root.global_scale;
 
-                                    // change look based on state
-                                    background: offer.is_downloading
-                                        ? #20242c
-                                        : (download_area.has-hover ? #3a8dff : #2b7bff);
+                                    // Download control
+                                    Rectangle {
+                                        width: 36px * root.global_scale;
+                                        height: 34px * root.global_scale;
+                                        border-radius: 8px * root.global_scale;
 
-                                    Text {
-                                        text: offer.is_downloading ? offer.progress_text : "⬇";
-                                        color: white;
-                                        font-size: offer.is_downloading ? (11px * root.global_scale) : (14px * root.global_scale);
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
-                                        width: parent.width;
-                                        height: parent.height;
-                                    }
+                                        // Change look based on state
+                                        background: offer.is_downloading ? #20242c : (download_area.has-hover ? #3a8dff : #2b7bff);
 
-                                    download_area := TouchArea {
-                                        width: parent.width;
-                                        height: parent.height;
+                                        Text {
+                                            text: offer.is_downloading ? offer.progress_text : "⬇";
+                                            color: white;
+                                            font-size: offer.is_downloading ? (11px * root.global_scale * Translations.font_global_scale) : (14px * root.global_scale * Translations.font_global_scale);
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                            width: parent.width;
+                                            height: parent.height;
+                                        }
 
-                                        // prevent clicks while downloading
-                                        enabled: !offer.is_downloading;
-
-                                        clicked => {
-                                            if (!offer.is_downloading) {
-                                                download_offer(offer.offer_id);
-                                            }
+                                        download_area := TouchArea {
+                                            width: parent.width;
+                                            height: parent.height;
+                                            // Prevent clicks while downloading
+                                            enabled: !offer.is_downloading;
+                                            Tooltip {text: @markdown("\{Translations.tooltip_download_file}");}
+                                            clicked => { if (!offer.is_downloading) {download_offer(offer.offer_id);}}
                                         }
                                     }
+
+                                    // Resend control
+                                    ActionButton {
+                                        width: 36px * root.global_scale;
+                                        label: "🔄";
+                                        tooltip: Translations.tooltip_resend_file;
+                                        base_color: #2d8f5b;
+                                        hover_color: #3caf72;
+                                        button_height: 34px;
+                                        label_size: 14px;
+                                        global_scale: root.global_scale;
+                                        clicked => {resend_file_offer(offer.offer_id);}
+                                    }
                                 }
-                            }
-                        }
-                    }
-                }
-
-                // Bottom bundling progress bar
-                Rectangle {
-                    visible: bundle_in_progress;
-                    height: 44px * root.global_scale;
-                    horizontal-stretch: 1;
-                    background: #0f1217;
-                    border-width: 1px * root.global_scale;
-                    border-color: #2a2f38;
-
-                    HorizontalBox {
-                        padding: 10px * root.global_scale;
-                        spacing: 10px * root.global_scale;
-
-                        Text {
-                            text: bundle_progress_text;
-                            color: white;
-                            font-size: 12px * root.global_scale;
-                            horizontal-stretch: 1;
-                            wrap: word-wrap;
-                            max-height: 28px * root.global_scale;
-                        }
-
-                        Rectangle {
-                            width: 80px * root.global_scale;
-                            height: 6px * root.global_scale;
-                            border-radius: 6px * root.global_scale;
-                            background: #20242c;
-
-                            Rectangle {
-                                width: parent.width * bundle_progress;
-                                height: parent.height;
-                                border-radius: 6px * root.global_scale;
-                                background: #2b7bff;
                             }
                         }
                     }
                 }
 
                 // Bottom download progress bar
-                Rectangle {
+                if download_in_progress : Rectangle {
                     visible: download_in_progress;
                     height: 44px * root.global_scale;
                     horizontal-stretch: 1;
@@ -318,7 +251,7 @@ export component FileTransferPanel inherits Rectangle {
                         Text {
                             text: download_progress_text;
                             color: white;
-                            font-size: 12px * root.global_scale;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
                             horizontal-stretch: 1;
                             wrap: word-wrap;
                             max-height: 28px * root.global_scale;
@@ -335,6 +268,46 @@ export component FileTransferPanel inherits Rectangle {
                                 height: parent.height;
                                 border-radius: 6px * root.global_scale;
                                 background: #2b7bff;
+                            }
+                        }
+                    }
+                }
+
+                // Bottom bundling progress bar
+                if bundle_in_progress : Rectangle {
+                    height: 68px * root.global_scale;
+                    horizontal-stretch: 1;
+                    background: #0f1217;
+                    border-width: 1px * root.global_scale;
+                    border-color: #2a2f38;
+
+                    VerticalBox {
+                        padding: 10px * root.global_scale;
+                        spacing: 6px * root.global_scale;
+
+                        Text {
+                            text: bundle_progress_text;
+                            color: white;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
+                            wrap: word-wrap;
+                            overflow: elide;
+                            vertical-stretch: 1;
+                        }
+
+                        Rectangle {
+                            height: 10px * root.global_scale;
+                            border-radius: 5px * root.global_scale;
+                            background: #20242c;
+                            clip: true;
+
+                            Rectangle {
+                                x: 0px;
+                                width: max(parent.width * bundle_progress,
+                                           bundle_progress > 0.0 ? 6px * root.global_scale : 0px);
+                                height: parent.height;
+                                border-radius: 5px * root.global_scale;
+                                background: #2b7bff;
+                                animate width { duration: 200ms; easing: ease-out; }
                             }
                         }
                     }

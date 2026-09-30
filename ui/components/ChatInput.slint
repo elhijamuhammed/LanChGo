@@ -1,4 +1,5 @@
 import { HorizontalBox, Button, TextEdit } from "std-widgets.slint";
+import { Translations } from "translations.slint";
 
 export component ChatInput inherits HorizontalBox {
     spacing: 5px * root.global_scale;
@@ -15,8 +16,8 @@ export component ChatInput inherits HorizontalBox {
         wrap: word-wrap;
         height: 60px * root.global_scale;
         horizontal-stretch: 1;
-        font-size: 20px* root.global_scale;
-        placeholder-text: "Type here...";
+        font-size: 20px* root.global_scale * Translations.font_global_scale;
+        placeholder-text: Translations.input_placeholder;
 
         key-pressed(event) => {
             // ENTER (without Shift) → SEND
@@ -32,7 +33,6 @@ export component ChatInput inherits HorizontalBox {
                 root.open_command_picker();
                 return accept;
             }
-
             reject
         }
     }
@@ -48,7 +48,7 @@ export component ChatInput inherits HorizontalBox {
     }
 
     Button {
-        text: "Send";
+        text: Translations.send_button;
         height: 60px * root.global_scale;
         enabled: root.input_text != "";
 
@@ -59,7 +59,7 @@ export component ChatInput inherits HorizontalBox {
     }
 
     Button {
-        text: "Clear";
+        text: Translations.clear_button;
         height: 60px * root.global_scale;
         
         clicked => {

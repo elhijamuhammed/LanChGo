@@ -1,0 +1,146 @@
+export global Translations {
+    
+    // to decide with the language if it is RTL or LTR
+    in-out property <string> direction;
+    in-out property <string> selected_language;
+    // global font scale because of different fonts for languages disrupts the UI
+    out property <float> font_global_scale: selected_language == "zh" ? 0.85 : 1.0;
+    // Populated by Rust in one call (set_t). The order here is the
+    // contract: it must match the key order in lang/<code>.json exactly.
+    // Defaults below are the English fallback shown before Rust runs.
+    in-out property <[string]> t: [
+        "Send", "Clear", "Type here...",
+        "© All rights reserved",
+        "Send messages and files to devices on the same Wi-Fi / network",
+        "LanChGo v", "is available", "Download from GitHub Releases",
+        "File Transfers", "Files", "Save to…", "Open", "No offers yet",
+        "Talk freely fast with LanChGo App", "Made to solve a problem! LanChGo App ",
+        "Online", "Offline", "Secure Host", "Joined", "Public",
+        "Web On", "Web Off", "Web companion running", "Web companion stopped",
+        "Show Web", "Start Web", "Stop Web", "Secure", "PIN: ", "Show PIN",
+        "New PIN", "Disconnect",
+        "🧰 Tools", "🧰 LAN Tools", "Phone Mouse", "Phone Keyboard",
+        "Settings", "Welcome to LanChGo",
+        "Your network changed — pick an interface to continue.",
+        "Pick your network interface to get started.", "UDP Port", "Auto",
+        "(Auto: ", "Manual", "Apply", "Reset", "Continue", "Port available",
+        "Message too long, it will not be sent!\nClick to dismiss.",
+        "Create or Join a Channel", "Create Channel", "Join with PIN:",
+        "Enter 8-digit PIN…", "Join", "Close",
+        "Web Join QR Code", "Open the Web Companion in LanChGo's web page",
+        "Scan this QR code with your phone to open Web Join.", "Can't scan? ",
+        "Copied", "Copy link", "Your Channel PIN:",
+        "Are you sure you want to clear the chat box?", "Confirm", "Cancel",
+        "Config file for an older version detected!",
+        "Please restart LanChGo to continue with a fresh configuration.", "EXIT",
+        "Connecting to secure channel...", "Please wait",
+        "Commands", "Enter", "↑ ↓ navigate    Enter execute    Esc close",
+        "Change app's language:", "copy", "tooltip_copy_all", "tooltip_resend",
+        "tooltip_send_file", "tooltip_save_to", "tooltip_resend_file", "tooltip_download_file"
+    ];
+    // Every existing reference elsewhere (translations.send_button, etc.)
+    // keeps working unchanged — these are derived from t[] by fixed index.
+    // This index list must match en.json's key order exactly:
+    // 0 send_button, 1 clear_button, 2 input_placeholder, 3 copyright_text,
+    // 4 network_description, 5 update_available, 6 update_suffix,
+    // 7 download_github, 8 title_file_transfer, 9 files_button,
+    // 10 save_button, 11 open_button, 12 no_offers, 13 title_header,
+    // 14 subtitle_prefix, 15 online, 16 offline, 17 secure_host, 18 joined,
+    // 19 public, 20 web_on, 21 web_off, 22 web_companion_running,
+    // 23 web_companion_stopped, 24 show_web, 25 start_web, 26 stop_web,
+    // 27 secure_mode, 28 pin, 29 show_pin, 30 new_pin, 31 disconnect,
+    // 32 tools, 33 lan_tools, 34 phone_mouse, 35 phone_keyboard, 36 settings,
+    // 37 title_welcome, 38 network_changed, 39 pick_network, 40 udp_port,
+    // 41 auto, 42 auto_prefix, 43 manual, 44 apply, 45 reset,
+    // 46 continue_button, 47 port_available, 48 message_too_long,
+    // 49 create_or_join_title, 50 create_channel, 51 join_with_pin,
+    // 52 enter_pin, 53 join, 54 close, 55 web_join_qr, 56 open_web_companion,
+    // 57 scan_qr, 58 cannot_scan, 59 copied, 60 copy_link, 61 channel_pin,
+    // 62 clear_chat_confirmation, 63 confirm, 64 cancel, 65 old_config_detected,
+    // 66 restart_for_fresh_config, 67 exit, 68 connecting_secure,
+    // 69 please_wait, 70 commands, 71 enter, 72 command_navigation,
+    // 73 change_app_language
+    in-out property <string> send_button: t[0];
+    in-out property <string> clear_button: t[1];
+    in-out property <string> input_placeholder: t[2];
+    in-out property <string> copyright_text: t[3];
+    in-out property <string> network_description: t[4];
+    in-out property <string> update_available: t[5];
+    in-out property <string> update_suffix: t[6];
+    in-out property <string> download_github: t[7];
+    in-out property <string> title_file_transfer: t[8];
+    in-out property <string> files_button: t[9];
+    in-out property <string> save_button: t[10];
+    in-out property <string> open_button: t[11];
+    in-out property <string> no_offers: t[12];
+    in-out property <string> title_header: t[13];
+    in-out property <string> subtitle_prefix: t[14];
+    in-out property <string> online: t[15];
+    in-out property <string> offline: t[16];
+    in-out property <string> secure_host: t[17];
+    in-out property <string> joined: t[18];
+    in-out property <string> public: t[19];
+    in-out property <string> web_on: t[20];
+    in-out property <string> web_off: t[21];
+    in-out property <string> web_companion_running: t[22];
+    in-out property <string> web_companion_stopped: t[23];
+    in-out property <string> show_web: t[24];
+    in-out property <string> start_web: t[25];
+    in-out property <string> stop_web: t[26];
+    in-out property <string> secure_mode: t[27];
+    in-out property <string> pin: t[28];
+    in-out property <string> show_pin: t[29];
+    in-out property <string> new_pin: t[30];
+    in-out property <string> disconnect: t[31];
+    in-out property <string> tools: t[32];
+    in-out property <string> lan_tools: t[33];
+    in-out property <string> phone_mouse: t[34];
+    in-out property <string> phone_keyboard: t[35];
+    in-out property <string> settings: t[36];
+    in-out property <string> title_welcome: t[37];
+    in-out property <string> network_changed: t[38];
+    in-out property <string> pick_network: t[39];
+    in-out property <string> udp_port: t[40];
+    in-out property <string> auto: t[41];
+    in-out property <string> auto_prefix: t[42];
+    in-out property <string> manual: t[43];
+    in-out property <string> apply: t[44];
+    in-out property <string> reset: t[45];
+    in-out property <string> continue_button: t[46];
+    in-out property <string> port_available: t[47];
+    in-out property <string> message_too_long: t[48];
+    in-out property <string> create_or_join_title: t[49];
+    in-out property <string> create_channel: t[50];
+    in-out property <string> join_with_pin: t[51];
+    in-out property <string> enter_pin: t[52];
+    in-out property <string> join: t[53];
+    in-out property <string> close: t[54];
+    in-out property <string> web_join_qr: t[55];
+    in-out property <string> open_web_companion: t[56];
+    in-out property <string> scan_qr: t[57];
+    in-out property <string> cannot_scan: t[58];
+    in-out property <string> copied: t[59];
+    in-out property <string> copy_link: t[60];
+    in-out property <string> channel_pin: t[61];
+    in-out property <string> clear_chat_confirmation: t[62];
+    in-out property <string> confirm: t[63];
+    in-out property <string> cancel: t[64];
+    in-out property <string> old_config_detected: t[65];
+    in-out property <string> restart_for_fresh_config: t[66];
+    in-out property <string> exit: t[67];
+    in-out property <string> connecting_secure: t[68];
+    in-out property <string> please_wait: t[69];
+    in-out property <string> commands: t[70];
+    in-out property <string> enter: t[71];
+    in-out property <string> command_navigation: t[72];
+    in-out property <string> change_app_language: t[73];
+    in-out property <string> copy: t[74];
+    in-out property <string> tooltip_copy_all: t[75];
+    in-out property <string> tooltip_resend: t[76];
+    in-out property <string> tooltip_send_file: t[77];
+    in-out property <string> tooltip_save_to: t[78];
+    in-out property <string> tooltip_open_download: t[79];
+    in-out property <string> tooltip_clear_files_panel: t[80];
+    in-out property <string> tooltip_resend_file: t[81];
+    in-out property <string> tooltip_download_file: t[82];
+}

@@ -1,12 +1,17 @@
 import { VerticalBox, HorizontalBox, TextEdit, ListView } from "std-widgets.slint";
+import { MessageItem } from "types.slint";
+import { Translations } from "translations.slint";
 
 export component ChatPanel inherits Rectangle {
     in property <string> temp_message;
-    in property <[string]> messages;
-
+    in property <[MessageItem]> messages;
     in-out property <bool> update_available: false;
     in-out property <string> latest_version: "";
     in-out property <float> global_scale;
+    
+    callback resend(string);
+    callback delete_message(string);
+    callback open_link(string);
 
     background: #2c2f35;
     border-radius: 8px * root.global_scale;
@@ -14,27 +19,23 @@ export component ChatPanel inherits Rectangle {
 
     HorizontalLayout {
         Rectangle { horizontal-stretch: 1; }
-
         VerticalBox {
             spacing: 2px* root.global_scale;
-
             Text {
-                text: "© Muhammed Abu El-Hija 2025, All rights reserved";
-                font-size: 16px* root.global_scale;
+                text: Translations.copyright_text;
+                font-size: 16px* root.global_scale * Translations.font_global_scale * Translations.font_global_scale;
                 color: white;
                 opacity: 25%;
                 horizontal-alignment: center;
             }
-
             Text {
-                text: "Send messages and files to devices on the same Wi-Fi / network";
-                font-size: 18px* root.global_scale;
+                text: Translations.network_description;
+                font-size: 18px* root.global_scale * Translations.font_global_scale * Translations.font_global_scale;
                 color: white;
                 opacity: 25%;
                 horizontal-alignment: center;
             }
         }
-
         Rectangle { horizontal-stretch: 1; }
     }
 
@@ -50,7 +51,7 @@ export component ChatPanel inherits Rectangle {
         Text {
             text: root.temp_message;
             color: white;
-            font-size: 16px* root.global_scale;
+            font-size: 16px* root.global_scale * Translations.font_global_scale;
             horizontal-alignment: center;
             vertical-alignment: center;
             width: parent.width;
@@ -76,9 +77,9 @@ export component ChatPanel inherits Rectangle {
             spacing: 10px* root.global_scale;
 
             Text {
-                text: "🚀 LanChGo v" + root.latest_version + " is available";
+                text: Translations.update_available + root.latest_version + Translations.update_suffix;
                 color: #ffd27a;
-                font-size: 13px* root.global_scale;
+                font-size: 13px* root.global_scale * Translations.font_global_scale;
                 font-weight: 600;
                 vertical-alignment: center;
             }
@@ -86,9 +87,9 @@ export component ChatPanel inherits Rectangle {
             Rectangle { horizontal-stretch: 1; }
 
             Text {
-                text: "Download from GitHub Releases";
+                text: Translations.download_github;
                 color: #ffffff;
-                font-size: 12px* root.global_scale;
+                font-size: 12px* root.global_scale * Translations.font_global_scale;
                 vertical-alignment: center;
             }
 
@@ -101,7 +102,7 @@ export component ChatPanel inherits Rectangle {
                 Text {
                     text: "X";
                     color: #ffd27a;
-                    font-size: 14px* root.global_scale;
+                    font-size: 14px* root.global_scale * Translations.font_global_scale;
                     font-weight: 700;
                     horizontal-alignment: center;
                     vertical-alignment: center;
@@ -134,18 +135,112 @@ export component ChatPanel inherits Rectangle {
                 border-radius: 12px * root.global_scale;
                 x: 10px * root.global_scale;
 
-                width: min(parent.width * 0.85, msg.preferred-width + 20px * root.global_scale);
+                width: min(parent.width * 0.85, msg.preferred-width + 40px * root.global_scale);
                 height: msg.preferred-height + (16px * root.global_scale);
 
-                msg := TextInput {
-                    text: m;
-                    read-only: true;
-                    color: white;
-                    font-size: 18px* root.global_scale;
-                    wrap: word-wrap;
-                    single-line: false;
-                    x: 10px * root.global_scale; y : 8px* root.global_scale;
-                    width: parent.width - (20px * root.global_scale);
+                ContextMenuArea {
+                    Menu {
+                        MenuItem {
+                            title: "📋" + Translations.copy;
+                            activated => {
+                                msg.copy();
+                            }
+                        }
+                        if m.link != "": MenuItem {
+                            title: "🔗 Open Link";
+                            activated => { root.open_link(m.link); }
+                        }
+                        MenuItem {
+                            title: "↩" + Translations.tooltip_resend; // used the tooltip resend for the translation
+                            activated => { root.resend(m.text); }
+                        }
+                    }
+
+                    msg := TextInput {
+                        text: m.text;
+                        read-only: true;
+                        color: white;
+                        font-size: 18px* root.global_scale * Translations.font_global_scale;
+                        wrap: word-wrap;
+                        single-line: false;
+                        x: 10px * root.global_scale; y : 8px* root.global_scale;
+                        width: parent.width - (20px * root.global_scale);
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                x: bubble.x + bubble.width + 6px * root.global_scale;
+                y: bubble.y + (bubble.height - self.height) / 2;
+                spacing: 4px * root.global_scale;
+
+                Rectangle {
+                    width: 22px * root.global_scale;
+                    height: 22px * root.global_scale;
+                    border-radius: 5px * root.global_scale;
+                    background: copy_btn_area.has-hover ? #4a4f58 : #3a3f48;
+
+                    Text {
+                        text: "📋";
+                        font-size: 12px * root.global_scale;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                    copy_btn_area := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        mouse-cursor: pointer;
+                        Tooltip { text: @markdown("\{Translations.tooltip_copy_all}"); }
+                        clicked => {
+                            msg.select-all();
+                            msg.copy();
+                            msg.clear-selection();
+                        }
+                    }
+                }
+                if m.link != "": Rectangle {
+                    width: 22px * root.global_scale;
+                    height: 22px * root.global_scale;
+                    border-radius: 5px * root.global_scale;
+                    background: link_btn_area.has-hover ? #4a4f58 : #3a3f48;
+                    Text {
+                        text: "🔗";
+                        font-size: 12px * root.global_scale;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                    link_btn_area := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        mouse-cursor: pointer;
+                        Tooltip { text: @markdown("Open Link"); }
+                        clicked => { root.open_link(m.link); }
+                    }
+                }
+                Rectangle {
+                    width: 22px * root.global_scale;
+                    height: 22px * root.global_scale;
+                    border-radius: 5px * root.global_scale;
+                    background: resend_btn_area.has-hover ? #4a4f58 : #3a3f48;
+                    Text {
+                        text: "↩";
+                        font-size: 13px * root.global_scale;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                    resend_btn_area := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        mouse-cursor: pointer;
+                        Tooltip { text: @markdown("\{Translations.tooltip_resend}"); }
+                        clicked => { root.resend(m.text); }
+                    }
                 }
             }
         }

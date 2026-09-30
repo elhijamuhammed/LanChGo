@@ -332,7 +332,7 @@ export component AppWindow inherits Window {
 
                             VerticalBox {                          // stack Slint logo and text together
                                 Text {
-                                    text: "© Muhammed Abu El-Hija 2025, All rights reserved";
+                                    text: "© All rights reserved";
                                     font-size: 16px;
                                     color: white;
                                     opacity: 25%;

@@ -1,0 +1,39 @@
+import { VerticalBox, HorizontalBox, ListView } from "std-widgets.slint";
+import { FileOfferItem } from "types.slint";
+import { Translations } from "translations.slint";
+
+export component ActionButton inherits Rectangle {
+    in property <string> label;
+    in property <string> tooltip;
+    in property <color> base_color;
+    in property <color> hover_color;
+    in property <color> text_color: white;
+    in property <length> button_height: 32px;
+    in property <length> button_radius: 8px;
+    in property <length> label_size: 13px;
+    in property <bool> active: true;   // false = dimmed and ignores clicks
+    in property <float> global_scale: 1.0;
+    callback clicked();
+
+    height: root.button_height * root.global_scale;
+    border-radius: root.button_radius * root.global_scale;
+    opacity: root.active ? 1 : 0.45;
+    background: area.has-hover ? root.hover_color : root.base_color;
+
+    Text {
+        text: root.label;
+        color: root.text_color;
+        font-size: root.label_size * root.global_scale * Translations.font_global_scale;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+    }
+
+    area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        Tooltip {text: @markdown("\{root.tooltip}");}
+        clicked => { if (root.active) {root.clicked();} }
+    }
+}

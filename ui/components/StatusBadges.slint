@@ -1,4 +1,5 @@
 import { VerticalBox } from "std-widgets.slint";
+import { Translations } from "translations.slint";
 
 export component StatusBadge inherits Rectangle {
 
@@ -6,7 +7,7 @@ export component StatusBadge inherits Rectangle {
     in-out property <bool> show_welcome;
     in-out property <[string]> interfaces;        // ["Wi-Fi|10.0.0.255", "Ethernet|192.168.1.255"]
     in-out property <string> selected_interface;  // e.g. "Wi-Fi"
-    in-out property <string> channel_mode: "public";  // values: "public" | "host" | "joined" // default public
+    in-out property <string> channel_mode: "public";  // values: "public" | "host" | "joined"
     in-out property <string> broadcast_address;
     in-out property <string> interface_status;
     in-out property <float> global_scale;
@@ -15,34 +16,50 @@ export component StatusBadge inherits Rectangle {
     y: 12px * root.global_scale;
     width: 200px * root.global_scale;
     height: 50px * root.global_scale;
-    visible: !root.show_welcome; 
+    visible: !root.show_welcome;
+
+    // "direction" is normalized to exactly "rtl" or "ltr" by the Rust loader.
+    // Empty (before Rust runs) counts as LTR.
+    property <bool> rtl: Translations.direction == "rtl";
+
+    // RTL: label first, so the trailing icon renders on the visual left.
+    // LTR: icon first, which also renders on the left.
+    pure function with_icon(icon: string, label: string) -> string {
+        return root.rtl ? label + " " + icon : icon + " " + label;
+    }
 
     VerticalBox {
         spacing: 2px * root.global_scale;
         padding: 6px * root.global_scale;
+
         Text {
             text: "🔌 " + root.selected_interface;
-            font-size: 14px * root.global_scale;
+            font-size: 14px * root.global_scale * Translations.font_global_scale;
             color: #00e1ff;
         }
+
         Text {
             text: "📡 " + root.broadcast_address;
-            font-size: 14px * root.global_scale;
+            font-size: 14px * root.global_scale * Translations.font_global_scale;
             color: #aaaaaa;
         }
+
         Text {
-            text: root.interface_status == "IfOperStatusUp" ? "✅ Online" : "❌ Offline";
-            font-size: 14px * root.global_scale;
+            text: root.interface_status == "IfOperStatusUp"
+                ? root.with_icon("✅", Translations.online)
+                : root.with_icon("❌", Translations.offline);
+            font-size: 14px * root.global_scale * Translations.font_global_scale;
             color: root.interface_status == "IfOperStatusUp" ? #00ff88 : #ff4444;
         }
+
         Text {
-            text: root.channel_mode == "host" ? "🔒 Secure Host"
-                : root.channel_mode == "joined" ? "📥 Joined"
-                : "🌍 Public";
-            font-size: 14px * root.global_scale;
-            color: root.channel_mode == "host" ? #ffaa00
-                : root.channel_mode == "joined" ? #00ccff
-                : #bbbbbb;
+            text: root.channel_mode == "host"
+                ? root.with_icon("🔒", Translations.secure_host)
+                : root.channel_mode == "joined"
+                    ? root.with_icon("📥", Translations.joined)
+                    : root.with_icon("🌍", Translations.public);
+            font-size: 14px * root.global_scale * Translations.font_global_scale;
+            color: root.channel_mode == "host" ? #ffaa00 : root.channel_mode == "joined" ? #00ccff : #bbbbbb;
         }
     }
 }
