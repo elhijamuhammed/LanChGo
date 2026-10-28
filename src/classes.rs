@@ -42,6 +42,10 @@ pub struct Config {
     pub ui_scale: Option<f32>,
     #[serde(default = "default_language")]
     pub language: String,
+    #[serde(default)]
+    pub device_id: String,
+    #[serde(default)]
+    pub device_name: Option<String>,
 }
 
 fn default_language() -> String {
@@ -75,3 +79,35 @@ pub struct MToolPacket {
 //     pub name: slint::SharedString,
 //     pub broadcast: slint::SharedString,
 // }
+
+pub struct TaggedMessage {
+    pub id: String,
+    pub name: String,
+    pub text: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Poll {
+    pub id: String,
+    pub creator_id: String,
+    pub minutes: i32,
+    pub question: String,
+    pub options: Vec<String>,
+}
+
+#[derive(Default)]
+pub struct PollController {
+    pub(crate) current: Option<Poll>,
+    pub my_id: String,
+    pub votes: std::collections::HashMap<String, usize>, // voter id -> option index
+    pub seconds_left: i32,
+    pub results: std::collections::HashMap<String, PollResult>,
+}
+
+#[derive(Clone)]
+pub struct PollResult {
+    pub id: String,
+    pub question: String,
+    pub options: Vec<String>,
+    pub counts: Vec<i32>,
+}

@@ -5,6 +5,7 @@ import { HeaderBar } from "components/HeaderBar.slint";
 import { StatusBadge } from "components/StatusBadges.slint";
 import { WelcomeOverlay } from "components/WelcomeOverlay.slint";
 import { Toolbar } from "components/Toolbar.slint";
+import { CreatePollDialog } from "components/create_poll.slint";
 import { FileTransferPanel } from "components/FileTransferPanel.slint";
 import { FileOfferItem } from "components/types.slint";
 import { EscCloseHandler } from "components/HelpFunctions.slint";
@@ -13,7 +14,7 @@ import { Translations } from "components/translations.slint";
 // import { LanguageDropdown } from "components/langDropDown.slint";
 import "assets/fonts/NotoSansSC-Bold.otf";
 import { MessageItem } from "components/types.slint";
-
+import { PollResultsDialog } from "components/poll_results.slint";
 export { Translations } from "components/translations.slint";
 
 export component AppWindow inherits Window {
@@ -122,7 +123,7 @@ export component AppWindow inherits Window {
 
     // Command picker
     in-out property <[string]> chat_commands: [
-        "/info", "/rescale", "/help", "/settings", "/downloads", "/clearall", "/secure", "/disconnect", "/webjoin", "/webstop", "/restart", "/exit" 
+        "/info", "/rescale", "/help", "/settings", "/downloads", "/clearall", "/secure", "/disconnect", "/webjoin", "/webstop","/poll", "/restart", "/exit" 
     ];
     property <int> selected_command_idx: 0;
 
@@ -158,12 +159,12 @@ export component AppWindow inherits Window {
     in-out property <string> connected_device_id: "";
     callback disconnect_clicked();
 
-    open_tools_devices_list(title, icon, tool_id) => {
-        root.tools_device_list_title = title;
-        root.tools_device_list_icon = icon;
-        root.active_tool = tool_id;
-        root.tools_device_list_open = true;
-    }
+    // open_tools_devices_list(title, icon, tool_id) => {
+    //     root.tools_device_list_title = title;
+    //     root.tools_device_list_icon = icon;
+    //     root.active_tool = tool_id;
+    //     root.tools_device_list_open = true;
+    // }
 
     // Languages
     callback language-changed(string);
@@ -172,6 +173,35 @@ export component AppWindow inherits Window {
     default-font-family: root.selected_language == "zh" ? "Noto Sans SC" : "";
     // in-out property <[string]> lang_items: [];
     // in-out property <[string]> lang_values: [];
+
+    // Device Name
+    in-out property <string> default_device_name;
+    in-out property <string> device_name;
+    callback device_name_changed(string);
+
+    // Polls
+    in-out property <bool> poll_active: false;
+    in-out property <string> poll_question: "";
+    in-out property <[string]> poll_options: [];
+    in-out property <[int]> poll_counts: [];
+    in-out property <string> poll_countdown: "";
+    in-out property <bool> poll_is_creator: false;
+    callback open_poll_dialog();
+    open_poll_dialog => { poll_dialog.open = true; }
+
+    callback create_poll(string, [string], int);
+    callback vote(int);
+    callback done_poll();
+    callback append_poll_result(string, string);
+    callback show_poll_results(string);
+
+    // Poll results
+    in-out property <bool> results_open: false;
+    in-out property <string> results_question: "";
+    in-out property <[string]> results_options: [];
+    in-out property <[int]> results_counts: [];
+    in-out property <int> results_total: 0;
+    in-out property <[float]> results_starts: [];
 
     Rectangle {
         background: blue;
@@ -206,7 +236,6 @@ export component AppWindow inherits Window {
                         // toolbar-inst.close_all_popups();
                         return accept;
                     }
-
                     reject
                 }
             }
@@ -223,6 +252,7 @@ export component AppWindow inherits Window {
                     width: parent.width;
                     height: parent.height;
                     global_scale: root.global_scale;
+                    default_device_name: root.default_device_name;
                     changed_networks <=> root.changed_networks;
                     selected_interface <=> root.selected_interface;
                     interfaces <=> root.interfaces;
@@ -230,10 +260,12 @@ export component AppWindow inherits Window {
                     ui_port <=> root.ui_port;
                     manual_port_mode <=> root.manual_port_mode;
                     selected_language <=> root.selected_language;
+                    device_name <=> root.device_name;
                     language-changed(code) => { root.language_changed(code); }
                     interface_selected() => { root.interface_selected(root.selected_interface); }
                     apply_manual_port (port) => { root.apply_manual_port(port); }
                     reset_port_to_auto () => { root.reset_port_to_auto(); }
+                    device_name_changed(name) => { root.device_name_changed(name); }
                 }
 
                 // ======= MAIN ROW: Chat + File transfers =======
@@ -255,10 +287,21 @@ export component AppWindow inherits Window {
                             update_available <=> root.update_available;
                             latest_version <=> root.latest_version;
                             global_scale: root.global_scale;
+                            // Poll data
+                            poll_active: root.poll_active;
+                            poll_question: root.poll_question;
+                            poll_options: root.poll_options;
+                            poll_counts: root.poll_counts;
+                            poll_countdown: root.poll_countdown;
+                            poll_is_creator: root.poll_is_creator;
+                            poll_vote(index) => {root.vote(index); }
+                            poll_done() => { root.done_poll(); }
+                            show_poll_results(id) => { root.show_poll_results(id); }
                             resend(text) => {
                                 root.input_text = text;
                                 root.send_clicked();
                             }
+
                         }
 
                         VerticalBox {
@@ -305,7 +348,8 @@ export component AppWindow inherits Window {
                     host_PIN_masked <=> root.host_PIN_masked;
                     show_welcome <=> root.show_welcome;
                     web_session_active <=> root.web_session_active;
-
+                    
+                    open_activity() => { poll_dialog.open = true; }
                     change_channel_mode(mode) => { root.change_channel_mode(mode); }
                     generate_new_PIN() => { root.generate_new_PIN(); }
                     disconnect_channel() => { root.disconnect_channel(); }
@@ -337,73 +381,92 @@ export component AppWindow inherits Window {
                 }
             }
             // --- Tools Device List Popup ---
-            if root.tools_device_list_open: FocusScope {
+            // if root.tools_device_list_open: FocusScope {
+            //     width: parent.width;
+            //     height: parent.height;
+
+            //     init => {
+            //         self.focus();
+            //     }
+
+            //     key-pressed(event) => {
+            //         if event.text == Key.Escape {
+            //             root.tools_device_list_open = false;
+            //             return accept;
+            //         }
+
+            //         reject
+            //     }
+
+            //     Rectangle {
+            //         width: parent.width;
+            //         height: parent.height;
+            //         background: #00000080;
+
+            //         TouchArea {
+            //             width: parent.width;
+            //             height: parent.height;
+
+            //             clicked => {
+            //                 root.tools_device_list_open = false;
+            //             }
+            //         }
+
+            //         Rectangle {
+            //             width: 500px * root.global_scale;
+            //             height: 490px * root.global_scale;
+
+            //             x: (parent.width - self.width) / 2;
+            //             y: (parent.height - self.height) / 2;
+
+            //             background: transparent;
+
+            //             TouchArea {
+            //                 width: parent.width;
+            //                 height: parent.height;
+            //                 clicked => { }
+            //             }
+
+            //             DevicesList {
+            //                 width: parent.width;
+            //                 height: parent.height;
+
+            //                 global_scale: root.global_scale;
+            //                 tool_title: root.tools_device_list_title;
+            //                 tool_icon: root.tools_device_list_icon;
+            //                 devices <=> root.tool_devices;
+            //                 active_tool: root.active_tool;
+            //                 active_tool_count <=> root.active_tool_count;
+            //                 connected_device_id <=> root.connected_device_id;
+            //                 disconnect_clicked() => { root.disconnect_clicked(); }
+            //                 close_clicked() => { root.tools_device_list_open = false; }
+            //                 clear_tool_devices() => { root.clear_tool_devices(); }
+            //                 device_selected(id) => {
+            //                     root.tool_device_selected(id);
+            //                     root.tools_device_list_open = false;
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+
+            poll_dialog := CreatePollDialog {
                 width: parent.width;
                 height: parent.height;
+                global_scale: root.global_scale;
+                create_poll(question, options, minutes) => { root.create_poll(question, options, minutes); }
+            }
 
-                init => {
-                    self.focus();
-                }
-
-                key-pressed(event) => {
-                    if event.text == Key.Escape {
-                        root.tools_device_list_open = false;
-                        return accept;
-                    }
-
-                    reject
-                }
-
-                Rectangle {
-                    width: parent.width;
-                    height: parent.height;
-                    background: #00000080;
-
-                    TouchArea {
-                        width: parent.width;
-                        height: parent.height;
-
-                        clicked => {
-                            root.tools_device_list_open = false;
-                        }
-                    }
-
-                    Rectangle {
-                        width: 500px * root.global_scale;
-                        height: 490px * root.global_scale;
-
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
-
-                        background: transparent;
-
-                        TouchArea {
-                            width: parent.width;
-                            height: parent.height;
-                            clicked => { }
-                        }
-
-                        DevicesList {
-                            width: parent.width;
-                            height: parent.height;
-
-                            global_scale: root.global_scale;
-                            tool_title: root.tools_device_list_title;
-                            tool_icon: root.tools_device_list_icon;
-                            devices <=> root.tool_devices;
-                            active_tool: root.active_tool;
-                            active_tool_count <=> root.active_tool_count;
-                            connected_device_id <=> root.connected_device_id;
-                            disconnect_clicked() => { root.disconnect_clicked(); }
-                            close_clicked() => { root.tools_device_list_open = false; }
-                            clear_tool_devices() => { root.clear_tool_devices(); }
-                            device_selected(id) => {
-                                root.tool_device_selected(id);
-                                root.tools_device_list_open = false;
-                            }
-                        }
-                    }
-                }
+            PollResultsDialog {
+                width: parent.width;
+                height: parent.height;
+                global_scale: root.global_scale;
+                open <=> root.results_open;
+                question: root.results_question;
+                options: root.results_options;
+                counts: root.results_counts;
+                total: root.results_total;
+                starts: root.results_starts;
             }
         }
     }
@@ -864,11 +927,14 @@ export component AppWindow inherits Window {
                     HorizontalBox {
                         Rectangle { horizontal-stretch: 1; }
                         Button {
-                            text: "🚪 " + Translations.exit;
+                            text: "🔄 " + Translations.restart;
                             horizontal-stretch: 0;
                             width: 120px * root.global_scale;
                             height: 42px * root.global_scale;
-                            clicked => { root.exit_app(); }
+                            clicked => {
+                                root.input_text = "/restart";
+                                root.send_clicked();
+                            }
                         }
                         Rectangle { horizontal-stretch: 1; }
                     }

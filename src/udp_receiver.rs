@@ -1,5 +1,4 @@
 use crate::AppWindow;
-use crate::FileOfferItem;
 use crate::file_transfer_protocol::RemoteMobileOfferRegistry;
 use crate::file_transfer_protocol::RemoteWindowsOfferRegistry;
 use crate::main_helpers;
@@ -24,7 +23,7 @@ pub fn start_udp_receiver(
     remote_mobile_offers: Arc <Mutex<RemoteMobileOfferRegistry>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
-        let mut buf = [0u8; 2048];
+        let mut buf = [0u8; 65535];
         let my_ip: Option<std::net::IpAddr> = get_local_ipv4().map(std::net::IpAddr::V4);
 
         while running.load(Ordering::Relaxed) {
@@ -183,6 +182,27 @@ pub fn start_udp_receiver(
                                 }
                             }
                             continue;
+                        } else if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"EFOFT" {
+                            // encrypted FOFT (desktop file offer)
+                            if let Some(channel) = secure_channel_code::get_active_channel() {
+                                if let Some(foft_packet) = crate::file_transfer_protocol::decrypt_efoft(&channel.key, &msg_bytes[5..]) {
+                                    if let Some(offer) = crate::file_transfer_protocol::decode_foft(&foft_packet) {
+                                        main_helpers::handle_foft_offer(offer, _from.ip(), &remote_windows_offers, &ui_weak);
+                                    }
+                                }
+                            }
+                            continue;
+                        } else if msg_bytes.len() >= 6 && &msg_bytes[..6] == b"EMFOFT" {
+                            // encrypted MFOFT (phone file offer)
+                            if let Some(ip) = my_ip { if _from.ip() == ip { continue; } }
+                            if let Some(channel) = secure_channel_code::get_active_channel() {
+                                if let Some(mfoft_json) = crate::file_transfer_protocol::decrypt_emfoft(&channel.key, &msg_bytes[6..]) {
+                                    if let Some((offer, id_hex)) = crate::file_transfer_protocol::decode_mfoft(&mfoft_json) {
+                                        main_helpers::handle_mfoft_offer(offer, id_hex, _from.ip(), &remote_windows_offers, &remote_mobile_offers, &ui_weak);
+                                    }
+                                }
+                            }
+                            continue;
                         } else if msg_bytes.len() >= 4 && &msg_bytes[..4] == b"FOFR" {
                             // ignore FOFR in secure mode for now
                             continue;
@@ -198,88 +218,18 @@ pub fn start_udp_receiver(
                         // 1) Special handling for FOFR
                         if msg_bytes.len() >= 4 && &msg_bytes[..4] == b"FOFT" {
                             if let Some(offer) = crate::file_transfer_protocol::decode_foft(msg_bytes) {
-                                let id_hex =
-                                    crate::file_transfer_protocol::offer_id_to_hex(&offer.offer_id);
-                                let sender_ip = _from.ip();
-
-                                {
-                                    let mut reg = remote_windows_offers.lock().unwrap();
-                                    reg.insert(id_hex.clone(), (sender_ip, offer.clone()));
-                                }
-
-                                let weak = ui_weak.clone();
-
-                                // ✅ truncate using helper
-                                let display_name =
-                                    crate::file_transfer_protocol::truncate_name(&offer.name, 16);
-
-                                let size_text =
-                                    crate::file_transfer_protocol::human_size(offer.size);
-
-                                slint::invoke_from_event_loop(move || {
-                                    if let Some(app) = weak.upgrade() {
-                                        let item = FileOfferItem {
-                                            offer_id: id_hex.into(),
-                                            name: display_name.into(),
-                                            size_text: size_text.into(),
-                                            is_downloading: false,
-                                            progress_text: "".into(),
-                                            is_mobile: false,
-                                            is_web: false,
-                                        };
-
-                                        app.invoke_add_file_offer(item);
-                                    }
-                                })
-                                .ok();
+                                main_helpers::handle_foft_offer(offer, _from.ip(), &remote_windows_offers, &ui_weak);
                             }
-
                             continue;
                         }
 
                         if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MFOFT" {
                             if let Some(ip) = my_ip { if _from.ip() == ip { continue; } }
-                            let payload = &msg_bytes[5..];
-                            if let Some((offer, id_hex)) = crate::file_transfer_protocol::decode_mfoft(payload) {
-                                if remote_windows_offers.lock().unwrap().contains_key(&id_hex) {
-                                    continue;
-                                }
-                                let sender_ip = _from.ip();
-
-                                let is_new = crate::file_transfer_protocol::register_remote_offer(
-                                    &remote_mobile_offers,
-                                    sender_ip,
-                                    id_hex.clone(),
-                                    offer.clone(),
-                                );
-
-                                if !is_new {
-                                    continue; // duplicate MFOFT, don't spam UI
-                                }
-
-                                let weak = ui_weak.clone();
-                                let display_name = crate::file_transfer_protocol::truncate_name(&offer.name, 16);
-                                let size_text = crate::file_transfer_protocol::human_size(offer.size);
-
-                                slint::invoke_from_event_loop(move || {
-                                    if let Some(app) = weak.upgrade() {
-                                        app.invoke_add_file_offer(FileOfferItem {
-                                            offer_id: id_hex.into(),
-                                            name: display_name.into(),
-                                            size_text: size_text.into(),
-                                            is_downloading: false,
-                                            progress_text: "".into(),
-                                            is_mobile: true,
-                                            is_web: false,
-                                        });
-                                    }
-                                })
-                                .ok();
+                            if let Some((offer, id_hex)) = crate::file_transfer_protocol::decode_mfoft(&msg_bytes[5..]) {
+                                main_helpers::handle_mfoft_offer(offer, id_hex, _from.ip(), &remote_windows_offers, &remote_mobile_offers, &ui_weak);
                             }
-
                             continue;
                         }
-
                         if msg_bytes.len() >= 5 && &msg_bytes[..5] == b"MTOOL" {
                             if let Some(ip) = my_ip {
                                 if _from.ip() == ip {
@@ -290,9 +240,25 @@ pub fn start_udp_receiver(
                             main_helpers::recieve_tools_packet( payload, _from.ip(), ui_weak.clone(), );
                             continue;
                         }
-
                         // 2️⃣ Normal text messages
-                        if let Ok(msg) = String::from_utf8(msg_bytes.to_vec()) {
+                        if let Ok(raw) = String::from_utf8(msg_bytes.to_vec()) {
+                            if raw.starts_with("POLL") {
+                                //println!("POLL: Packet reached receiver");
+                                main_helpers::handle_poll_packet(&raw, ui_weak.clone());
+                                continue;
+                            }
+                            if raw.starts_with("VOTE") {
+                                main_helpers::handle_vote_packet(&raw, ui_weak.clone());
+                                continue;
+                            }
+                            if raw.starts_with("DNPL") {
+                                main_helpers::handle_done_packet(&raw, ui_weak.clone());
+                                continue;
+                            }
+                            //println!("{:?} this is the raw before parsing", raw);
+                            // text without the sender tag, used only for the checks below
+                            let msg = match main_helpers::parse_sender_tag(&raw) {Some(tagged) => tagged.text, None => raw.clone(),};
+                            //println!("{:?} this is the msg after parsing", raw);
                             if msg.eq_ignore_ascii_case("ping") {
                                 secure_channel_code::play_ping_sound();
                             } else if msg.to_ascii_lowercase().contains("nutella") {
@@ -302,7 +268,7 @@ pub fn start_udp_receiver(
                                 let weak = ui_weak.clone();
                                 slint::invoke_from_event_loop(move || {
                                     if let Some(app) = weak.upgrade() {
-                                        app.invoke_append_message(msg.into());
+                                        app.invoke_append_message(raw.into());
                                     }
                                 })
                                 .ok();
@@ -311,14 +277,8 @@ pub fn start_udp_receiver(
                     }
                 }
                 Err(e)
-                    if e.kind() == io::ErrorKind::WouldBlock
-                        || e.kind() == io::ErrorKind::TimedOut =>
-                {
-                    // Expected timeouts
-                }
-                Err(_e) => {
-                    break;
-                }
+                    if e.kind() == io::ErrorKind::WouldBlock || e.kind() == io::ErrorKind::TimedOut => { /* Expected timeouts */ }
+                Err(_e) => {break;}
             }
         }
     })

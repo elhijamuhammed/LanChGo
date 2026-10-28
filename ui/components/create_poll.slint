@@ -1,0 +1,313 @@
+import { LineEdit } from "std-widgets.slint";
+import { Translations } from "translations.slint";
+
+export component CreatePollDialog inherits Rectangle {
+    in property <float> global_scale: 1.0;
+    in-out property <bool> open: false;
+    in-out property <[string]> options: ["", ""];
+    in-out property <int> minutes: 3;
+    in-out property <string> question_text: "";
+    callback create_poll(string, [string], int);
+
+    property <bool> valid: root.question_text != "" && root.options[0] != "" && root.options[1] != "";
+    property <bool> rtl: Translations.direction == "RTL";
+
+    property <bool> length_warning: root.question_text.character-count > 69 || root.options[0].character-count > 69 || root.options[1].character-count > 69
+    || (root.options.length > 2 && root.options[2].character-count > 69) || (root.options.length > 3 && root.options[3].character-count > 69)
+    || (root.options.length > 4 && root.options[4].character-count > 69) || (root.options.length > 5 && root.options[5].character-count > 69);
+
+    function close() {
+        root.question_text = "";
+        root.options = ["", ""];
+        root.minutes = 3;
+        root.open = false;
+    }
+
+    function submit() {
+        if (root.valid && !root.length_warning) {
+            root.create_poll(root.question_text, root.options, root.minutes);
+            root.close();
+        }
+    }
+
+    visible: root.open;
+    background: #000000aa;
+
+    TouchArea { }
+
+    if root.open: FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.close();
+                return accept;
+            }
+            return reject;
+        }
+
+        card := Rectangle {
+            width: 360px * root.global_scale;
+            height: (218px + 42px * root.options.length) * root.global_scale;
+            background: #11161c;
+            border-radius: 14px * root.global_scale;
+            border-width: 1px * root.global_scale;
+            border-color: #2a3540;
+
+            VerticalLayout {
+                padding: 16px * root.global_scale;
+                spacing: 8px * root.global_scale;
+
+                Text {
+                    text: "📊 " + Translations.new_poll;
+                    color: white;
+                    font-size: 15px * root.global_scale;
+                    font-weight: 700;
+                    height: 24px * root.global_scale;
+                }
+
+                question := LineEdit {
+                    placeholder-text: Translations.poll_question_placeholder;
+                    height: 34px * root.global_scale;
+                    text: root.question_text;
+                    edited(t) => { root.question_text = t; }
+                    accepted => { root.submit(); }
+                    init => { self.focus(); }
+
+                    key-pressed(event) => {
+                        if (self.text.character-count >= 69 && !event.modifiers.control
+                            && event.text != Key.Backspace && event.text != Key.Delete && event.text != Key.LeftArrow && event.text != Key.RightArrow
+                            && event.text != Key.Home && event.text != Key.End && event.text != Key.Return && event.text != Key.Escape
+                            && event.text != Key.Tab) {
+                            return accept;
+                        }
+                        return reject;
+                    }
+                }
+
+                if root.length_warning: Text {
+                    text: Translations.poll_max_length_warning;
+                    color: #ff7777;
+                    font-size: 11px * root.global_scale;
+                    wrap: word-wrap;
+                }
+
+                for opt[i] in root.options: LineEdit {
+                    placeholder-text: Translations.poll_option + (i + 1);
+                    text: opt;
+                    height: 34px * root.global_scale;
+                    edited(t) => { root.options[i] = t; }
+                    accepted => { root.submit(); }
+
+                    key-pressed(event) => {
+                        if (self.text.character-count >= 69 && !event.modifiers.control && event.text != Key.Backspace && event.text != Key.Delete
+                            && event.text != Key.LeftArrow && event.text != Key.RightArrow && event.text != Key.Home && event.text != Key.End
+                            && event.text != Key.Return && event.text != Key.Escape && event.text != Key.Tab) {
+                            return accept;
+                        }
+                        return reject;
+                    }
+                }
+
+                // Add / Remove options: order follows language direction.
+                HorizontalLayout {
+                    height: 30px * root.global_scale;
+                    spacing: 8px * root.global_scale;
+
+                    if root.rtl: Rectangle {
+                        border-radius: 8px * root.global_scale;
+                        background: root.options.length > 2 ? (rem_rtl.has-hover ? #49325F : #302344) : #202831;
+
+                        Text {
+                            text: "− " + Translations.poll_remove_option;
+                            color: root.options.length > 2 ? white : #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        rem_rtl := TouchArea {
+                            enabled: root.options.length > 2;
+                            clicked => {root.options.remove(root.options.length - 1);}
+                        }
+                    }
+
+                    Rectangle {
+                        border-radius: 8px * root.global_scale;
+                        background: root.options.length < 6 ? (add_area.has-hover ? #49325F : #302344) : #202831;
+
+                        Text {
+                            text: "+ " + Translations.poll_add_option;
+                            color: root.options.length < 6 ? white : #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        add_area := TouchArea {
+                            enabled: root.options.length < 6;
+                            clicked => { root.options.push(""); }
+                        }
+                    }
+
+                    if !root.rtl: Rectangle {
+                        border-radius: 8px * root.global_scale;
+                        background: root.options.length > 2 ? (rem_ltr.has-hover ? #49325F : #302344) : #202831;
+
+                        Text {
+                            text: "− " + Translations.poll_remove_option;
+                            color: root.options.length > 2 ? white : #8d98a3;
+                            font-size: 12px * root.global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        rem_ltr := TouchArea {
+                            enabled: root.options.length > 2;
+                            clicked => {root.options.remove(root.options.length - 1);}
+                        }
+                    }
+                }
+
+                // Minutes: reverse the order of the minus and plus controls.
+                HorizontalLayout {
+                    height: 30px * root.global_scale;
+                    spacing: 8px * root.global_scale;
+
+                    Text {
+                        text: Translations.poll_closes_prefix + root.minutes + Translations.poll_closes_suffix;
+                        color: #a7b1bb;
+                        font-size: 12px * root.global_scale;
+                        vertical-alignment: center;
+                    }
+
+                    if root.rtl: Rectangle {
+                        width: 30px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: root.minutes < 5 ? (plus_rtl.has-hover ? #49325F : #302344) : #202831;
+
+                        Text {
+                            text: "+";
+                            color: root.minutes < 5 ? white : #8d98a3;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        plus_rtl := TouchArea {
+                            enabled: root.minutes < 5;
+                            clicked => { root.minutes += 1; }
+                        }
+                    }
+
+                    if !root.rtl: Rectangle {
+                        width: 30px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: root.minutes > 1 ? (min_ltr.has-hover ? #49325F : #302344) : #202831;
+
+                        Text {
+                            text: "−";
+                            color: root.minutes > 1 ? white : #8d98a3;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        min_ltr := TouchArea {
+                            enabled: root.minutes > 1;
+                            clicked => { root.minutes -= 1; }
+                        }
+                    }
+
+                    if root.rtl: Rectangle {
+                        width: 30px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: root.minutes > 1 ? (min_rtl.has-hover ? #49325F : #302344) : #202831;
+
+                        Text {
+                            text: "−";
+                            color: root.minutes > 1 ? white : #8d98a3;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        min_rtl := TouchArea {
+                            enabled: root.minutes > 1;
+                            clicked => { root.minutes -= 1; }
+                        }
+                    }
+
+                    if !root.rtl: Rectangle {
+                        width: 30px * root.global_scale;
+                        border-radius: 8px * root.global_scale;
+                        background: root.minutes < 5 ? (plus_ltr.has-hover ? #49325F : #302344) : #202831;
+
+                        Text {
+                            text: "+";
+                            color: root.minutes < 5 ? white : #8d98a3;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        plus_ltr := TouchArea {
+                            enabled: root.minutes < 5;
+                            clicked => { root.minutes += 1; }
+                        }
+                    }
+                }
+
+                // Close / Create: Create appears first in RTL.
+                HorizontalLayout {
+                    height: 36px * root.global_scale;
+                    spacing: 8px * root.global_scale;
+                    if root.rtl: Rectangle {
+                        border-radius: 8px * root.global_scale;
+                        background: root.valid ? (create_rtl.has-hover ? #8B5FBF : #6d4aa0) : #202831;
+                        Text {
+                            text: Translations.poll_create;
+                            color: root.valid ? white : #8d98a3;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        create_rtl := TouchArea {
+                            enabled: root.valid;
+                            clicked => { root.submit(); }
+                        }
+                    }
+                    Rectangle {
+                        border-radius: 8px * root.global_scale;
+                        background: cancel_area.has-hover ? #3a4552 : #202831;
+                        Text {
+                            text: Translations.close;
+                            color: white;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        cancel_area := TouchArea {
+                            clicked => { root.close(); }
+                        }
+                    }
+
+                    if !root.rtl: Rectangle {
+                        border-radius: 8px * root.global_scale;
+                        background: root.valid ? (create_ltr.has-hover ? #8B5FBF : #6d4aa0) : #202831;
+
+                        Text {
+                            text: Translations.poll_create;
+                            color: root.valid ? white : #8d98a3;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        create_ltr := TouchArea {
+                            enabled: root.valid;
+                            clicked => { root.submit(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

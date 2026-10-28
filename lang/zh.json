@@ -84,7 +84,7 @@
   "old_config_detected": "检测到旧版本的配置文件！",
   "restart_for_fresh_config": "请重新启动 LanChGo，以使用新的配置继续。",
 
-  "exit": "退出",
+  "restart": "重启",
   "connecting_secure": "正在连接到安全频道...",
   "please_wait": "请稍候",
 
@@ -102,5 +102,26 @@
   "tooltip_open_download": "打开文件保存位置",
   "tooltip_clear_files_panel": "清除文件列表",
   "tooltip_resend_file": "重新发送文件",
-  "tooltip_download_file": "下载文件"
+  "tooltip_download_file": "下载文件",
+
+  "device_name": "设备名称",
+  "tooltip_device_name": "为您的设备输入一个名称，方便其他人在网络中识别",
+
+  "activities_button": "更多活动",
+
+  "activities_poll": "投票",
+  "new_poll": "新建投票",
+  "poll_question_placeholder": "问题",
+  "poll_option": "选项 ",
+  "poll_add_option": "添加选项",
+  "poll_remove_option": "删除选项",
+  "poll_closes_prefix": "投票将在 ",
+  "poll_closes_suffix": " 分钟后结束",
+  "poll_create": "创建投票",
+  "poll_show_results": "查看结果",
+  "poll_chart_bars": "条形图",
+  "poll_chart_pie": "饼图",
+  "poll_chart_columns": "柱状图",
+  "poll_max_length_warning": "每个字段最多允许 69 个字符",
+  "poll_done": "结束投票"
 }

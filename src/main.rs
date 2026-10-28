@@ -17,12 +17,13 @@ mod tray;
 #[allow(non_snake_case)]
 mod Tools;
 mod translation_controller;
+mod poll_controller;
 
 use semaphore::Semaphore;
 use slint::{ComponentHandle, LogicalSize, Model, ModelRc, VecModel};
 use std::error::Error;
 use std::{io, /*io::{BufRead, BufReader}*/};
-use std::io::{ErrorKind, /*Write*/};
+//use std::io::{ErrorKind, /*Write*/};
 use std::net::{/*TcpStream,*/ UdpSocket};
 use std::rc::Rc;
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex };
@@ -44,16 +45,10 @@ use crate::main_helpers::{
 slint::include_modules!();
 
 //static APP_HANDLE: OnceLock<slint::Weak<AppWindow>> = OnceLock::new();
-const MAX_DATAGRAM: usize = 1400;
+//const MAX_DATAGRAM: usize = 1400; // unused or unbenefical so deleted it
 
 fn broadcast_the_msg(sock: &UdpSocket, state: &BroadcastState, msg: &[u8]) -> io::Result<()> {
     let target = state.target_v4();
-    if msg.len() >= MAX_DATAGRAM {
-        return Err(io::Error::new(
-            ErrorKind::InvalidInput,
-            format!("message too long: {} > {}", msg.len(), MAX_DATAGRAM),
-        ));
-    }
     sock.send_to(msg, target)?;
     Ok(())
 }
@@ -106,8 +101,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     app.set_file_offer(ModelRc::new(file_offer_model.clone()));
 
     // -------- tools devices model
-    let tool_devices_model = Rc::new(VecModel::<ToolDevice>::from(Vec::new()));
-    app.set_tool_devices(ModelRc::new(tool_devices_model.clone()));
+    // let tool_devices_model = Rc::new(VecModel::<ToolDevice>::from(Vec::new()));
+    // app.set_tool_devices(ModelRc::new(tool_devices_model.clone()));
 
     let offer_registry = Arc::new(Mutex::new(file_transfer_protocol::OfferRegistry::new()));
     web_app_file_transfer::register_offer_registry(Arc::clone(&offer_registry));
@@ -120,84 +115,62 @@ fn main() -> Result<(), Box<dyn Error>> {
     // for pushing file offers in the Vector
     {
         let file_offer_model = file_offer_model.clone();
-        app.on_add_file_offer(move |item: FileOfferItem| {
-            file_offer_model.push(item);
-        });
+        app.on_add_file_offer(move |item: FileOfferItem| {file_offer_model.push(item);});
     }
 
-    // for pushing discovered tool devices
-    {
-        let tool_devices_model = tool_devices_model.clone();
-        let weak = app.as_weak();
+    // // for pushing discovered tool devices
+    // {
+    //     let tool_devices_model = tool_devices_model.clone();
+    //     let weak = app.as_weak();
 
-        app.on_add_tool_device(
-            move |device_id, name, ip, platform, tcp_port, version, tool, direction| {
-                // Remove old entry for same device + tool + direction
-                for i in (0..tool_devices_model.row_count()).rev() {
-                    if let Some(row) = tool_devices_model.row_data(i) {
-                        if row.id == device_id && row.tool == tool {
-                            tool_devices_model.remove(i);
-                        }
-                    }
-                }
+    //     app.on_add_tool_device(
+    //         move |device_id, name, ip, platform, tcp_port, version, tool, direction| {
+    //             // Remove old entry for same device + tool + direction
+    //             for i in (0..tool_devices_model.row_count()).rev() {
+    //                 if let Some(row) = tool_devices_model.row_data(i) {
+    //                     if row.id == device_id && row.tool == tool {
+    //                         tool_devices_model.remove(i);
+    //                     }
+    //                 }
+    //             }
 
-                let icon: slint::SharedString =
-                    if platform.to_lowercase() == "android" {
-                        "📱".into()
-                    } else {
-                        "🖥".into()
-                    };
+    //             let icon: slint::SharedString =
+    //                 if platform.to_lowercase() == "android" {"📱".into()} else {"🖥".into()};
 
-                let status: slint::SharedString =
-                    if tool == "screen_share" {
-                        match direction.as_str() {
-                            "android_to_pc" => "Phone → PC".into(),
-                            "pc_to_android" => "PC → Phone".into(),
-                            _ => "Screen Share".into(),
-                        }
-                    } else {
-                        format!("{} v{}", platform, version).into()
-                    };
+    //             let status: slint::SharedString =
+    //                 if tool == "screen_share" {
+    //                     match direction.as_str() {
+    //                         "android_to_pc" => "Phone → PC".into(),
+    //                         "pc_to_android" => "PC → Phone".into(),
+    //                         _ => "Screen Share".into(),}
+    //                 } else {format!("{} v{}", platform, version).into()};
 
-                tool_devices_model.push(ToolDevice {
-                    id: device_id,
-                    name,
-                    ip: format!("{}:{}", ip, tcp_port).into(),
-                    status,
-                    icon,
-                    tool: tool.clone(),
-                    direction,
-                });
-
-                let mut active_count = 0;
-
-                for i in 0..tool_devices_model.row_count() {
-                    if let Some(row) = tool_devices_model.row_data(i) {
-                        if row.tool == tool {
-                            active_count += 1;
-                        }
-                    }
-                }
-
-                if let Some(app) = weak.upgrade() {
-                    app.set_active_tool_count(active_count);
-                }
-            },
-        );
-    }
+    //             tool_devices_model.push(ToolDevice {
+    //                 id: device_id,
+    //                 name,
+    //                 ip: format!("{}:{}", ip, tcp_port).into(),
+    //                 status,
+    //                 icon,
+    //                 tool: tool.clone(),
+    //                 direction,
+    //             });
+    //             let mut active_count = 0;
+    //             for i in 0..tool_devices_model.row_count() {if let Some(row) = tool_devices_model.row_data(i) {if row.tool == tool {active_count += 1;}}}
+    //             if let Some(app) = weak.upgrade() {app.set_active_tool_count(active_count);}
+    //         },
+    //     );
+    // }
         
-    // for clearing discovered tool devices
-    {
-        let tool_devices_model = tool_devices_model.clone();
-        let weak = app.as_weak();
-        app.on_clear_tool_devices(move || {
-            tool_devices_model.set_vec(Vec::new());
-            if let Some(app) = weak.upgrade() {
-                app.set_active_tool_count(0);
-            }
-            //println!("[TOOLS] device list cleared");
-        });
-    }
+    // // for clearing discovered tool devices
+    // {
+    //     let tool_devices_model = tool_devices_model.clone();
+    //     let weak = app.as_weak();
+    //     app.on_clear_tool_devices(move || {
+    //         tool_devices_model.set_vec(Vec::new());
+    //         if let Some(app) = weak.upgrade() {app.set_active_tool_count(0);}
+    //         //println!("[TOOLS] device list cleared");
+    //     });
+    // }
 
     // clear button for the file transfer panel
     {
@@ -227,16 +200,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     // append message handler
     {
         let model = model.clone();
+        let weak = app.as_weak();
         app.on_append_message(move |msg: slint::SharedString| {
-            let item = build_message_item(&msg);
-
+            let default_name = weak.upgrade().map(|a| a.get_default_device_name().to_string()).unwrap_or_default();
+            let item = build_message_item(&msg, &default_name);
+            let clean_text = item.text.to_string();
             model.push(item);
-            if model.row_count() > 10 {
-                model.remove(0);
-            }
-
-            // send to web clients (unchanged — still uses the raw string)
-            let payload = serde_json::json!({ "type": "chat", "sender": "app", "text": msg.to_string()});
+            if model.row_count() > 10 { model.remove(0); }
+            let payload = serde_json::json!({ "type": "chat", "sender": "app", "text": clean_text });
             web_app::broadcast_to_web_clients(payload.to_string());
         });
     }
@@ -247,11 +218,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let default_broadcast = get_broadcast_for_name(&interfaces, &default_iface_name).unwrap_or_else(|| state.get_broadcast_address());
     let default_gateway = get_gateway_for_adapter(&default_iface_name);
 
-    let default_download_folder = dirs::download_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("LanChGo")
-        .display()
-        .to_string();
+    let default_download_folder = dirs::download_dir().unwrap_or_else(|| std::path::PathBuf::from(".")).join("LanChGo").display().to_string();
 
     let default_config = Config {
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -262,15 +229,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         port: None,
         ui_scale: None,
         language: "ar".to_string(),
+        device_id: String::new(),
+        device_name: None,
     };
-
     let (config_loaded, first_run) = load_or_create_config(&default_config, &app);
     let config = Arc::new(Mutex::new(config_loaded));
-    
     {
         let lang = config.lock().unwrap().language.clone();
         translation_controller::main_controller(&app, &lang);
-        app.set_selected_language(lang.into());
+        app.set_selected_language(lang.clone().into());
+        app.set_default_device_name(main_helpers::default_device_name(&lang).into());
+        if let Some(name) = config.lock().unwrap().device_name.clone() {app.set_device_name(name.into());}
     }
 
     // ensure folder exists + push to UI
@@ -479,7 +448,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 app.set_input_text("".into());
                 return;
             }
-            
+
             if trimmed.eq_ignore_ascii_case("/info") {
                 let info = main_helpers::info_message();
                 app.invoke_append_message(info.into());
@@ -498,13 +467,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                 app.set_show_welcome(true);
                 app.set_input_text("".into());
                 return;
-            }            
+            }
 
             if trimmed.eq_ignore_ascii_case("/restart") {
                 main_helpers::restart_app_after_delay(900);
                 app.set_input_text("".into());
                 return;
-            }  
+            }
 
             if msg.eq_ignore_ascii_case("/downloads") {
                 match main_helpers::open_download_folder_from_config(&config_for_commands) {
@@ -528,7 +497,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 app.set_global_scale(next);
                 app.set_input_text("".into());
                 app.invoke_show_temp_message(format!("🔎 UI scale set to {:.2}", next).into());
-                // Save to config  <-- add this block
                 {
                     let mut cfg = config_for_commands.lock().unwrap();
                     cfg.ui_scale = Some(next);
@@ -537,29 +505,37 @@ fn main() -> Result<(), Box<dyn Error>> {
                 return;
             }
 
+            if trimmed.eq_ignore_ascii_case("/poll") {
+                app.invoke_open_poll_dialog();
+                app.set_input_text("".into());
+                return;
+            }
+
             if trimmed.is_empty() {
                 app.set_input_text("".into());
                 return;
             }
 
+            // tag the message with this device's id and name
+            let tagged = {
+                let cfg = config_for_commands.lock().unwrap();
+                main_helpers::build_sender_tag(&cfg.device_id, cfg.device_name.as_deref().unwrap_or(""), trimmed,)
+            };
+
             if let Some(channel) = secure_channel_code::get_active_channel() {
-                let encrypted =
-                    secure_channel_code::encrypt_message(&channel.key, trimmed);
+                let encrypted = secure_channel_code::encrypt_message(&channel.key, &tagged);
                 let payload = bincode::serde::encode_to_vec(
                     &encrypted,
                     bincode::config::standard(),
-                )
-                .expect("Failed to encode SecureMessage");
+                ).expect("Failed to encode SecureMessage");
 
                 let mut packet_win = Vec::from(b"ENCM" as &[u8]);
                 packet_win.extend_from_slice(&payload);
                 let _ = broadcast_the_msg(&s, &st, &packet_win);
-
-                let packet_mob =
-                    phone_protocol::encrypt_message_phone(&channel.key, trimmed);
+                let packet_mob = phone_protocol::encrypt_message_phone(&channel.key, &tagged);
                 let _ = broadcast_the_msg(&s, &st, &packet_mob);
             } else {
-                if let Err(_e) = broadcast_the_msg(&s, &st, trimmed.as_bytes()) {
+                if let Err(_e) = broadcast_the_msg(&s, &st, tagged.as_bytes()) {
                     app.invoke_show_popupmsg();
                 }
             }
@@ -806,7 +782,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         let s = Arc::clone(&sock);
         let weak = app.as_weak();
         let offer_registry = Arc::clone(&offer_registry);
-
+        let config = Arc::clone(&config);
+        // to set the id in the controller struct so we can take the id afterwards
+        poll_controller::set_my_id(config.lock().unwrap().device_id.clone());
         // guard lives next to the handler so it persists across clicks
         let is_picking_files = Arc::new(AtomicBool::new(false));
 
@@ -816,10 +794,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             if is_picking_files.swap(true, Ordering::SeqCst) {
                 return;
             }
+            let sender = main_helpers::get_sender_identity(&config);
             // call the async builder (opens dialog; returns Ready or Bundling)
             let build = {
                 let mut reg = offer_registry.lock().unwrap();
-                file_transfer_protocol::pick_and_build_foft_packet_async(&mut reg)
+                file_transfer_protocol::pick_and_build_foft_packet_async(&mut reg, (sender.0.clone(), sender.1.clone()),)
             };
             // IMPORTANT: dialog is closed now → allow clicking Files again
             is_picking_files.store(false, Ordering::SeqCst);
@@ -837,20 +816,38 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // i want to work on something else so i am leaving it at that maybe if i wanted to i will change it and make
                 // it more tidy
                 file_transfer_protocol::BuildResult::Ready(packet) => {
-                    // 1) broadcast FOFT (Windows)
-                    if let Err(_e) = broadcast_the_msg(&s, &st, &packet) {
-                        app.invoke_show_popupmsg();
-                        return;
-                    }
-                    // 2) broadcast MFOFT (Android)
-                    if let Some(offer) = crate::file_transfer_protocol::decode_foft(&packet) {
-                        if let Ok(mfoft_packet) = crate::file_transfer_protocol::encode_mfoft_packet(&offer) {
-                            let _ = broadcast_the_msg(&s, &st, &mfoft_packet);
-                        }
-                        crate::web_app_file_transfer::notify_web_file_offer(&offer.offer_id, &offer.name, offer.size);
-                    }
-                    app.invoke_show_temp_message("📤 File offer broadcasted".into());
-                }
+    let channel = secure_channel_code::get_active_channel();
+    let offer = crate::file_transfer_protocol::decode_foft(&packet);
+    let mfoft_packet = offer.as_ref().and_then(|o| crate::file_transfer_protocol::encode_mfoft_packet(o).ok());
+
+    // 1) FOFT (Windows), encrypted as EFOFT in a secure channel
+    let foft_out = match &channel {
+        Some(ch) => match file_transfer_protocol::encrypt_foft_packet(&ch.key, &packet) {
+            Ok(p) => p,
+            Err(_) => { app.invoke_show_popupmsg(); return; }
+        },
+        None => packet.clone(),
+    };
+    if let Err(_e) = broadcast_the_msg(&s, &st, &foft_out) {
+        app.invoke_show_popupmsg();
+        return;
+    }
+    // 2) MFOFT (Android), encrypted as EMFOFT in a secure channel
+    if let Some(m) = mfoft_packet {
+        let mfoft_out = match &channel {
+            Some(ch) => file_transfer_protocol::encrypt_mfoft_packet(&ch.key, &m),
+            None => Some(m),
+        };
+        if let Some(p) = mfoft_out {
+            let _ = broadcast_the_msg(&s, &st, &p);
+        }
+    }
+    if let Some(offer) = offer {
+        crate::web_app_file_transfer::notify_web_file_offer(&offer.offer_id, &offer.name, offer.size);
+    }
+    app.invoke_show_temp_message("📤 File offer broadcasted".into());
+}
+                
                 file_transfer_protocol::BuildResult::Bundling { rx, handle: _handle, offer_id: _ } => {
                     // ✅ show immediate UI feedback
                     app.invoke_show_temp_message("🧵 Bundling files in background...".into());
@@ -860,7 +857,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                     let s2 = Arc::clone(&s);
                     let st2 = Arc::clone(&st);
                     let weak2 = app.as_weak();
-
                     use std::time::{Duration, Instant};
 
                     std::thread::spawn(move || {
@@ -946,6 +942,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                                             kind: crate::file_transfer_protocol::OfferKind::SingleFile, // android limitation
                                             protocol_version: crate::file_transfer_protocol::FILE_PROTOCOL_VERSION,
                                             tcp_port: crate::file_transfer_protocol::DEFAULT_TCP_PORT,
+                                            sender_id: sender.0.clone(),
+                                            sender_name: sender.1.clone(),
                                         };
 
                                         match crate::file_transfer_protocol::encode_mfoft_packet(&offer) {
@@ -953,43 +951,30 @@ fn main() -> Result<(), Box<dyn Error>> {
                                             Err(_) => false,
                                         }
                                     };
-
                                     let ok = ok_foft || ok_mfoft;
-
                                     let weak_ui = weak2.clone();
-                                    let _ = slint::invoke_from_event_loop(move || {
-                                        let Some(app) = weak_ui.upgrade() else { return; };
-
+                                    let _ = slint::invoke_from_event_loop(move || {let Some(app) = weak_ui.upgrade() else { return; };
                                         // hide bundling row
                                         app.set_bundle_in_progress(false);
                                         app.set_bundle_progress(0.0);
                                         app.set_bundle_progress_text("".into());
-
-                                        if ok {
-                                            app.invoke_show_temp_message("📤 File offer (FOFT) broadcasted".into());
-                                        } else {
-                                            app.invoke_show_popupmsg();
-                                        }
+                                        if ok {app.invoke_show_temp_message("📤 File offer (FOFT) broadcasted".into());
+                                        } else {app.invoke_show_popupmsg();}
                                     });
-
                                     break;
                                 }
 
                                 Ok(file_transfer_protocol::BundleEvent::Error { message, .. }) => {
                                     let weak_ui = weak2.clone();
-                                    let _ = slint::invoke_from_event_loop(move || {
-                                        let Some(app) = weak_ui.upgrade() else { return; };
-
+                                    let _ = slint::invoke_from_event_loop(move || {let Some(app) = weak_ui.upgrade() else { return; };
                                         // hide bundling row
                                         app.set_bundle_in_progress(false);
                                         app.set_bundle_progress(0.0);
                                         app.set_bundle_progress_text("".into());
-
                                         app.invoke_show_temp_message(format!("❌ ZIP failed: {}", message).into());
                                     });
                                     break;
                                 }
-
                                 Err(_) => break,
                             }
                         }
@@ -1005,6 +990,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let s = Arc::clone(&sock);
         let weak = app.as_weak();
         let offer_registry = Arc::clone(&offer_registry);
+        let config = Arc::clone(&config);
 
         app.on_resend_file_offer(move |offer_id| {
             // Convert Slint string back to [u8; 16]
@@ -1017,30 +1003,43 @@ fn main() -> Result<(), Box<dyn Error>> {
             // Find the existing locally-created offer
             let offer = {
                 let registry = offer_registry.lock().unwrap();
-                file_transfer_protocol::repoint_file_offer( &registry, offer_id,)
+                let sender = main_helpers::get_sender_identity(&config);
+                file_transfer_protocol::repoint_file_offer(&registry, offer_id, sender)
             };
             let Some(offer) = offer else {
                 // println!("offer not found in local registry");
                 return;
             };
             // println!("resending: {}", offer.name);
-
+            
+            let channel = secure_channel_code::get_active_channel();
             // ─────────────────────────────────────────────
             // FOFT → Windows
             // ─────────────────────────────────────────────
 
-            let foft_packet =
-                match file_transfer_protocol::encode_foft_packet(&offer) {
-                    Ok(packet) => packet,
-                    Err(e) => {
-                        // println!("failed to encode FOFT: {e}");
-                        return;
-                    }
-                };
-
-            if let Err(e) = broadcast_the_msg( &s, &st, &foft_packet, ) {
-                // println!("failed to broadcast FOFT: {e}");
+            let foft_packet = match file_transfer_protocol::encode_foft_packet(&offer) {
+                Ok(packet) => packet,
+                Err(_e) => return,
+            };
+            let foft_out = match &channel {
+                Some(ch) => match file_transfer_protocol::encrypt_foft_packet(&ch.key, &foft_packet) {
+                    Ok(p) => p,
+                    Err(_) => return,
+                },
+                None => foft_packet,
+            };
+            if broadcast_the_msg(&s, &st, &foft_out).is_err() {
                 return;
+            }
+
+            if let Ok(mfoft_packet) = file_transfer_protocol::encode_mfoft_packet(&offer) {
+                let mfoft_out = match &channel {
+                    Some(ch) => file_transfer_protocol::encrypt_mfoft_packet(&ch.key, &mfoft_packet),
+                    None => Some(mfoft_packet),
+                };
+                if let Some(p) = mfoft_out {
+                    let _ = broadcast_the_msg(&s, &st, &p);
+                }
             }
             //println!("FOFT resent");
             // ─────────────────────────────────────────────
@@ -1199,7 +1198,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             // 4) Spawn download thread
             let weak_ui_thread = weak.clone();
             let offer_id_str_thread = offer_id_hex.to_string();
-
             std::thread::spawn(move || {
                 // Hold permit for entire download lifetime (IMPORTANT)
                 let _permit = permit;
@@ -1528,6 +1526,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     //     });
     // }
 
+    // when changing the language
     {
         let weak = app.as_weak();
         let config = Arc::clone(&config);
@@ -1535,11 +1534,137 @@ fn main() -> Result<(), Box<dyn Error>> {
         app.on_language_changed(move |language| {
             if let Some(app) = weak.upgrade() {
                 translation_controller::main_controller(&app, &language);
+                app.set_default_device_name(main_helpers::default_device_name(&language).into());
 
                 let mut cfg = config.lock().unwrap();
                 cfg.language = language.to_string();
                 save_config(&cfg);
             }
+        });
+    }
+
+    // when setting a new device name
+    {
+        let config = Arc::clone(&config);
+        let weak = app.as_weak();
+        app.on_device_name_changed(move |name| {
+            let limited = main_helpers::limit_name(&name);
+            if limited != name.as_str() {
+                if let Some(app) = weak.upgrade() {
+                    app.set_device_name(limited.clone().into());
+                }
+            }
+            let saved = limited.trim().to_string();
+            let mut cfg = config.lock().unwrap();
+            cfg.device_name = if saved.is_empty() { None } else { Some(saved) };
+            save_config(&cfg);
+        });
+    }
+
+    // creating a poll (Create pressed in the poll dialog)
+    {
+        let config = Arc::clone(&config);
+        let st = Arc::clone(&state);
+        let s = Arc::clone(&sock);
+
+        app.on_create_poll(move |question, options, minutes| {
+            let options: Vec<String> = options.iter().map(|o| o.to_string()).collect();
+            let creator_id = config.lock().unwrap().device_id.clone();
+            let packet = crate::poll_controller::controller()
+                .lock()
+                .unwrap()
+                .create_poll(&creator_id, minutes, question.as_str(), &options);
+
+            if let Some(packet) = packet {
+                let st = Arc::clone(&st);
+                let s = Arc::clone(&s);
+                thread::spawn(move || {
+                    for i in 0..3 {
+                        let _ = broadcast_the_msg(&s, &st, packet.as_bytes());
+                        if i < 2 {
+                            sleep(Duration::from_millis(60));
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    // voting (an option was tapped in the poll banner)
+    {
+        let st = Arc::clone(&state);
+        let s = Arc::clone(&sock);
+
+        app.on_vote(move |index| {
+            let packet = crate::poll_controller::build_vote_packet(index);
+            if let Some(packet) = packet {
+                let st = Arc::clone(&st);
+                let s = Arc::clone(&s);
+                thread::spawn(move || {
+                    for i in 0..3 {
+                        let _ = broadcast_the_msg(&s, &st, packet.as_bytes());
+                        if i < 2 {
+                            sleep(Duration::from_millis(60));
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    // poll finished message (with the show results button)
+    {
+        let model = model.clone();
+        app.on_append_poll_result(move |text, poll_id| {
+            let mut item = build_message_item(&text, "");
+            item.poll_id = poll_id;
+            model.push(item);
+            if model.row_count() > 10 { model.remove(0); }
+        });
+    }
+
+        // done button (creator closes the poll early)
+    {
+        let st = Arc::clone(&state);
+        let s = Arc::clone(&sock);
+        let weak = app.as_weak();
+
+        app.on_done_poll(move || {
+            let Some(packet) = crate::poll_controller::build_done_packet() else { return; };
+            crate::poll_controller::close_poll(weak.clone());
+            let st = Arc::clone(&st);
+            let s = Arc::clone(&s);
+            thread::spawn(move || {
+                for i in 0..3 {
+                    let _ = broadcast_the_msg(&s, &st, packet.as_bytes());
+                    if i < 2 {
+                        sleep(Duration::from_millis(60));
+                    }
+                }
+            });
+        });
+    }
+
+    // clicking show results button on the finished poll
+    {
+        let weak = app.as_weak();
+        app.on_show_poll_results(move |poll_id| {
+            let Some(result) = poll_controller::get_result(poll_id.as_str()) else { return; };
+            let Some(app) = weak.upgrade() else { return; };
+            let options: Vec<slint::SharedString> = result.options.iter().map(|o| o.as_str().into()).collect();
+            let total: i32 = result.counts.iter().sum();
+            // where each pie slice starts, as a fraction of the whole circle
+            let mut running = 0;
+            let starts: Vec<f32> = result.counts.iter().map(|c| {
+                let start = if total > 0 { running as f32 / total as f32 } else { 0.0 };
+                running += c;
+                start}).collect();
+            app.set_results_question(result.question.as_str().into());
+            app.set_results_options(ModelRc::new(VecModel::from(options)));
+            app.set_results_counts(ModelRc::new(VecModel::from(result.counts.clone())));
+            app.set_results_starts(ModelRc::new(VecModel::from(starts)));
+            app.set_results_total(total);
+            app.set_results_open(true);
         });
     }
 

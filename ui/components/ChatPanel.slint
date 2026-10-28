@@ -1,6 +1,8 @@
+
 import { VerticalBox, HorizontalBox, TextEdit, ListView } from "std-widgets.slint";
 import { MessageItem } from "types.slint";
 import { Translations } from "translations.slint";
+import { PollBanner } from "poll_banner.slint";
 
 export component ChatPanel inherits Rectangle {
     in property <string> temp_message;
@@ -8,29 +10,43 @@ export component ChatPanel inherits Rectangle {
     in-out property <bool> update_available: false;
     in-out property <string> latest_version: "";
     in-out property <float> global_scale;
-    
+
     callback resend(string);
     callback delete_message(string);
     callback open_link(string);
 
+    // Polls
+    in property <bool> poll_active: false;
+    in property <string> poll_question: "";
+    in property <[string]> poll_options: [];
+    in property <[int]> poll_counts: [];
+    in property <string> poll_countdown: "";
+    in property <bool> poll_is_creator: false;
+
+    callback poll_vote(int);
+    callback poll_done();
+    callback show_poll_results(string);
+
     background: #2c2f35;
     border-radius: 8px * root.global_scale;
-    height: 450px* root.global_scale;
+    height: 450px * root.global_scale;
 
     HorizontalLayout {
         Rectangle { horizontal-stretch: 1; }
         VerticalBox {
-            spacing: 2px* root.global_scale;
+            spacing: 2px * root.global_scale;
+
             Text {
                 text: Translations.copyright_text;
-                font-size: 16px* root.global_scale * Translations.font_global_scale * Translations.font_global_scale;
+                font-size: 16px * root.global_scale * Translations.font_global_scale * Translations.font_global_scale;
                 color: white;
                 opacity: 25%;
                 horizontal-alignment: center;
             }
+
             Text {
                 text: Translations.network_description;
-                font-size: 18px* root.global_scale * Translations.font_global_scale * Translations.font_global_scale;
+                font-size: 18px * root.global_scale * Translations.font_global_scale * Translations.font_global_scale;
                 color: white;
                 opacity: 25%;
                 horizontal-alignment: center;
@@ -39,7 +55,7 @@ export component ChatPanel inherits Rectangle {
         Rectangle { horizontal-stretch: 1; }
     }
 
-    if root.temp_message != "": Rectangle {
+    if root.temp_message != "" : Rectangle {
         background: #444;
         border-radius: 8px * root.global_scale;
         width: parent.width * 0.4;
@@ -51,7 +67,7 @@ export component ChatPanel inherits Rectangle {
         Text {
             text: root.temp_message;
             color: white;
-            font-size: 16px* root.global_scale * Translations.font_global_scale;
+            font-size: 16px * root.global_scale * Translations.font_global_scale;
             horizontal-alignment: center;
             vertical-alignment: center;
             width: parent.width;
@@ -59,27 +75,27 @@ export component ChatPanel inherits Rectangle {
         }
     }
 
-    if root.update_available: Rectangle {
+    if root.update_available : Rectangle {
         background: #3a2f12;
         border-radius: 8px * root.global_scale;
         border-width: 1px * root.global_scale;
         border-color: #d89b2b;
 
         width: parent.width - (20px * root.global_scale);
-        height: 38px* root.global_scale;
-        x: 10px* root.global_scale;
-        y: 42px* root.global_scale;
+        height: 38px * root.global_scale;
+        x: 10px * root.global_scale;
+        y: 42px * root.global_scale;
         z: 90;
 
         HorizontalBox {
-            padding-left: 14px* root.global_scale;
-            padding-right: 10px* root.global_scale;
-            spacing: 10px* root.global_scale;
+            padding-left: 14px * root.global_scale;
+            padding-right: 10px * root.global_scale;
+            spacing: 10px * root.global_scale;
 
             Text {
                 text: Translations.update_available + root.latest_version + Translations.update_suffix;
                 color: #ffd27a;
-                font-size: 13px* root.global_scale * Translations.font_global_scale;
+                font-size: 13px * root.global_scale * Translations.font_global_scale;
                 font-weight: 600;
                 vertical-alignment: center;
             }
@@ -89,20 +105,20 @@ export component ChatPanel inherits Rectangle {
             Text {
                 text: Translations.download_github;
                 color: #ffffff;
-                font-size: 12px* root.global_scale * Translations.font_global_scale;
+                font-size: 12px * root.global_scale * Translations.font_global_scale;
                 vertical-alignment: center;
             }
 
             Rectangle {
-                width: 28px* root.global_scale;
-                height: 24px* root.global_scale;
+                width: 28px * root.global_scale;
+                height: 24px * root.global_scale;
                 border-radius: 6px * root.global_scale;
                 background: close_update_area.has-hover ? #5a4118 : transparent;
 
                 Text {
                     text: "X";
                     color: #ffd27a;
-                    font-size: 14px* root.global_scale * Translations.font_global_scale;
+                    font-size: 14px * root.global_scale * Translations.font_global_scale;
                     font-weight: 700;
                     horizontal-alignment: center;
                     vertical-alignment: center;
@@ -126,52 +142,142 @@ export component ChatPanel inherits Rectangle {
         height: parent.height;
         y: root.update_available ? (88px * root.global_scale) : 0px;
 
-        for m[i] in root.messages: Rectangle {
+        for m[i] in root.messages : Rectangle {
             width: parent.width;
-            height: bubble.height + 8px * root.global_scale;
+
+            // Small gap between messages; the sender label now lives inside the bubble.
+            height: bubble.height + (8px * root.global_scale);
 
             bubble := Rectangle {
                 background: #3a3f48;
                 border-radius: 12px * root.global_scale;
-                x: 10px * root.global_scale;
+                x: m.poll_id != "" ? (parent.width - self.width) / 2 : 10px * root.global_scale;
 
-                width: min(parent.width * 0.85, msg.preferred-width + 40px * root.global_scale);
-                height: msg.preferred-height + (16px * root.global_scale);
+                width: m.poll_id != "" ? parent.width * 0.85 : min(parent.width * 0.85, max(msg.preferred-width + 40px * root.global_scale, 110px * root.global_scale));
+                height: m.poll_id != "" ? 44px * root.global_scale : msg.preferred-height + (m.device_id_short != "" ? 32px : 16px) * root.global_scale;
 
                 ContextMenuArea {
                     Menu {
                         MenuItem {
                             title: "📋" + Translations.copy;
-                            activated => {
-                                msg.copy();
-                            }
+                            activated => {msg.copy();}
                         }
-                        if m.link != "": MenuItem {
+
+                        if m.link != "" : MenuItem {
                             title: "🔗 Open Link";
-                            activated => { root.open_link(m.link); }
+                            activated => {root.open_link(m.link);}
                         }
+
                         MenuItem {
-                            title: "↩" + Translations.tooltip_resend; // used the tooltip resend for the translation
-                            activated => { root.resend(m.text); }
+                            title: "↩" + Translations.tooltip_resend;
+                            activated => {root.resend(m.text);}
                         }
                     }
 
                     msg := TextInput {
+                        visible: m.poll_id == "";
                         text: m.text;
                         read-only: true;
                         color: white;
-                        font-size: 18px* root.global_scale * Translations.font_global_scale;
+                        font-size: 18px * root.global_scale * Translations.font_global_scale;
                         wrap: word-wrap;
                         single-line: false;
-                        x: 10px * root.global_scale; y : 8px* root.global_scale;
+                        x: 10px * root.global_scale;
+                        y: 8px * root.global_scale;
                         width: parent.width - (20px * root.global_scale);
+                    }
+                }
+
+                // Sender identity inside the bubble: elided, slides on hover
+                if m.device_id_short != "" : Rectangle {
+                    x: 10px * root.global_scale;
+                    y: msg.preferred-height + (12px * root.global_scale);
+                    width: parent.width - (20px * root.global_scale);
+                    height: 14px * root.global_scale;
+                    clip: true;
+
+                    property <bool> too_long: measure.preferred-width > self.width;
+                    property <length> shift: label_area.has-hover && self.too_long ? self.width - measure.preferred-width : 0px;
+                    animate shift { duration: 1200ms; easing: linear; }
+                    // invisible, only measures the full label width
+                    measure := Text {
+                        text: m.device_name + ":" + m.device_id_short;
+                        font-size: 11px * root.global_scale * Translations.font_global_scale;
+                        opacity: 0;
+                    }
+
+                    // normal state: elided
+                    Text {
+                        text: m.device_name + ":" + m.device_id_short;
+                        color: #9ba3af;
+                        font-size: 11px * root.global_scale * Translations.font_global_scale;
+                        width: parent.width;
+                        height: parent.height;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        opacity: (label_area.has-hover && parent.too_long) ? 0 : 1;
+                    }
+
+                    // hover state: same text sliding left
+                    Text {
+                        text: m.device_name + ":" + m.device_id_short;
+                        color: #9ba3af;
+                        font-size: 11px * root.global_scale * Translations.font_global_scale;
+                        x: parent.shift;
+                        height: parent.height;
+                        vertical-alignment: center;
+                        opacity: (label_area.has-hover && parent.too_long) ? 1 : 0;
+                    }
+
+                    label_area := TouchArea { }
+                }
+
+                // message bubble for the poll results
+                if m.poll_id != "" : Rectangle {
+                    width: parent.width;
+                    height: parent.height;
+
+                    // long questions are cut off with "..."
+                    Text {
+                        text: m.text;
+                        color: white;
+                        font-size: 16px * root.global_scale * Translations.font_global_scale;
+                        overflow: elide;
+                        vertical-alignment: center;
+                        x: 12px * root.global_scale;
+                        width: parent.width - 160px * root.global_scale;
+                        height: parent.height;
+                    }
+
+                    Rectangle {
+                        width: 130px * root.global_scale;
+                        height: 30px * root.global_scale;
+                        x: parent.width - self.width - 8px * root.global_scale;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 8px * root.global_scale;
+                        background: results_area.has-hover ? #8B5FBF : #6d4aa0;
+
+                        Text {
+                            text: "📊 " + Translations.poll_show_results;
+                            color: white;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        results_area := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.show_poll_results(m.poll_id); }
+                        }
                     }
                 }
             }
 
-            HorizontalLayout {
-                x: bubble.x + bubble.width + 6px * root.global_scale;
+            // Action buttons remain beside the bubble.
+            if m.poll_id == "" : HorizontalLayout {
+                x: bubble.x + bubble.width + (6px * root.global_scale);
                 y: bubble.y + (bubble.height - self.height) / 2;
+                height: 22px * root.global_scale;
                 spacing: 4px * root.global_scale;
 
                 Rectangle {
@@ -188,11 +294,16 @@ export component ChatPanel inherits Rectangle {
                         width: parent.width;
                         height: parent.height;
                     }
+
                     copy_btn_area := TouchArea {
                         width: parent.width;
                         height: parent.height;
                         mouse-cursor: pointer;
-                        Tooltip { text: @markdown("\{Translations.tooltip_copy_all}"); }
+
+                        Tooltip {
+                            text: @markdown("\{Translations.tooltip_copy_all}");
+                        }
+
                         clicked => {
                             msg.select-all();
                             msg.copy();
@@ -200,11 +311,13 @@ export component ChatPanel inherits Rectangle {
                         }
                     }
                 }
-                if m.link != "": Rectangle {
+
+                if m.link != "" : Rectangle {
                     width: 22px * root.global_scale;
                     height: 22px * root.global_scale;
                     border-radius: 5px * root.global_scale;
                     background: link_btn_area.has-hover ? #4a4f58 : #3a3f48;
+
                     Text {
                         text: "🔗";
                         font-size: 12px * root.global_scale;
@@ -213,14 +326,22 @@ export component ChatPanel inherits Rectangle {
                         width: parent.width;
                         height: parent.height;
                     }
+
                     link_btn_area := TouchArea {
                         width: parent.width;
                         height: parent.height;
                         mouse-cursor: pointer;
-                        Tooltip { text: @markdown("Open Link"); }
-                        clicked => { root.open_link(m.link); }
+
+                        Tooltip {
+                            text: @markdown("Open Link");
+                        }
+
+                        clicked => {
+                            root.open_link(m.link);
+                        }
                     }
                 }
+
                 Rectangle {
                     width: 22px * root.global_scale;
                     height: 22px * root.global_scale;
@@ -238,11 +359,26 @@ export component ChatPanel inherits Rectangle {
                         width: parent.width;
                         height: parent.height;
                         mouse-cursor: pointer;
-                        Tooltip { text: @markdown("\{Translations.tooltip_resend}"); }
-                        clicked => { root.resend(m.text); }
+                        Tooltip {text: @markdown("\{Translations.tooltip_resend}");}
+                        clicked => {root.resend(m.text);}
                     }
                 }
             }
         }
+    }
+    PollBanner {
+        x: 10px * root.global_scale;
+        y: root.update_available ? 86px * root.global_scale : 6px * root.global_scale;
+        width: parent.width - 20px * root.global_scale;
+        z: 95;
+        global_scale: root.global_scale;
+        active: root.poll_active;
+        question: root.poll_question;
+        options: root.poll_options;
+        counts: root.poll_counts;
+        countdown: root.poll_countdown;
+        is_creator: root.poll_is_creator;
+        vote(i) => { root.poll_vote(i); }
+        done_clicked => { root.poll_done(); }
     }
 }

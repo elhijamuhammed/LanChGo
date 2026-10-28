@@ -398,3 +398,46 @@ pub fn clear_QR_code() {
     let lock = QR_IMAGE_BYTES.get_or_init(|| Mutex::new(None));
     *lock.lock().unwrap() = None;
 }
+
+/// Encrypt raw bytes (used for EFOFT)
+pub fn encrypt_bytes(key: &[u8; 32], data: &[u8]) -> SecureMessage {
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
+    let mut nonce_bytes = [0u8; 12];
+    OsRng.try_fill_bytes(&mut nonce_bytes).expect("RNG failed");
+    let nonce = Nonce::from_slice(&nonce_bytes);
+    let ciphertext = cipher.encrypt(nonce, data).expect("encryption failed");
+    SecureMessage { nonce: nonce_bytes, ciphertext }
+}
+
+/// Decrypt raw bytes (used for EFOFT)
+pub fn decrypt_bytes(key: &[u8], secure_msg: &SecureMessage) -> Option<Vec<u8>> {
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
+    let nonce = Nonce::from_slice(&secure_msg.nonce);
+    cipher.decrypt(nonce, secure_msg.ciphertext.as_ref()).ok()
+}
+
+#[cfg(test)]
+mod bench {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    fn guess_speed() {
+        let ch = Channel::new(12_345_678);
+        let ann = build_announcement(&ch);
+
+        let n = 2000;
+        let start = Instant::now();
+        for pin in 50_000_000..50_000_000 + n {
+            let key = derive_key(pin, &ann.salt);
+            let _ = key_is_good(&key, &ann);
+        }
+        let per_sec = n as f64 / start.elapsed().as_secs_f64();
+
+        let report = format!(
+            "{per_sec:.0} guesses/sec on one core\nfull space (90M), one core: {:.1} hours\n",
+            90_000_000.0 / per_sec / 3600.0
+        );
+        std::fs::write("bench_result.txt", report).unwrap();
+    }
+}

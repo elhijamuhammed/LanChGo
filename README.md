@@ -16,7 +16,7 @@ Most communication tools depend on internet connectivity, cloud infrastructure, 
 
 LanChGo takes a different approach.
 
-It is designed for environments where devices simply need to communicate directly with each other on the same network—quickly, privately, and without unnecessary complexity.
+It is designed for environments where devices simply need to communicate directly with each other on the same network: quickly, privately, and without unnecessary complexity.
 
 Perfect for:
 
@@ -35,22 +35,32 @@ Perfect for:
 
 * Instant LAN messaging
 * Automatic device discovery
-* Secure channel creation using PIN pairing
-* End-to-end encrypted secure communication
+* Device names, so you can tell who sent what, even when two devices share a name
+* Secure channel creation using PIN or QR pairing
+* Encrypted messages and file offers inside secure channels
 * No internet connection required
 
 ### File Sharing
 
 * Direct device-to-device file transfers
 * Reliable TCP-based transfers
-* Multi-device compatibility
+* Resend a file offer to devices that missed it
+* Works between Windows, Android and the browser
 * No cloud storage involved
+
+### Activities
+
+* **Polls:** create a poll, vote from any device on the network, and watch the live counts
+* A countdown closes the poll when votes stop coming in, or the creator can end it early
+* Results can be viewed as bars, a pie chart or columns
+* Polls are available in public mode; support for secure channels is planned
 
 ### Productivity
 
 * Web Companion for browser-based access
+* Chat commands (type `/help` to see them all)
+* Available in Arabic, English and Chinese, including right-to-left layout
 * Lightweight and responsive user interface
-* Fast local communication
 * Designed for low-latency local networking
 
 ### Privacy
@@ -58,8 +68,8 @@ Perfect for:
 * No accounts
 * No tracking
 * No analytics
-* No external servers
 * No cloud dependency
+* Messages, files and polls stay inside your local network
 
 ---
 
@@ -80,11 +90,12 @@ The Android application is maintained separately and is not included in this rep
 
 LanChGo is built with privacy as a core principle.
 
-* Communication remains within the local network
-* No external server communication
-* Secure channels use encrypted communication
+* Communication stays within the local network
+* Secure channels encrypt messages and file offers
+* Polls are not encrypted yet and are disabled while a secure channel is active
 * No personal information is collected
 * No analytics or tracking services are used
+* The only request that leaves your network is a check against GitHub Releases to see whether a newer version is available
 
 ---
 

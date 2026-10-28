@@ -6,6 +6,7 @@ export struct FileOfferItem {
     progress_text: string,
     is_mobile: bool,
     is_web: bool,
+    sender_label: string,
 }
 
 export struct MessageItem {
@@ -13,4 +14,7 @@ export struct MessageItem {
     text: string,
     timestamp: string,
     link: string,
+    device_name: string,
+    device_id_short: string,
+    poll_id: string,
 }

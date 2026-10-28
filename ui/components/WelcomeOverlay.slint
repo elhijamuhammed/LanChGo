@@ -21,6 +21,11 @@ export component WelcomeOverlay inherits Rectangle {
     in-out property <string> selected_language;
     property <bool> rtl: Translations.direction == "rtl";
 
+    // Setting a name for the device
+    in-out property <string> device_name;
+    callback device_name_changed(string);
+    in-out property <string> default_device_name;
+
     background: #00000080;
 
     VerticalLayout {
@@ -31,7 +36,7 @@ export component WelcomeOverlay inherits Rectangle {
 
             Rectangle {
                 width: 720px * root.global_scale;
-                height: 430px * root.global_scale;
+                height: 470px * root.global_scale;
                 border-radius: 20px * root.global_scale;
                 background: #1e2128;
                 border-width: 1px * root.global_scale;
@@ -73,9 +78,7 @@ export component WelcomeOverlay inherits Rectangle {
                         }
 
                         Text {
-                            text: root.changed_networks
-                                ? Translations.network_changed
-                                : Translations.pick_network;
+                            text: root.changed_networks ? Translations.network_changed : Translations.pick_network;
                             color: #666666;
                             font-size: 12px * root.global_scale * Translations.font_global_scale;
                             horizontal-alignment: center;
@@ -145,6 +148,103 @@ export component WelcomeOverlay inherits Rectangle {
 
                     // --- Divider ---
                     Rectangle {
+                        width: parent.width;
+                        height: 1px * root.global_scale;
+                        background: #2c2f35;
+                    }
+
+                    // --- Device Name ---
+                    HorizontalLayout {
+                        spacing: 10px * root.global_scale;
+
+                        Text {
+                            text: Translations.device_name;
+                            color: #cccccc;
+                            font-size: 13px * root.global_scale * Translations.font_global_scale;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+
+                        // info icon with hover tooltip
+                        Rectangle {
+                            width: 20px * root.global_scale;
+
+                            Text {
+                                text: "ⓘ";
+                                color: info_area.has-hover ? #2b7bff : #cccccc;
+                                font-size: 16px * root.global_scale;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width;
+                                height: parent.height;
+                                animate color { duration: 120ms; }
+                            }
+
+                            info_area := TouchArea { }
+
+                            if info_area.has-hover: Rectangle {
+                                x: 0px;
+                                y: -(self.height + 6px * root.global_scale);
+                                width: 250px * root.global_scale;
+                                height: tip_text.preferred-height + 14px * root.global_scale;
+                                border-radius: 8px * root.global_scale;
+                                background: #2c2f35;
+                                border-width: 1px * root.global_scale;
+                                border-color: #2b7bff;
+
+                                tip_text := Text {
+                                    x: 7px * root.global_scale;
+                                    y: 7px * root.global_scale;
+                                    width: parent.width - 14px * root.global_scale;
+                                    text: Translations.tooltip_device_name;
+                                    color: white;
+                                    font-size: 13px * root.global_scale * Translations.font_global_scale;
+                                    font-weight: 500;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 1;
+                        }
+
+                        Rectangle {
+                            width: 200px * root.global_scale;
+                            height: 30px * root.global_scale;
+                            border-radius: 6px * root.global_scale;
+                            background: #12151a;
+                            border-width: 1px * root.global_scale;
+                            border-color: #3a3f48;
+
+                            TextInput {
+                                width: parent.width - (16px * root.global_scale);
+                                height: parent.height;
+                                x: 8px * root.global_scale;
+                                color: white;
+                                font-size: 13px * root.global_scale * Translations.font_global_scale;
+                                vertical-alignment: center;
+
+                                text <=> root.device_name;
+
+                                edited => {
+                                    root.device_name_changed(self.text);
+                                }
+                            }
+                            if root.device_name == "": Text {
+                                x: 8px * root.global_scale;
+                                width: parent.width - (16px * root.global_scale);
+                                height: parent.height;
+                                text: root.default_device_name;
+                                color: #666666;
+                                font-size: 13px * root.global_scale * Translations.font_global_scale;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    // --- Divider ---
+                    Rectangle {
                         width: parent.width - 10px;
                         height: 1px * root.global_scale;
                         background: #2c2f35;
@@ -179,9 +279,7 @@ export component WelcomeOverlay inherits Rectangle {
                         }
 
                         Text {
-                            text: root.manual_port_mode
-                                ? ""
-                                : Translations.auto_prefix + root.ui_port + ")";
+                            text: root.manual_port_mode ? "" : Translations.auto_prefix + root.ui_port + ")";
                             color: #444444;
                             font-size: 12px * root.global_scale * Translations.font_global_scale;
                             vertical-alignment: center;
@@ -209,9 +307,7 @@ export component WelcomeOverlay inherits Rectangle {
                                 height: 18px * root.global_scale;
                                 border-radius: 9px * root.global_scale;
                                 background: white;
-                                x: root.manual_port_mode
-                                    ? 23px * root.global_scale
-                                    : 3px * root.global_scale;
+                                x: root.manual_port_mode ? 23px * root.global_scale : 3px * root.global_scale;
                                 y: 3px * root.global_scale;
                                 animate x { duration: 150ms; }
                             }
@@ -224,7 +320,6 @@ export component WelcomeOverlay inherits Rectangle {
                                     } else {
                                         root.manual_port_mode = true;
                                     }
-
                                     root.port_status = "";
                                 }
                             }
@@ -263,10 +358,7 @@ export component WelcomeOverlay inherits Rectangle {
                                 vertical-alignment: center;
                                 text: root.typed_port;
                                 enabled: root.manual_port_mode;
-
-                                edited => {
-                                    root.typed_port = self.text.to-float();
-                                }
+                                edited => {root.typed_port = self.text.to-float();}
                             }
                         }
 
@@ -275,9 +367,7 @@ export component WelcomeOverlay inherits Rectangle {
                             width: 70px * root.global_scale;
                             height: 30px * root.global_scale;
                             border-radius: 6px * root.global_scale;
-                            background: root.manual_port_mode
-                                ? (apply_area.has-hover ? #3a8dff : #2b7bff)
-                                : #2c2f35;
+                            background: root.manual_port_mode ? (apply_area.has-hover ? #3a8dff : #2b7bff) : #2c2f35;
                             opacity: root.manual_port_mode ? 1.0 : 0.35;
                             animate opacity { duration: 150ms; }
                             animate background { duration: 150ms; }
@@ -291,13 +381,9 @@ export component WelcomeOverlay inherits Rectangle {
                                 width: parent.width;
                                 height: parent.height;
                             }
-
                             apply_area := TouchArea {
                                 enabled: root.manual_port_mode;
-
-                                clicked => {
-                                    root.apply_manual_port(root.typed_port);
-                                }
+                                clicked => {root.apply_manual_port(root.typed_port);}
                             }
                         }
 
@@ -306,9 +392,7 @@ export component WelcomeOverlay inherits Rectangle {
                             width: 70px * root.global_scale;
                             height: 30px * root.global_scale;
                             border-radius: 6px * root.global_scale;
-                            background: root.manual_port_mode
-                                ? (reset_area.has-hover ? #ff5555 : #3a3f48)
-                                : #2c2f35;
+                            background: root.manual_port_mode ? (reset_area.has-hover ? #ff5555 : #3a3f48) : #2c2f35;
                             opacity: root.manual_port_mode ? 1.0 : 0.35;
                             animate opacity { duration: 150ms; }
                             animate background { duration: 150ms; }
@@ -335,9 +419,7 @@ export component WelcomeOverlay inherits Rectangle {
 
                         Text {
                             text: root.port_status;
-                            color: root.port_status == "✅ Port available"
-                                ? #44cc77
-                                : #ff5555;
+                            color: root.port_status == "✅ Port available" ? #44cc77 : #ff5555;
                             font-size: 12px * root.global_scale * Translations.font_global_scale;
                             vertical-alignment: center;
                         }

@@ -82,7 +82,7 @@
 
   "old_config_detected": "تم اكتشاف ملف إعدادات لإصدار أقدم!",
   "restart_for_fresh_config": "يرجى إعادة تشغيل LanChGo للمتابعة بإعدادات جديدة.",
-  "exit": "خروج",
+  "restart": "اعادة تشغيل",
 
   "connecting_secure": "جارٍ الاتصال بالقناة الآمنة...",
   "please_wait": "يرجى الانتظار",
@@ -91,7 +91,7 @@
   "enter": "إدخال",
   "command_navigation": "↑ ↓ للتنقل    إدخال للتنفيذ    Esc للإغلاق",
 
-  "change_app_language": "تغيير لغة التطبيق:",
+  "change_app_language": ":تغيير لغة التطبيق",
 
   "copy": "نسخ",
 
@@ -102,5 +102,27 @@
   "tooltip_open_download": "فتح مكان حفظ الملفات",
   "tooltip_clear_files_panel": "مسح قائمة الملفات",
   "tooltip_resend_file": "إعادة إرسال ملف",
-  "tooltip_download_file": "تحميل الملف"
+  "tooltip_download_file": "تحميل الملف",
+  
+  "device_name": "اسم الجهاز",
+  "tooltip_device_name": "أدخل اسمًا لجهازك ليتمكن الآخرون من تمييزه على الشبكة",
+
+  "activities_button": "فعاليات إضافية",
+
+  "activities_poll": "استطلاع",
+  "new_poll": "استطلاع جديد",
+  "poll_question_placeholder": "السؤال",
+  "poll_option": "خيار ",
+  "poll_add_option": "إضافة خيار",
+  "poll_remove_option": "إزالة خيار",
+  "poll_closes_prefix": "ينتهي الاستطلاع بعد ",
+  "poll_closes_suffix": " دقائق",
+  "poll_create": "إنشاء الاستطلاع",
+  "poll_show_results": "عرض النتائج",
+  "poll_chart_bars": "أشرطة",
+  "poll_chart_pie": "دائرة",
+  "poll_chart_columns": "أعمدة",
+  "poll_max_length_warning" : "الحد الأقصى المسموح به هو 69 حرفًا لكل حقل",
+  "poll_done" : "انهاء الاستطلاع"
+
 }

@@ -1,0 +1,270 @@
+import { Translations } from "translations.slint";
+
+export component PollResultsDialog inherits Rectangle {
+    in property <float> global_scale: 1.0;
+    in-out property <bool> open: false;
+    in property <string> question;
+    in property <[string]> options;
+    in property <[int]> counts;
+    in property <[float]> starts;
+    in property <int> total: 0;
+    in-out property <int> view: 0; // 0 bars, 1 pie, 2 columns
+
+    property <[color]> palette: [#CE1126, #009736, #FFFFFF, #000000, #ff6b6b, #4ade80];
+
+    visible: root.open;
+    background: #000000aa;
+
+    // click outside the card closes the dialog
+    TouchArea { clicked => { root.open = false; } }
+
+    if root.open: FocusScope {
+        init => { self.focus(); }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.open = false;
+                return accept;
+            }
+            return reject;
+        }
+
+        card := Rectangle {
+            width: 400px * root.global_scale;
+            // the card is as tall as its content, for any view and any number of options
+            height: content.preferred-height;
+            background: #11161c;
+            border-radius: 14px * root.global_scale;
+            border-width: 1px * root.global_scale;
+            border-color: #2a3540;
+
+            // swallow clicks inside the card so they don't close it
+            TouchArea { }
+
+            content := VerticalLayout {
+                alignment: start;
+                padding: 16px * root.global_scale;
+                spacing: 10px * root.global_scale;
+
+                Text {
+                    text: "📊 " + root.question;
+                    color: white;
+                    font-size: 16px * root.global_scale * Translations.font_global_scale;
+                    font-weight: 700;
+                    wrap: word-wrap;
+                    overflow: clip;
+                    vertical-alignment: center;
+                    height: 50px * root.global_scale;
+                }
+
+                // ---- view tabs ----
+                HorizontalLayout {
+                    height: 30px * root.global_scale;
+                    spacing: 6px * root.global_scale;
+
+                    for name[t] in ["poll_chart_bars", "poll_chart_pie", "poll_chart_columns"]: Rectangle {
+                        border-radius: 8px * root.global_scale;
+                        background: root.view == t ? #6d4aa0 : (tab_area.has-hover ? #3a4552 : #202831);
+
+                        Text {
+                            text: t == 0 ? Translations.poll_chart_bars : (t == 1 ? Translations.poll_chart_pie : Translations.poll_chart_columns);
+                            color: white;
+                            font-size: 12px * root.global_scale * Translations.font_global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        tab_area := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.view = t; }
+                        }
+                    }
+                }
+
+                // ---- view 0: bars ----
+                if root.view == 0: VerticalLayout {
+                    spacing: 10px * root.global_scale;
+
+                    for opt[i] in root.options: VerticalLayout {
+                        spacing: 4px * root.global_scale;
+                        height: 48px * root.global_scale;
+
+                        HorizontalLayout {
+                            height: 20px * root.global_scale;
+                            spacing: 8px * root.global_scale;
+
+                            Text {
+                                text: opt;
+                                color: white;
+                                font-size: 13px * root.global_scale * Translations.font_global_scale;
+                                overflow: elide;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            Text {
+                                text: root.counts[i] + (root.total > 0 ? "  (" + Math.round(root.counts[i] * 100 / root.total) + "%)" : "");
+                                color: root.palette[mod(i, 6)];
+                                font-size: 13px * root.global_scale * Translations.font_global_scale;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            height: 16px * root.global_scale;
+                            border-radius: 8px * root.global_scale;
+                            background: #232a33;
+
+                            Rectangle {
+                                x: 0px;
+                                width: parent.width * (root.total > 0 ? root.counts[i] / root.total : 0);
+                                height: parent.height;
+                                border-radius: 8px * root.global_scale;
+                                background: root.palette[mod(i, 6)];
+                                animate width { duration: 400ms; easing: ease-out; }
+                            }
+                        }
+                    }
+                }
+
+                // ---- view 1: pie ----
+                if root.view == 1: VerticalLayout {
+                    spacing: 10px * root.global_scale;
+
+                    Rectangle {
+                        height: 170px * root.global_scale;
+
+                        pie := Rectangle {
+                            width: 160px * root.global_scale;
+                            height: 160px * root.global_scale;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+
+                            // no votes: grey circle
+                            if root.total == 0: Rectangle {
+                                border-radius: self.width / 2;
+                                background: #232a33;
+                            }
+
+                            for opt[i] in root.options: Rectangle {
+                                property <float> f: root.total > 0 ? root.counts[i] / root.total : 0;
+                                property <angle> a0: (root.starts[i] * 360 - 90) * 1deg;
+                                property <angle> a1: ((root.starts[i] + self.f) * 360 - 90) * 1deg;
+
+                                // one option has every vote: full circle
+                                if self.f > 0.999: Rectangle {
+                                    border-radius: self.width / 2;
+                                    background: root.palette[mod(i, 6)];
+                                }
+
+                                // normal slice
+                                if self.f > 0 && self.f <= 0.999: Path {
+                                    width: pie.width;
+                                    height: pie.height;
+                                    viewbox-width: 200;
+                                    viewbox-height: 200;
+                                    fill: root.palette[mod(i, 6)];
+                                    commands: "M 100 100 L " + (100 + 100 * Math.cos(parent.a0)) + " " + (100 + 100 * Math.sin(parent.a0))
+                                        + " A 100 100 0 " + (parent.f > 0.5 ? 1 : 0) + " 1 "
+                                        + (100 + 100 * Math.cos(parent.a1)) + " " + (100 + 100 * Math.sin(parent.a1)) + " Z";
+                                }
+                            }
+                        }
+                    }
+
+                    // legend
+                    for opt[i] in root.options: HorizontalLayout {
+                        height: 22px * root.global_scale;
+                        spacing: 8px * root.global_scale;
+
+                        Rectangle {
+                            width: 12px * root.global_scale;
+                            height: 12px * root.global_scale;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 3px * root.global_scale;
+                            background: root.palette[mod(i, 6)];
+                        }
+
+                        Text {
+                            text: opt;
+                            color: white;
+                            font-size: 13px * root.global_scale * Translations.font_global_scale;
+                            overflow: elide;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+
+                        Text {
+                            text: root.counts[i] + (root.total > 0 ? "  (" + Math.round(root.counts[i] * 100 / root.total) + "%)" : "");
+                            color: root.palette[mod(i, 6)];
+                            font-size: 13px * root.global_scale * Translations.font_global_scale;
+                            font-weight: 700;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // ---- view 2: columns ----
+                if root.view == 2: HorizontalLayout {
+                    height: 200px * root.global_scale;
+                    spacing: 8px * root.global_scale;
+
+                    for opt[i] in root.options: VerticalLayout {
+                        spacing: 4px * root.global_scale;
+
+                        Text {
+                            text: root.counts[i];
+                            color: root.palette[mod(i, 6)];
+                            font-size: 13px * root.global_scale * Translations.font_global_scale;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                            height: 18px * root.global_scale;
+                        }
+
+                        Rectangle {
+                            background: #232a33;
+                            border-radius: 6px * root.global_scale;
+
+                            Rectangle {
+                                width: parent.width;
+                                height: parent.height * (root.total > 0 ? root.counts[i] / root.total : 0);
+                                y: parent.height - self.height;
+                                border-radius: 6px * root.global_scale;
+                                background: root.palette[mod(i, 6)];
+                                animate height { duration: 400ms; easing: ease-out; }
+                            }
+                        }
+
+                        Text {
+                            text: opt;
+                            color: white;
+                            font-size: 11px * root.global_scale * Translations.font_global_scale;
+                            overflow: elide;
+                            horizontal-alignment: center;
+                            height: 16px * root.global_scale;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    height: 34px * root.global_scale;
+                    border-radius: 8px * root.global_scale;
+                    background: close_area.has-hover ? #3a4552 : #202831;
+
+                    Text {
+                        text: Translations.close;
+                        color: white;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    close_area := TouchArea {
+                        clicked => { root.open = false; }
+                    }
+                }
+            }
+        }
+    }
+}

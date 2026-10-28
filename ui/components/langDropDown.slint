@@ -32,11 +32,7 @@ export component LanguageDropdown inherits HorizontalLayout {
         model: root.items;
 
         // Convert language code -> displayed language
-        current-value: root.selected_language == "ar"
-            ? "العربية"
-            : root.selected_language == "zh"
-                ? "中文"
-                : "English";
+        current-value: root.selected_language == "ar" ? "العربية" : root.selected_language == "zh" ? "中文" : "English";
 
         selected(value) => {
             if value == "العربية" {

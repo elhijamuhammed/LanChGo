@@ -1,5 +1,6 @@
 import { HorizontalBox, VerticalBox } from "std-widgets.slint";
 import { Translations } from "translations.slint";
+import { ActivitiesPopup } from "activities.slint";
 
 export component Toolbar inherits Rectangle {
     in-out property <string> channel_mode: "public";
@@ -37,8 +38,13 @@ export component Toolbar inherits Rectangle {
     in-out property <bool> web_popup_open: false;
     in-out property <bool> tools_popup_open: false;
 
+
     // Language direction
     property <bool> rtl: Translations.direction == "rtl";
+
+    // Activities
+    in-out property <bool> activities_popup_open: false;
+    callback open_activity();
 
     // LTR: icon + label
     // RTL: label + icon
@@ -132,6 +138,7 @@ export component Toolbar inherits Rectangle {
                     root.secure_popup_open = false;
                     // root.tools_popup_open = false;
                     root.web_popup_open = !root.web_popup_open;
+                    root.activities_popup_open = false;
                 }
             }
 
@@ -198,6 +205,7 @@ export component Toolbar inherits Rectangle {
                             height: parent.height;
                             clicked => {
                                 root.web_popup_open = false;
+                                root.activities_popup_open = false;
                                 if (root.web_session_active) {
                                     root.show_web_join_popup();
                                 } else {
@@ -233,6 +241,7 @@ export component Toolbar inherits Rectangle {
                             enabled: root.web_session_active;
                             clicked => {
                                 root.web_popup_open = false;
+                                root.activities_popup_open = false;
                                 root.web_join_clicked();
                             }
                         }
@@ -312,6 +321,7 @@ export component Toolbar inherits Rectangle {
                         height: parent.height;
                         clicked => {
                             root.web_popup_open = false;
+                            root.activities_popup_open = false;
                             // root.tools_popup_open = false;
                             if (root.channel_mode == "host" || root.channel_mode == "joined") {
                                 root.secure_popup_open = !root.secure_popup_open;
@@ -671,6 +681,65 @@ export component Toolbar inherits Rectangle {
         //     }
         // }
 
+        // -------- Activities ------
+        Rectangle {
+            width: 140px * root.global_scale;
+            height: 42px * root.global_scale;
+            border-radius: 10px * root.global_scale;
+            border-width: 1px * root.global_scale;
+            border-color: root.channel_mode == "public" ? (activities_area.has-hover ? #55A69B : #397875) : #39424c;
+            background: root.channel_mode == "public" ? (activities_area.has-hover ? #24534F : #183C3B) : #202831;
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: 7px * root.global_scale;
+
+                Rectangle {
+                    width: 18px * root.global_scale;
+
+                    Image {
+                        source: @image-url("../assets/activities.png");
+                        width: 18px * root.global_scale;
+                        height: 18px * root.global_scale;
+                        y: (parent.height - self.height) / 2;
+                        image-fit: contain;
+                    }
+                }
+
+                Text {
+                    text: Translations.activities_button;
+                    color: root.channel_mode == "public" ? white : #8d98a3;
+                    font-size: 13px * root.global_scale
+                        * Translations.font_global_scale;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                }
+            }
+
+            activities_area := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                enabled: root.channel_mode == "public";
+
+                clicked => {
+                    root.secure_popup_open = false;
+                    root.web_popup_open = false;
+                    root.activities_popup_open = !root.activities_popup_open;
+                }
+            }
+
+            if root.activities_popup_open: ActivitiesPopup {
+                x: 0px;
+                y: -(54px * root.global_scale);
+                width: parent.width;
+                global_scale: root.global_scale;
+                poll_clicked => {
+                    root.activities_popup_open = false;
+                    root.open_activity();
+                }
+            }
+        }
+
         // -------- Settings --------
         Rectangle {
             width: 96px * root.global_scale;
@@ -697,6 +766,7 @@ export component Toolbar inherits Rectangle {
                 clicked => {
                     root.secure_popup_open = false;
                     root.web_popup_open = false;
+                    root.activities_popup_open = false;
                     // root.tools_popup_open = false;
                     root.show_welcome = true;
                 }

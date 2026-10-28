@@ -1,0 +1,164 @@
+import { Translations } from "translations.slint";
+
+export component PollBanner inherits Rectangle {
+    in property <float> global_scale: 1.0;
+    in property <bool> active: false;
+    in property <string> question;
+    in property <[string]> options;
+    in property <[int]> counts;
+    in property <string> countdown: "";
+    in property <bool> is_creator: false;
+    in-out property <int> selected: -1;
+    in-out property <bool> expanded: false;
+    callback vote(int);
+    callback done_clicked();
+
+    property <bool> rtl: Translations.direction == "rtl";
+    property <bool> banner_hovered: banner_area.has-hover;
+
+    visible: root.active;
+    height: root.active ? 44px * root.global_scale : 0px;
+    background: root.banner_hovered || root.expanded ? #1b222b : #1b222bcc;
+    border-radius: 12px * root.global_scale;
+    border-width: 1px * root.global_scale;
+    border-color: #1f7f86;
+
+    // ---- banner row ----
+    Text {
+        text: "📊 " + root.question;
+        color: white;
+        font-size: 14px * root.global_scale * Translations.font_global_scale;
+        font-weight: 700;
+        overflow: elide;
+        vertical-alignment: center;
+        horizontal-alignment: root.rtl ? right : left;
+        x: root.rtl ? 70px * root.global_scale : 14px * root.global_scale;
+        width: parent.width - 84px * root.global_scale;
+        height: parent.height;
+    }
+
+    Text {
+        text: (root.expanded ? "▲ " : "▼ ") + root.countdown;
+        color: #22d3ee;
+        font-size: 13px * root.global_scale * Translations.font_global_scale;
+        font-weight: 700;
+        vertical-alignment: center;
+        horizontal-alignment: root.rtl ? left : right;
+        x: root.rtl ? 14px * root.global_scale : parent.width - self.width - 14px * root.global_scale;
+        width: 70px * root.global_scale;
+        height: parent.height;
+    }
+
+    // invisible focus holder: when it loses focus the panel folds back up
+    banner_focus := FocusScope {
+        width: 0px;
+        height: 0px;
+
+        changed has-focus => {
+            if (!self.has-focus) {
+                root.expanded = false;
+            }
+        }
+    }
+
+    banner_area := TouchArea {
+        width: parent.width;
+        height: 44px * root.global_scale;
+
+        clicked => {
+            root.expanded = !root.expanded;
+            if (root.expanded) {
+                banner_focus.focus();
+            }
+        }
+    }
+
+    // ---- drop-down panel ----
+    if root.expanded && root.active: Rectangle {
+        y: parent.height + 6px * root.global_scale;
+        width: parent.width;
+        height: (70px + 40px * root.options.length + (root.is_creator ? 44px : 0px)) * root.global_scale;
+        background: #1b222b;
+        border-radius: 12px * root.global_scale;
+        border-width: 1px * root.global_scale;
+        border-color: #1f7f86;
+        drop-shadow-blur: 24px * root.global_scale;
+        drop-shadow-color: #000000dd;
+        drop-shadow-offset-y: 8px * root.global_scale;
+
+        VerticalLayout {
+            padding: 12px * root.global_scale;
+            spacing: 6px * root.global_scale;
+
+            Text {
+                text: root.question;
+                color: white;
+                font-size: 16px * root.global_scale * Translations.font_global_scale;
+                font-weight: 700;
+                wrap: word-wrap;
+                horizontal-alignment: root.rtl ? right : left;
+                height: 30px * root.global_scale;
+            }
+
+            for opt[i] in root.options: Rectangle {
+                height: 34px * root.global_scale;
+                border-radius: 8px * root.global_scale;
+                border-width: 1px * root.global_scale;
+                border-color: root.selected == i ? #22d3ee : #3a4552;
+                background: root.selected == i ? #1e4046 : (opt_area.has-hover ? #2a323d : #232a33);
+
+                Text {
+                    text: opt;
+                    color: white;
+                    font-size: 13px * root.global_scale * Translations.font_global_scale;
+                    overflow: elide;
+                    vertical-alignment: center;
+                    horizontal-alignment: root.rtl ? right : left;
+                    x: root.rtl ? 50px * root.global_scale : 12px * root.global_scale;
+                    width: parent.width - 62px * root.global_scale;
+                    height: parent.height;
+                }
+
+                Text {
+                    text: root.counts[i];
+                    color: #22d3ee;
+                    font-size: 14px * root.global_scale * Translations.font_global_scale;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                    horizontal-alignment: root.rtl ? left : right;
+                    x: root.rtl ? 12px * root.global_scale : parent.width - self.width - 12px * root.global_scale;
+                    width: 36px * root.global_scale;
+                    height: parent.height;
+                }
+
+                opt_area := TouchArea {
+                    clicked => {
+                        root.selected = i;
+                        root.vote(i);
+                    }
+                }
+            }
+
+            if root.is_creator: Rectangle {
+                height: 34px * root.global_scale;
+                border-radius: 8px * root.global_scale;
+                background: done_area.has-hover ? #8B5FBF : #6d4aa0;
+
+                Text {
+                    text: Translations.poll_done;
+                    color: white;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                done_area := TouchArea {
+                    clicked => {
+                        root.expanded = false;
+                        root.done_clicked();
+                    }
+                }
+            }
+        }
+    }
+}

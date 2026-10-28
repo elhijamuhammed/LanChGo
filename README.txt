@@ -1,4 +1,4 @@
-LanChGo v1.9.0
+LanChGo v1.10.0
 
 Fast. Private. Local.
 
@@ -16,6 +16,7 @@ Features
 • Remote keyboard input
 • Background service support
 • Local network device discovery
+• Polls
 
 Privacy
 

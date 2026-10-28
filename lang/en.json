@@ -83,7 +83,7 @@
   "old_config_detected": "Config file for an older version detected!",
   "restart_for_fresh_config": "Please restart LanChGo to continue with a fresh configuration.",
 
-  "exit": "Exit",
+  "restart": "Restart",
   "connecting_secure": "Connecting to secure channel...",
   "please_wait": "Please wait",
 
@@ -101,5 +101,26 @@
   "tooltip_open_download": "Open file save location",
   "tooltip_clear_files_panel": "Clear file list",
   "tooltip_resend_file": "Resend file",
-  "tooltip_download_file": "Download file"
+  "tooltip_download_file": "Download file",
+
+  "device_name": "Device name",
+  "tooltip_device_name": "Enter a name for your device so others can tell it apart on the network",
+
+  "activities_button": "Activities",
+
+  "activities_poll": "Poll",
+  "new_poll": "New poll",
+  "poll_question_placeholder": "Question",
+  "poll_option": "Option ",
+  "poll_add_option": "Add option",
+  "poll_remove_option": "Remove option",
+  "poll_closes_prefix": "Poll ends after ",
+  "poll_closes_suffix": " minutes",
+  "poll_create": "Create poll",
+  "poll_show_results": "Show results",
+  "poll_chart_bars": "Bars",
+  "poll_chart_pie": "Pie",
+  "poll_chart_columns": "Columns",
+  "poll_max_length_warning": "Maximum allowed is 69 characters per field",
+  "poll_done": "End poll"
 }

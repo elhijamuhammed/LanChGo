@@ -1,0 +1,46 @@
+import { Translations } from "translations.slint";
+
+export component ActivitiesPopup inherits Rectangle {
+    in property <float> global_scale: 1.0;
+    in property <string> poll_label: "📊 " + Translations.activities_poll;
+    callback poll_clicked();
+
+    width: 120px * root.global_scale;
+    height: 40px * root.global_scale;
+    background: #11161c;
+    border-radius: 12px * root.global_scale;
+    border-width: 1px * root.global_scale;
+    border-color: #2a3540;
+    drop-shadow-blur: 24px * root.global_scale;
+    drop-shadow-color: #000000dd;
+    drop-shadow-offset-y: 8px * root.global_scale;
+
+    VerticalLayout {
+        padding: 6px * root.global_scale;
+
+        Rectangle {
+            height: 28px * root.global_scale;
+            border-radius: 8px * root.global_scale;
+            border-width: 1px * root.global_scale;
+            border-color: poll_area.has-hover ? #55A69B : #397875;
+            background: poll_area.has-hover ? #24534F : #183C3B;
+
+            Text {
+                text: root.poll_label;
+                color: white;
+                font-size: 12px * root.global_scale * Translations.font_global_scale;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+
+            poll_area := TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { root.poll_clicked(); }
+            }
+        }
+    }
+}

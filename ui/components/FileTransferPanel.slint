@@ -1,4 +1,3 @@
-// components/FileTransferPanel.slint
 import { VerticalBox, HorizontalBox, ListView } from "std-widgets.slint";
 import { FileOfferItem } from "types.slint";
 import { Translations } from "translations.slint";
@@ -139,11 +138,9 @@ export component FileTransferPanel inherits Rectangle {
                 spacing: 0px;
                 horizontal-stretch: 1;
                 vertical-stretch: 1;
-
                 Flickable {
                     horizontal-stretch: 1;
                     vertical-stretch: 1;
-
                     Text {
                         visible: file_offer.length == 0;
                         text: Translations.no_offers;
@@ -162,7 +159,7 @@ export component FileTransferPanel inherits Rectangle {
 
                         for offer in file_offer: Rectangle {
                             width: parent.width - (10px * root.global_scale);
-                            height: 56px * root.global_scale;
+                            height: 72px * root.global_scale;
 
                             HorizontalBox {
                                 padding: 10px * root.global_scale;
@@ -182,12 +179,54 @@ export component FileTransferPanel inherits Rectangle {
                                         color: #9aa3ad;
                                         font-size: 12px * root.global_scale * Translations.font_global_scale;
                                     }
+                                    // Sender name: elided normally, slides on hover
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 14px * root.global_scale;
+                                        clip: true;
+                                        property <bool> too_long: measure.preferred-width > self.width;
+                                        property <length> shift: label_area.has-hover && self.too_long ? self.width - measure.preferred-width : 0px;
+                                        animate shift {
+                                            duration: 1200ms;
+                                            easing: linear;
+                                        }
+                                        // Invisible text used to measure the full sender name
+                                        measure := Text {
+                                            text: offer.sender_label;
+                                            font-size: 11px * root.global_scale * Translations.font_global_scale;
+                                            opacity: 0;
+                                        }
+
+                                        // Normal state: elided
+                                        Text {
+                                            text: offer.sender_label;
+                                            color: #7f8b97;
+                                            font-size: 11px * root.global_scale * Translations.font_global_scale;
+                                            width: parent.width;
+                                            height: parent.height;
+                                            vertical-alignment: center;
+                                            overflow: elide;
+                                            opacity: (label_area.has-hover && parent.too_long) ? 0 : 1;
+                                        }
+
+                                        // Hover state: slide the full sender name
+                                        Text {
+                                            text: offer.sender_label;
+                                            color: #7f8b97;
+                                            font-size: 11px * root.global_scale * Translations.font_global_scale;
+                                            x: parent.shift;
+                                            height: parent.height;
+                                            vertical-alignment: center;
+                                            opacity: (label_area.has-hover && parent.too_long) ? 1 : 0;
+                                        }
+
+                                        label_area := TouchArea { }
+                                    }
                                 }
 
                                 // File actions
                                 HorizontalBox {
                                     spacing: 6px * root.global_scale;
-
                                     // Download control
                                     Rectangle {
                                         width: 36px * root.global_scale;
@@ -293,17 +332,14 @@ export component FileTransferPanel inherits Rectangle {
                             overflow: elide;
                             vertical-stretch: 1;
                         }
-
                         Rectangle {
                             height: 10px * root.global_scale;
                             border-radius: 5px * root.global_scale;
                             background: #20242c;
                             clip: true;
-
                             Rectangle {
                                 x: 0px;
-                                width: max(parent.width * bundle_progress,
-                                           bundle_progress > 0.0 ? 6px * root.global_scale : 0px);
+                                width: max(parent.width * bundle_progress, bundle_progress > 0.0 ? 6px * root.global_scale : 0px);
                                 height: parent.height;
                                 border-radius: 5px * root.global_scale;
                                 background: #2b7bff;
