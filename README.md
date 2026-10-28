@@ -63,6 +63,14 @@ Perfect for:
 * Lightweight and responsive user interface
 * Designed for low-latency local networking
 
+### Names
+* Each device has a unique ID
+* You can set a name for the device
+
+### Polls
+* Start a poll with a question and options
+* Each device that receives the poll can Vote for an option
+
 ### Privacy
 
 * No accounts
