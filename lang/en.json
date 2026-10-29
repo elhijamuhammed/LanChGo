@@ -122,5 +122,8 @@
   "poll_chart_pie": "Pie",
   "poll_chart_columns": "Columns",
   "poll_max_length_warning": "Maximum allowed is 69 characters per field",
-  "poll_done": "End poll"
+  "poll_done": "End poll",
+
+  "drop_files_title": "Drop files to send",
+  "drop_files_subtitle": "Release to share with everyone on your network"
 }

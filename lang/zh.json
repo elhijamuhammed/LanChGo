@@ -123,5 +123,8 @@
   "poll_chart_pie": "饼图",
   "poll_chart_columns": "柱状图",
   "poll_max_length_warning": "每个字段最多允许 69 个字符",
-  "poll_done": "结束投票"
+  "poll_done": "结束投票",
+  
+  "drop_files_title": "拖放文件以发送",
+  "drop_files_subtitle": "松开即可与网络中的所有人分享"
 }

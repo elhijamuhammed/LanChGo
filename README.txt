@@ -1,4 +1,4 @@
-LanChGo v1.10.0
+LanChGo v1.10.1
 
 Fast. Private. Local.
 
@@ -17,6 +17,7 @@ Features
 • Background service support
 • Local network device discovery
 • Polls
+• Drop files to send
 
 Privacy
 

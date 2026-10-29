@@ -123,6 +123,8 @@
   "poll_chart_pie": "دائرة",
   "poll_chart_columns": "أعمدة",
   "poll_max_length_warning" : "الحد الأقصى المسموح به هو 69 حرفًا لكل حقل",
-  "poll_done" : "انهاء الاستطلاع"
+  "poll_done" : "انهاء الاستطلاع",
 
+  "drop_files_title": "أفلت الملفات للإرسال",
+  "drop_files_subtitle": "اترك الملفات لمشاركتها مع الجميع على شبكتك"
 }

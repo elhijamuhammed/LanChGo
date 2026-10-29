@@ -35,6 +35,7 @@ use crate::classes::{BroadcastState, Config};
 use crate::phone_protocol::build_MANCH;
 use crate::file_transfer_protocol::{ RemoteWindowsOfferRegistry, RemoteMobileOfferRegistry};
 use crate::udp_receiver::start_udp_receiver;
+use slint::winit_030::{WinitWindowAccessor, EventResult, winit};
 // use crate::Tools::tools_handshake::HandshakeResult;
 // use crate::Tools::tools_handshake::perform_handshake;
 // use crate::Tools::tools_action_translator::ToolsActionTranslator;
@@ -56,10 +57,7 @@ fn broadcast_the_msg(sock: &UdpSocket, state: &BroadcastState, msg: &[u8]) -> io
 // ===================== main =====================
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let state = Arc::new(BroadcastState {
-        broadcast_address: Mutex::new(String::new()),
-        port: Mutex::new(3000),
-    });
+    let state = Arc::new(BroadcastState {broadcast_address: Mutex::new(String::new()), port: Mutex::new(3000),});
     get_broadcast_address(&state);
 
     let app = AppWindow::new()?;
@@ -1665,6 +1663,50 @@ fn main() -> Result<(), Box<dyn Error>> {
             app.set_results_starts(ModelRc::new(VecModel::from(starts)));
             app.set_results_total(total);
             app.set_results_open(true);
+        });
+    }
+
+    // dropping files to send
+    {
+        let weak = app.as_weak();
+        let dropped: Arc<Mutex<Vec<std::path::PathBuf>>> = Arc::new(Mutex::new(Vec::new()));
+
+        app.window().on_winit_window_event(move |_w, event| {
+            use winit::event::WindowEvent;
+            match event {
+                WindowEvent::HoveredFile(_) => {
+                    if let Some(app) = weak.upgrade() { app.set_drop_hover(true); }
+                }
+                WindowEvent::HoveredFileCancelled => {
+                    if let Some(app) = weak.upgrade() { app.set_drop_hover(false); }
+                }
+                WindowEvent::DroppedFile(path) => {
+                    if let Some(app) = weak.upgrade() { app.set_drop_hover(false); }
+
+                    let mut list = dropped.lock().unwrap();
+                    let is_first = list.is_empty();
+                    list.push(path.clone());
+                    drop(list);
+
+                    // the first file starts a short timer, the rest join the same batch
+                    if is_first {
+                        let dropped = Arc::clone(&dropped);
+                        let weak = weak.clone();
+                        thread::spawn(move || {
+                            sleep(Duration::from_millis(150));
+                            let paths = std::mem::take(&mut *dropped.lock().unwrap());
+                            let _ = slint::invoke_from_event_loop(move || {
+                                file_transfer_protocol::queue_dropped_files(paths);
+                                if let Some(app) = weak.upgrade() {
+                                    app.invoke_pick_files_send();
+                                }
+                            });
+                        });
+                    }
+                }
+                _ => {}
+            }
+            EventResult::Propagate
         });
     }
 

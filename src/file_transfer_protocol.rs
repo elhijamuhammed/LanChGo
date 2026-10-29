@@ -1,17 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    fs::File,
-    io::{self, BufReader, Read, Write},
-    net::IpAddr,
-    path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        mpsc,
-    },
-    thread,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::{ collections::HashMap, fs::File, io::{self, BufReader, Read, Write},
+    net::IpAddr, path::{Path, PathBuf}, sync::{atomic::{AtomicUsize, Ordering},mpsc, Mutex}, thread, time::{SystemTime, UNIX_EPOCH},};
 use uuid::Uuid;
 use zip::{write::FileOptions, ZipWriter};
 
@@ -21,6 +10,7 @@ pub const EFOFT_MAGIC: &[u8; 5] = b"EFOFT";
 pub const EMFOFT_MAGIC: &[u8; 6] = b"EMFOFT";
 pub const FILE_PROTOCOL_VERSION: u8 = 1;
 pub const DEFAULT_TCP_PORT: u16 = 3001;
+static DROPPED_FILES: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OfferKind {
@@ -91,9 +81,10 @@ static ACTIVE_BUNDLES: AtomicUsize = AtomicUsize::new(0);
 const MAX_BUNDLES: usize = 2;
 
 pub fn pick_files() -> Option<Vec<PathBuf>> {
-    rfd::FileDialog::new()
-        .set_title("Select files to send")
-        .pick_files()
+    // dropped files take priority over opening the dialog
+    let dropped = std::mem::take(&mut *DROPPED_FILES.lock().unwrap());
+    if !dropped.is_empty() {return Some(dropped);}
+    rfd::FileDialog::new().set_title("Select files to send").pick_files()
 }
 
 /// Build bytes ready to broadcast: "FOFT" + bincode(FileOffer)
@@ -581,4 +572,8 @@ pub fn decrypt_emfoft(key: &[u8; 32], payload: &[u8]) -> Option<Vec<u8>> {
     if payload.len() <= 12 { return None; }
     let plain = crate::phone_protocol::decrypt_message_phone(key, &payload[..12], &payload[12..])?;
     Some(plain.into_bytes())
+}
+
+pub fn queue_dropped_files(paths: Vec<PathBuf>) {
+    *DROPPED_FILES.lock().unwrap() = paths;
 }

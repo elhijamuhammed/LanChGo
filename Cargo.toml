@@ -1,6 +1,6 @@
 [package]
 name = "LanChGo"
-version = "1.10.0"
+version = "1.10.1"
 edition = "2021"
 
 [[bin]]
@@ -29,7 +29,7 @@ rodio = "0.21.1"
 serde = "1.0.219"
 serde_json = { version = "1.0.143", features = ["preserve_order"] }
 sha2 = "0.10.9"
-slint = "1.18"
+slint = { version = "1.18", features = ["unstable-winit-030"] }
 walkdir = "2.5.0"
 zeroize = "1.8.1"
 zip = "7.2.0"

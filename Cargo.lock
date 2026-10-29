@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "LanChGo"
-version = "1.10.0"
+version = "1.10.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -6346,6 +6346,7 @@ dependencies = [
  "const-field-offset",
  "i-slint-backend-linuxkms",
  "i-slint-backend-selector",
+ "i-slint-backend-winit",
  "i-slint-common",
  "i-slint-core",
  "i-slint-core-macros",

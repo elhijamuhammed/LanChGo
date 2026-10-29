@@ -50,7 +50,7 @@ export component CreatePollDialog inherits Rectangle {
             background: #11161c;
             border-radius: 14px * root.global_scale;
             border-width: 1px * root.global_scale;
-            border-color: #2a3540;
+            border-color: #1f4a3a;
 
             VerticalLayout {
                 padding: 16px * root.global_scale;
@@ -114,7 +114,7 @@ export component CreatePollDialog inherits Rectangle {
 
                     if root.rtl: Rectangle {
                         border-radius: 8px * root.global_scale;
-                        background: root.options.length > 2 ? (rem_rtl.has-hover ? #49325F : #302344) : #202831;
+                        background: root.options.length > 2 ? (rem_rtl.has-hover ? #245242 : #1b3a2f) : #202831;
 
                         Text {
                             text: "− " + Translations.poll_remove_option;
@@ -133,7 +133,7 @@ export component CreatePollDialog inherits Rectangle {
 
                     Rectangle {
                         border-radius: 8px * root.global_scale;
-                        background: root.options.length < 6 ? (add_area.has-hover ? #49325F : #302344) : #202831;
+                        background: root.options.length < 6 ? (add_area.has-hover ? #245242 : #1b3a2f) : #202831;
 
                         Text {
                             text: "+ " + Translations.poll_add_option;
@@ -152,7 +152,7 @@ export component CreatePollDialog inherits Rectangle {
 
                     if !root.rtl: Rectangle {
                         border-radius: 8px * root.global_scale;
-                        background: root.options.length > 2 ? (rem_ltr.has-hover ? #49325F : #302344) : #202831;
+                        background: root.options.length > 2 ? (rem_ltr.has-hover ? #245242 : #1b3a2f) : #202831;
 
                         Text {
                             text: "− " + Translations.poll_remove_option;
@@ -185,7 +185,7 @@ export component CreatePollDialog inherits Rectangle {
                     if root.rtl: Rectangle {
                         width: 30px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: root.minutes < 5 ? (plus_rtl.has-hover ? #49325F : #302344) : #202831;
+                        background: root.minutes < 5 ? (plus_rtl.has-hover ? #245242 : #1b3a2f) : #202831;
 
                         Text {
                             text: "+";
@@ -203,7 +203,7 @@ export component CreatePollDialog inherits Rectangle {
                     if !root.rtl: Rectangle {
                         width: 30px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: root.minutes > 1 ? (min_ltr.has-hover ? #49325F : #302344) : #202831;
+                        background: root.minutes > 1 ? (min_ltr.has-hover ? #245242 : #1b3a2f) : #202831;
 
                         Text {
                             text: "−";
@@ -221,7 +221,7 @@ export component CreatePollDialog inherits Rectangle {
                     if root.rtl: Rectangle {
                         width: 30px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: root.minutes > 1 ? (min_rtl.has-hover ? #49325F : #302344) : #202831;
+                        background: root.minutes > 1 ? (min_rtl.has-hover ? #245242 : #1b3a2f) : #202831;
 
                         Text {
                             text: "−";
@@ -239,7 +239,7 @@ export component CreatePollDialog inherits Rectangle {
                     if !root.rtl: Rectangle {
                         width: 30px * root.global_scale;
                         border-radius: 8px * root.global_scale;
-                        background: root.minutes < 5 ? (plus_ltr.has-hover ? #49325F : #302344) : #202831;
+                        background: root.minutes < 5 ? (plus_ltr.has-hover ? #245242 : #1b3a2f) : #202831;
 
                         Text {
                             text: "+";
@@ -261,7 +261,7 @@ export component CreatePollDialog inherits Rectangle {
                     spacing: 8px * root.global_scale;
                     if root.rtl: Rectangle {
                         border-radius: 8px * root.global_scale;
-                        background: root.valid ? (create_rtl.has-hover ? #8B5FBF : #6d4aa0) : #202831;
+                        background: root.valid ? (create_rtl.has-hover ? #2bbf85 : #1f9d6b) : #202831;
                         Text {
                             text: Translations.poll_create;
                             color: root.valid ? white : #8d98a3;
@@ -291,7 +291,7 @@ export component CreatePollDialog inherits Rectangle {
 
                     if !root.rtl: Rectangle {
                         border-radius: 8px * root.global_scale;
-                        background: root.valid ? (create_ltr.has-hover ? #8B5FBF : #6d4aa0) : #202831;
+                        background: root.valid ? (create_ltr.has-hover ? #2bbf85 : #1f9d6b) : #202831;
 
                         Text {
                             text: Translations.poll_create;

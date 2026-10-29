@@ -203,6 +203,9 @@ export component AppWindow inherits Window {
     in-out property <int> results_total: 0;
     in-out property <[float]> results_starts: [];
 
+    // dropping files
+    in-out property <bool> drop_hover: false;
+
     Rectangle {
         background: blue;
         border-width: 3px * root.global_scale;
@@ -469,6 +472,48 @@ export component AppWindow inherits Window {
                 starts: root.results_starts;
             }
         }
+
+Rectangle {
+    visible: self.opacity > 0;
+    opacity: root.drop_hover ? 1.0 : 0.0;
+    background: #0b0d12e6;
+    animate opacity { duration: 150ms; easing: ease-out; }
+
+    Rectangle {
+        x: 24px * root.global_scale;
+        y: 24px * root.global_scale;
+        width: parent.width - 48px * root.global_scale;
+        height: parent.height - 48px * root.global_scale;
+        border-width: 2px * root.global_scale;
+        border-color: #2b7bff;
+        border-radius: 20px * root.global_scale;
+        background: #2b7bff1a;
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 12px * root.global_scale;
+
+            Text {
+                text: "📥";
+                font-size: 64px * root.global_scale;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: Translations.drop_files_title;
+                font-size: 30px * root.global_scale * Translations.font_global_scale;
+                font-weight: 700;
+                color: white;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: Translations.drop_files_subtitle;
+                font-size: 16px * root.global_scale * Translations.font_global_scale;
+                color: #9aa3b2;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}
     }
 
     // --- Message too long ---
